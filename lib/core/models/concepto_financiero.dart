@@ -1,0 +1,48 @@
+class ConceptoFinanciero {
+  final String id;
+  final String nombre;
+  final String tipo; // 'ingreso' | 'gasto'
+  final bool activo;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const ConceptoFinanciero({
+    required this.id,
+    required this.nombre,
+    required this.tipo,
+    required this.activo,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory ConceptoFinanciero.fromMap(Map<String, dynamic> map) =>
+      ConceptoFinanciero(
+        id: map['id'] as String,
+        nombre: map['nombre'] as String,
+        tipo: map['tipo'] as String,
+        activo: (map['activo'] is int)
+            ? (map['activo'] as int) == 1
+            : map['activo'] as bool,
+        createdAt: DateTime.parse(map['created_at'] as String),
+        updatedAt: DateTime.parse(map['updated_at'] as String),
+      );
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'nombre': nombre,
+        'tipo': tipo,
+        'activo': activo ? 1 : 0,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
+
+  ConceptoFinanciero copyWith({String? nombre, String? tipo, bool? activo}) =>
+      ConceptoFinanciero(
+        id: id,
+        nombre: nombre ?? this.nombre,
+        tipo: tipo ?? this.tipo,
+        activo: activo ?? this.activo,
+        createdAt: createdAt,
+        updatedAt: DateTime.now(),
+      );
+}

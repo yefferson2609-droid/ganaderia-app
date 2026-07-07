@@ -18,6 +18,10 @@ import '../../features/tipos_evento/tipos_evento_screen.dart';
 import '../../features/tipos_evento/tipo_evento_form_screen.dart';
 import '../../features/eventos/evento_masivo_screen.dart';
 import '../../features/ubicaciones/ubicaciones_screen.dart';
+import '../../features/finanzas/finanzas_screen.dart';
+import '../../features/finanzas/movimiento_form_screen.dart';
+import '../../features/finanzas/conceptos_financieros_screen.dart';
+import '../../features/finanzas/concepto_financiero_form_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -132,6 +136,43 @@ class AppRouter {
       GoRoute(
         path: '/ubicaciones',
         builder: (_, __) => const UbicacionesScreen(),
+      ),
+
+      // Finanzas
+      GoRoute(
+        path: '/finanzas',
+        builder: (_, __) => const FinanzasScreen(),
+        routes: [
+          GoRoute(
+            path: 'nuevo',
+            builder: (_, state) => MovimientoFormScreen(
+              tipoInicial: state.uri.queryParameters['tipo'] ?? 'ingreso',
+            ),
+          ),
+          GoRoute(
+            path: ':id/editar',
+            builder: (_, state) =>
+                MovimientoFormScreen(id: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'conceptos',
+            builder: (_, __) => const ConceptosFinancierosScreen(),
+            routes: [
+              GoRoute(
+                path: 'nuevo',
+                builder: (_, state) => ConceptoFinancieroFormScreen(
+                  tipoInicial:
+                      state.uri.queryParameters['tipo'] ?? 'ingreso',
+                ),
+              ),
+              GoRoute(
+                path: ':id/editar',
+                builder: (_, state) => ConceptoFinancieroFormScreen(
+                    id: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
       ),
     ],
   );

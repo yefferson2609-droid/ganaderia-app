@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/database/local_db.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/sync_provider.dart';
+import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
+
+final _moneyFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$');
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,8 +22,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, int> _totales = {};
   List<Ubicacion> _ubicaciones = [];
   Map<String, Map<String, int>> _conteosPorUbicacion = {};
+  double _utilidadMes = 0;
   bool _loading = true;
   final _ubicacionRepo = UbicacionRepository();
+  final _movimientoRepo = MovimientoFinancieroRepository();
 
   @override
   void initState() {
@@ -56,6 +62,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _conteosPorUbicacion[ub.id] =
           await _ubicacionRepo.getConteosPorUbicacion(ub.id);
     }
+
+    final now = DateTime.now();
+    final totalesFinanzas = await _movimientoRepo.getTotales(
+      desde: DateTime(now.year, now.month, 1),
+      hasta: now,
+    );
+    _utilidadMes = totalesFinanzas['utilidad'] ?? 0;
 
     setState(() => _loading = false);
   }
@@ -99,12 +112,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 context.push('/ubicaciones').then((_) => _loadConteos());
               } else if (v == 'evento_masivo') {
                 context.push('/evento-masivo').then((_) => _loadConteos());
+              } else if (v == 'finanzas') {
+                context.push('/finanzas').then((_) => _loadConteos());
               }
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'evento_masivo', child: Text('Evento masivo')),
               const PopupMenuItem(value: 'tipos', child: Text('Tipos de evento')),
               const PopupMenuItem(value: 'ubicaciones', child: Text('Ubicaciones')),
+              const PopupMenuItem(value: 'finanzas', child: Text('Finanzas')),
               const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
             ],
           ),
@@ -151,6 +167,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: Icons.filter_vintage, color: const Color(0xFF6A1B9A),
                             onTap: () => context.push('/lotes').then((_) => _loadConteos())),
                       ],
+                    ),
+
+                    const SizedBox(height: 24),
+                    Text('Finanzas',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => context
+                            .push('/finanzas')
+                            .then((_) => _loadConteos()),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.account_balance_wallet,
+                                  color: _utilidadMes >= 0
+                                      ? const Color(0xFF2E7D32)
+                                      : const Color(0xFFC62828)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Utilidad del mes',
+                                        style: TextStyle(fontSize: 12)),
+                                    Text(
+                                      _moneyFormat.format(_utilidadMes),
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: _utilidadMes >= 0
+                                            ? const Color(0xFF2E7D32)
+                                            : const Color(0xFFC62828),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
 
                     // Por ubicación

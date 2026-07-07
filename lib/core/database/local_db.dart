@@ -13,8 +13,9 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -159,6 +160,46 @@ class LocalDb {
         evento_masivo_id TEXT NOT NULL,
         vaca_id TEXT NOT NULL,
         created_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await _createFinanzasTables(db);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await _createFinanzasTables(db);
+    }
+  }
+
+  Future<void> _createFinanzasTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE conceptos_financieros (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        activo INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE movimientos_financieros (
+        id TEXT PRIMARY KEY,
+        tipo TEXT NOT NULL,
+        concepto_id TEXT,
+        nota TEXT,
+        monto REAL NOT NULL,
+        fecha TEXT NOT NULL,
+        ubicacion_id TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
         synced INTEGER NOT NULL DEFAULT 1,
         deleted INTEGER NOT NULL DEFAULT 0
       )

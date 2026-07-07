@@ -13,7 +13,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -169,6 +169,7 @@ class LocalDb {
     ''');
 
     await _createFinanzasTables(db);
+    await _createUsuariosTables(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -180,6 +181,40 @@ class LocalDb {
       await db.execute('ALTER TABLE toros ADD COLUMN padre_id TEXT');
       await db.execute('ALTER TABLE toros ADD COLUMN madre_id TEXT');
     }
+    if (oldVersion < 4) {
+      await _createUsuariosTables(db);
+    }
+  }
+
+  Future<void> _createUsuariosTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE perfiles_usuario (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        correo TEXT NOT NULL,
+        activo INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE permisos_usuario (
+        id TEXT PRIMARY KEY,
+        usuario_id TEXT NOT NULL,
+        modulo TEXT NOT NULL,
+        puede_ver INTEGER NOT NULL DEFAULT 0,
+        puede_crear INTEGER NOT NULL DEFAULT 0,
+        puede_editar INTEGER NOT NULL DEFAULT 0,
+        puede_eliminar INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
   }
 
   Future<void> _createFinanzasTables(Database db) async {

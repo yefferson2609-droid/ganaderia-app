@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/database/local_db.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/permisos_provider.dart';
 import 'core/providers/sync_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
@@ -30,6 +31,7 @@ class GanaderiaApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SyncProvider()),
+        ChangeNotifierProvider(create: (_) => PermisosProvider()),
       ],
       child: MaterialApp.router(
         title: 'Ganadería',

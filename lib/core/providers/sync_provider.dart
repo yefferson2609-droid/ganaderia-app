@@ -133,6 +133,21 @@ class SyncProvider extends ChangeNotifier {
       await db.insert('movimientos_financieros', _toLocalRow(row),
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
+
+    // Perfiles de usuario
+    final perfiles =
+        await _supabase.from('perfiles_usuario').select().order('nombre');
+    for (final row in perfiles) {
+      await db.insert('perfiles_usuario', _toLocalRow(row),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+
+    // Permisos de usuario
+    final permisos = await _supabase.from('permisos_usuario').select();
+    for (final row in permisos) {
+      await db.insert('permisos_usuario', _toLocalRow(row),
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
   }
 
   Map<String, dynamic> _toLocalRow(Map<String, dynamic> row) {
@@ -159,6 +174,8 @@ class SyncProvider extends ChangeNotifier {
       'eventos_masivos_vacas',
       'conceptos_financieros',
       'movimientos_financieros',
+      'perfiles_usuario',
+      'permisos_usuario',
     ];
 
     for (final table in tables) {

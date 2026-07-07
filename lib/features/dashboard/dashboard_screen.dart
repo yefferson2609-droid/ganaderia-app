@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/database/local_db.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/permisos_provider.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
@@ -70,12 +71,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
     _utilidadMes = totalesFinanzas['utilidad'] ?? 0;
 
+    if (mounted) await context.read<PermisosProvider>().cargar();
+
     setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final sync = context.watch<SyncProvider>();
+    final permisos = context.watch<PermisosProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -114,6 +118,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 context.push('/evento-masivo').then((_) => _loadConteos());
               } else if (v == 'finanzas') {
                 context.push('/finanzas').then((_) => _loadConteos());
+              } else if (v == 'usuarios') {
+                context.push('/usuarios').then((_) => _loadConteos());
               }
             },
             itemBuilder: (_) => [
@@ -121,6 +127,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const PopupMenuItem(value: 'tipos', child: Text('Tipos de evento')),
               const PopupMenuItem(value: 'ubicaciones', child: Text('Ubicaciones')),
               const PopupMenuItem(value: 'finanzas', child: Text('Finanzas')),
+              if (permisos.puedeVer('usuarios'))
+                const PopupMenuItem(value: 'usuarios', child: Text('Usuarios')),
               const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
             ],
           ),

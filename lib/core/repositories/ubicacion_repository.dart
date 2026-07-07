@@ -54,7 +54,7 @@ class UbicacionRepository {
   }
 
   // Conteos por ubicación para dashboard
-  Future<Map<String, dynamic>> getConteosPorUbicacion(String ubicacionId) async {
+  Future<Map<String, int>> getConteosPorUbicacion(String ubicacionId) async {
     final vacas = await _db.rawQuery(
         "SELECT COUNT(*) as c FROM vacas WHERE deleted=0 AND estado='activa' AND ubicacion_id=?",
         [ubicacionId]);

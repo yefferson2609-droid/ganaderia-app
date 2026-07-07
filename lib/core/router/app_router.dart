@@ -9,6 +9,7 @@ import '../../features/vacas/vaca_form_screen.dart';
 import '../../features/vacas/vaca_detalle_screen.dart';
 import '../../features/toros/toros_screen.dart';
 import '../../features/toros/toro_form_screen.dart';
+import '../../features/toros/toro_detalle_screen.dart';
 import '../../features/caballos/caballos_screen.dart';
 import '../../features/caballos/caballo_form_screen.dart';
 import '../../features/lotes/lotes_screen.dart';
@@ -68,9 +69,16 @@ class AppRouter {
         routes: [
           GoRoute(path: 'nuevo', builder: (_, __) => const ToroFormScreen()),
           GoRoute(
-            path: ':id/editar',
+            path: ':id',
             builder: (_, state) =>
-                ToroFormScreen(id: state.pathParameters['id']!),
+                ToroDetalleScreen(id: state.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: 'editar',
+                builder: (_, state) =>
+                    ToroFormScreen(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
         ],
       ),

@@ -13,7 +13,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -56,7 +56,10 @@ class LocalDb {
         id TEXT PRIMARY KEY,
         numero TEXT NOT NULL,
         nombre TEXT NOT NULL,
+        fecha_nacimiento TEXT,
         estado TEXT NOT NULL DEFAULT 'activo',
+        padre_id TEXT,
+        madre_id TEXT,
         ubicacion_id TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -171,6 +174,11 @@ class LocalDb {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await _createFinanzasTables(db);
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE toros ADD COLUMN fecha_nacimiento TEXT');
+      await db.execute('ALTER TABLE toros ADD COLUMN padre_id TEXT');
+      await db.execute('ALTER TABLE toros ADD COLUMN madre_id TEXT');
     }
   }
 

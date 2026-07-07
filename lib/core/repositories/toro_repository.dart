@@ -25,14 +25,22 @@ class ToroRepository {
   Future<Toro> create({
     required String numero,
     required String nombre,
+    DateTime? fechaNacimiento,
     String estado = 'activo',
+    String? padreId,
+    String? madreId,
+    String? ubicacionId,
   }) async {
     final now = DateTime.now();
     final toro = Toro(
       id: _uuid.v4(),
       numero: numero,
       nombre: nombre,
+      fechaNacimiento: fechaNacimiento,
       estado: estado,
+      padreId: padreId,
+      madreId: madreId,
+      ubicacionId: ubicacionId,
       createdAt: now,
       updatedAt: now,
     );

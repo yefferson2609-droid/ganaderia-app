@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/evento_vaca.dart';
 import '../../core/models/tipo_evento.dart';
+import '../../core/models/toro.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/evento_vaca_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
+import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 
 class VacaDetalleScreen extends StatefulWidget {
@@ -18,11 +20,12 @@ class VacaDetalleScreen extends StatefulWidget {
 
 class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
   final _vacaRepo = VacaRepository();
+  final _toroRepo = ToroRepository();
   final _eventoRepo = EventoVacaRepository();
   final _tipoRepo = TipoEventoRepository();
 
   Vaca? _vaca;
-  Vaca? _padre;
+  Toro? _padre;
   Vaca? _madre;
   List<EventoVaca> _eventos = [];
   List<TipoEvento> _tipos = [];
@@ -38,7 +41,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
     setState(() => _loading = true);
     _vaca = await _vacaRepo.getById(widget.id);
     if (_vaca != null) {
-      if (_vaca!.padreId != null) _padre = await _vacaRepo.getById(_vaca!.padreId!);
+      if (_vaca!.padreId != null) _padre = await _toroRepo.getById(_vaca!.padreId!);
       if (_vaca!.madreId != null) _madre = await _vacaRepo.getById(_vaca!.madreId!);
       _eventos = await _eventoRepo.getByVaca(widget.id);
     }
@@ -256,7 +259,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                     _InfoRow(
                         label: 'Padre',
                         value: _padre != null
-                            ? 'Vaca #${_padre!.numero}'
+                            ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
                             : 'No registrado'),
                     _InfoRow(
                         label: 'Madre',

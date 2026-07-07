@@ -281,14 +281,12 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                     DropdownButtonFormField<String?>(
                       value: _padreId,
                       decoration: const InputDecoration(
-                          labelText: 'Padre (vaca)', prefixIcon: Icon(Icons.male)),
+                          labelText: 'Padre (toro)', prefixIcon: Icon(Icons.male)),
                       items: [
                         const DropdownMenuItem(
                             value: null, child: Text('Sin registrar')),
-                        ..._vacasDisponibles
-                            .where((v) => v.id != widget.id)
-                            .map((v) => DropdownMenuItem(
-                                value: v.id, child: Text('Vaca #${v.numero}'))),
+                        ..._toros.map((t) => DropdownMenuItem(
+                            value: t.id, child: Text(t.displayName))),
                       ],
                       onChanged: (v) => setState(() => _padreId = v),
                     ),

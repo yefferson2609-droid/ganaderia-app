@@ -103,7 +103,7 @@ class _TorosScreenState extends State<TorosScreen> {
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold)),
                           subtitle: Text(
-                              '#${t.numero} · ${t.estado[0].toUpperCase()}${t.estado.substring(1)}'),
+                              '#${t.numero} · ${t.estado[0].toUpperCase()}${t.estado.substring(1)} · ${t.edad}'),
                           trailing: PopupMenuButton<String>(
                             onSelected: (v) {
                               if (v == 'editar') {
@@ -123,6 +123,9 @@ class _TorosScreenState extends State<TorosScreen> {
                                       style: TextStyle(color: Colors.red))),
                             ],
                           ),
+                          onTap: () => context
+                              .push('/toros/${t.id}')
+                              .then((_) => _load()),
                         ),
                       );
                     },

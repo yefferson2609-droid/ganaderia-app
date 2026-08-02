@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/concepto_financiero.dart';
 import '../../core/repositories/concepto_financiero_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class ConceptosFinancierosScreen extends StatefulWidget {
   const ConceptosFinancierosScreen({super.key});
@@ -52,7 +53,7 @@ class _ConceptosFinancierosScreenState
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -85,12 +86,12 @@ class _ConceptosFinancierosScreenState
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor:
-                    c.activo ? const Color(0xFFE8F5E9) : Colors.grey[200],
+                    c.activo ? AppColors.primaryContainer : Colors.grey[200],
                 child: Icon(
                     c.tipo == 'ingreso'
                         ? Icons.arrow_downward
                         : Icons.arrow_upward,
-                    color: c.activo ? const Color(0xFF2E7D32) : Colors.grey),
+                    color: c.activo ? AppColors.primary : Colors.grey),
               ),
               title: Text(c.nombre,
                   style: TextStyle(
@@ -118,7 +119,7 @@ class _ConceptosFinancierosScreenState
                   const PopupMenuItem(
                       value: 'eliminar',
                       child: Text('Eliminar',
-                          style: TextStyle(color: Colors.red))),
+                          style: TextStyle(color: AppColors.danger))),
                 ],
               ),
             ),

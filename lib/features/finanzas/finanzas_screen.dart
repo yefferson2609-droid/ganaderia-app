@@ -5,6 +5,7 @@ import '../../core/models/concepto_financiero.dart';
 import '../../core/models/movimiento_financiero.dart';
 import '../../core/repositories/concepto_financiero_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$');
 final _dateFormat = DateFormat('dd/MM/yyyy');
@@ -77,7 +78,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -97,12 +98,12 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.arrow_downward, color: Colors.green),
+              leading: const Icon(Icons.arrow_downward, color: AppColors.success),
               title: const Text('Ingreso'),
               onTap: () => Navigator.pop(context, 'ingreso'),
             ),
             ListTile(
-              leading: const Icon(Icons.arrow_upward, color: Colors.red),
+              leading: const Icon(Icons.arrow_upward, color: AppColors.danger),
               title: const Text('Gasto'),
               onTap: () => Navigator.pop(context, 'gasto'),
             ),
@@ -162,7 +163,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                               child: _TotalCard(
                                 label: 'Ingresos',
                                 value: _totales['ingresos']!,
-                                color: const Color(0xFF2E7D32),
+                                color: AppColors.primary,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -170,7 +171,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                               child: _TotalCard(
                                 label: 'Gastos',
                                 value: _totales['gastos']!,
-                                color: const Color(0xFFC62828),
+                                color: AppColors.danger,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -179,8 +180,8 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                 label: 'Utilidad',
                                 value: _totales['utilidad']!,
                                 color: _totales['utilidad']! >= 0
-                                    ? const Color(0xFF1565C0)
-                                    : const Color(0xFFC62828),
+                                    ? AppColors.info
+                                    : AppColors.danger,
                               ),
                             ),
                           ],
@@ -225,15 +226,15 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                 child: ListTile(
                                   leading: CircleAvatar(
                                     backgroundColor: esIngreso
-                                        ? const Color(0xFFE8F5E9)
-                                        : const Color(0xFFFFEBEE),
+                                        ? AppColors.primaryContainer
+                                        : AppColors.dangerContainer,
                                     child: Icon(
                                       esIngreso
                                           ? Icons.arrow_downward
                                           : Icons.arrow_upward,
                                       color: esIngreso
-                                          ? const Color(0xFF2E7D32)
-                                          : const Color(0xFFC62828),
+                                          ? AppColors.primary
+                                          : AppColors.danger,
                                     ),
                                   ),
                                   title: Text(
@@ -251,8 +252,8 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: esIngreso
-                                              ? const Color(0xFF2E7D32)
-                                              : const Color(0xFFC62828),
+                                              ? AppColors.primary
+                                              : AppColors.danger,
                                         ),
                                       ),
                                       PopupMenuButton<String>(
@@ -273,7 +274,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                               value: 'eliminar',
                                               child: Text('Eliminar',
                                                   style: TextStyle(
-                                                      color: Colors.red))),
+                                                      color: AppColors.danger))),
                                         ],
                                       ),
                                     ],

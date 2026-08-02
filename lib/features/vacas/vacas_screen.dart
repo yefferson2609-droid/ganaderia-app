@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/vaca_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class VacasScreen extends StatefulWidget {
   const VacasScreen({super.key});
@@ -53,11 +54,11 @@ class _VacasScreenState extends State<VacasScreen> {
   Color _estadoColor(String estado) {
     switch (estado) {
       case 'activa':
-        return Colors.green;
+        return AppColors.success;
       case 'vendida':
-        return Colors.orange;
+        return AppColors.warning;
       case 'muerta':
-        return Colors.red;
+        return AppColors.danger;
       default:
         return Colors.grey;
     }

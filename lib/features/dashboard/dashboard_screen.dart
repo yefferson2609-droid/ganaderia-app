@@ -9,6 +9,7 @@ import '../../core/providers/permisos_provider.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$');
 
@@ -160,19 +161,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       childAspectRatio: 1.1,
                       children: [
                         _AnimalCard(label: 'Vacas', count: _totales['vacas'] ?? 0,
-                            icon: Icons.local_activity, color: const Color(0xFF2E7D32),
+                            icon: Icons.local_activity, color: AppColors.primary,
                             onTap: () => context.push('/vacas').then((_) => _loadConteos())),
                         _AnimalCard(label: 'Toros', count: _totales['toros'] ?? 0,
-                            icon: Icons.male, color: const Color(0xFF1565C0),
+                            icon: Icons.male, color: AppColors.info,
                             onTap: () => context.push('/toros').then((_) => _loadConteos())),
                         _AnimalCard(label: 'Caballos', count: _totales['caballos'] ?? 0,
-                            icon: Icons.directions_run, color: const Color(0xFF795548),
+                            icon: Icons.directions_run, color: AppColors.secondary,
                             onTap: () => context.push('/caballos').then((_) => _loadConteos())),
                         _AnimalCard(label: 'Cerdos', count: _totales['cerdos'] ?? 0,
-                            icon: Icons.set_meal, color: const Color(0xFFE65100),
+                            icon: Icons.set_meal, color: AppColors.warning,
                             onTap: () => context.push('/lotes').then((_) => _loadConteos())),
                         _AnimalCard(label: 'Ovejos', count: _totales['ovejos'] ?? 0,
-                            icon: Icons.filter_vintage, color: const Color(0xFF6A1B9A),
+                            icon: Icons.filter_vintage, color: AppColors.accentPurple,
                             onTap: () => context.push('/lotes').then((_) => _loadConteos())),
                       ],
                     ),
@@ -196,8 +197,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Icon(Icons.account_balance_wallet,
                                   color: _utilidadMes >= 0
-                                      ? const Color(0xFF2E7D32)
-                                      : const Color(0xFFC62828)),
+                                      ? AppColors.primary
+                                      : AppColors.danger),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -212,8 +213,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                         color: _utilidadMes >= 0
-                                            ? const Color(0xFF2E7D32)
-                                            : const Color(0xFFC62828),
+                                            ? AppColors.primary
+                                            : AppColors.danger,
                                       ),
                                     ),
                                   ],
@@ -246,7 +247,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               children: [
                                 Row(children: [
                                   const Icon(Icons.location_on,
-                                      color: Color(0xFF2E7D32), size: 18),
+                                      color: AppColors.primary, size: 18),
                                   const SizedBox(width: 6),
                                   Text(ub.nombre,
                                       style: const TextStyle(
@@ -258,11 +259,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceAround,
                                   children: [
-                                    _MiniCount(label: 'Vacas', count: c['vacas'] ?? 0, color: const Color(0xFF2E7D32)),
-                                    _MiniCount(label: 'Toros', count: c['toros'] ?? 0, color: const Color(0xFF1565C0)),
-                                    _MiniCount(label: 'Caballos', count: c['caballos'] ?? 0, color: const Color(0xFF795548)),
-                                    _MiniCount(label: 'Cerdos', count: c['cerdos'] ?? 0, color: const Color(0xFFE65100)),
-                                    _MiniCount(label: 'Ovejos', count: c['ovejos'] ?? 0, color: const Color(0xFF6A1B9A)),
+                                    _MiniCount(label: 'Vacas', count: c['vacas'] ?? 0, color: AppColors.primary),
+                                    _MiniCount(label: 'Toros', count: c['toros'] ?? 0, color: AppColors.info),
+                                    _MiniCount(label: 'Caballos', count: c['caballos'] ?? 0, color: AppColors.secondary),
+                                    _MiniCount(label: 'Cerdos', count: c['cerdos'] ?? 0, color: AppColors.warning),
+                                    _MiniCount(label: 'Ovejos', count: c['ovejos'] ?? 0, color: AppColors.accentPurple),
                                   ],
                                 ),
                               ],

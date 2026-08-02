@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/caballo.dart';
 import '../../core/repositories/caballo_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class CaballosScreen extends StatefulWidget {
   const CaballosScreen({super.key});
@@ -39,7 +40,7 @@ class _CaballosScreenState extends State<CaballosScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -53,9 +54,9 @@ class _CaballosScreenState extends State<CaballosScreen> {
 
   Color _estadoColor(String estado) {
     switch (estado) {
-      case 'activo': return Colors.green;
-      case 'vendido': return Colors.orange;
-      case 'muerto': return Colors.red;
+      case 'activo': return AppColors.success;
+      case 'vendido': return AppColors.warning;
+      case 'muerto': return AppColors.danger;
       default: return Colors.grey;
     }
   }
@@ -112,7 +113,7 @@ class _CaballosScreenState extends State<CaballosScreen> {
                               PopupMenuItem(
                                   value: 'eliminar',
                                   child: Text('Eliminar',
-                                      style: TextStyle(color: Colors.red))),
+                                      style: TextStyle(color: AppColors.danger))),
                             ],
                           ),
                         ),

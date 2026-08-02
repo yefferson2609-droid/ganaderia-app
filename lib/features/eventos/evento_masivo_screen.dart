@@ -6,6 +6,7 @@ import '../../core/models/vaca.dart';
 import '../../core/repositories/evento_masivo_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class EventoMasivoScreen extends StatefulWidget {
   const EventoMasivoScreen({super.key});
@@ -76,7 +77,7 @@ class _EventoMasivoScreenState extends State<EventoMasivoScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
             'Evento registrado para ${_seleccionadas.length} vaca${_seleccionadas.length != 1 ? 's' : ''}'),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.success,
       ));
       context.pop();
     }
@@ -215,7 +216,7 @@ class _EventoMasivoScreenState extends State<EventoMasivoScreen> {
                               secondary: CircleAvatar(
                                 radius: 18,
                                 backgroundColor: seleccionada
-                                    ? const Color(0xFF2E7D32)
+                                    ? AppColors.primary
                                     : Colors.grey[200],
                                 child: Icon(Icons.check,
                                     size: 16,

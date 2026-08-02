@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/tipo_evento.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class TiposEventoScreen extends StatefulWidget {
   const TiposEventoScreen({super.key});
@@ -39,7 +40,7 @@ class _TiposEventoScreenState extends State<TiposEventoScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -83,11 +84,11 @@ class _TiposEventoScreenState extends State<TiposEventoScreen> {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: t.activo
-                                ? const Color(0xFFE8F5E9)
+                                ? AppColors.primaryContainer
                                 : Colors.grey[200],
                             child: Icon(Icons.event_note,
                                 color: t.activo
-                                    ? const Color(0xFF2E7D32)
+                                    ? AppColors.primary
                                     : Colors.grey),
                           ),
                           title: Text(t.nombre,
@@ -122,7 +123,7 @@ class _TiposEventoScreenState extends State<TiposEventoScreen> {
                                   value: 'eliminar',
                                   child: Text('Eliminar',
                                       style:
-                                          TextStyle(color: Colors.red))),
+                                          TextStyle(color: AppColors.danger))),
                             ],
                           ),
                         ),

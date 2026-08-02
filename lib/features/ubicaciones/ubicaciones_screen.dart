@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/repositories/ubicacion_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class UbicacionesScreen extends StatefulWidget {
   const UbicacionesScreen({super.key});
@@ -39,7 +40,7 @@ class _UbicacionesScreenState extends State<UbicacionesScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -129,11 +130,11 @@ class _UbicacionesScreenState extends State<UbicacionesScreen> {
                       child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: ub.activa
-                              ? const Color(0xFFE8F5E9)
+                              ? AppColors.primaryContainer
                               : Colors.grey[200],
                           child: Icon(Icons.location_on,
                               color: ub.activa
-                                  ? const Color(0xFF2E7D32)
+                                  ? AppColors.primary
                                   : Colors.grey),
                         ),
                         title: Text(ub.nombre,
@@ -165,7 +166,7 @@ class _UbicacionesScreenState extends State<UbicacionesScreen> {
                             const PopupMenuItem(
                                 value: 'eliminar',
                                 child: Text('Eliminar',
-                                    style: TextStyle(color: Colors.red))),
+                                    style: TextStyle(color: AppColors.danger))),
                           ],
                         ),
                       ),

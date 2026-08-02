@@ -9,6 +9,7 @@ import '../../core/repositories/evento_vaca_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class VacaDetalleScreen extends StatefulWidget {
   final String id;
@@ -143,7 +144,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -168,7 +169,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -299,8 +300,8 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: const CircleAvatar(
-                        backgroundColor: Color(0xFFE8F5E9),
-                        child: Icon(Icons.event_note, color: Color(0xFF2E7D32)),
+                        backgroundColor: AppColors.primaryContainer,
+                        child: Icon(Icons.event_note, color: AppColors.primary),
                       ),
                       title: Text(e.tipoEventoNombre ?? 'Evento'),
                       subtitle: Column(
@@ -315,7 +316,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline,
-                            color: Colors.red, size: 20),
+                            color: AppColors.danger, size: 20),
                         onPressed: () => _eliminarEvento(e.id),
                       ),
                       isThreeLine: e.notas != null && e.notas!.isNotEmpty,
@@ -330,11 +331,11 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
   Color _estadoColor(String estado) {
     switch (estado) {
       case 'activa':
-        return Colors.green;
+        return AppColors.success;
       case 'vendida':
-        return Colors.orange;
+        return AppColors.warning;
       case 'muerta':
-        return Colors.red;
+        return AppColors.danger;
       default:
         return Colors.grey;
     }

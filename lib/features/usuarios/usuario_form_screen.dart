@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/theme/app_theme.dart';
 
 class UsuarioFormScreen extends StatefulWidget {
   const UsuarioFormScreen({super.key});
@@ -46,14 +47,14 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Usuario creado correctamente'),
-            backgroundColor: Colors.green));
+            backgroundColor: AppColors.success));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Error al crear usuario: $e'),
-            backgroundColor: Colors.red));
+            backgroundColor: AppColors.danger));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

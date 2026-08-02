@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/perfil_usuario.dart';
 import '../../core/repositories/perfil_usuario_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class UsuariosScreen extends StatefulWidget {
   const UsuariosScreen({super.key});
@@ -55,11 +56,11 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
                         child: ListTile(
                           leading: CircleAvatar(
                             backgroundColor: u.activo
-                                ? const Color(0xFFE8F5E9)
+                                ? AppColors.primaryContainer
                                 : Colors.grey[200],
                             child: Icon(Icons.person,
                                 color: u.activo
-                                    ? const Color(0xFF2E7D32)
+                                    ? AppColors.primary
                                     : Colors.grey),
                           ),
                           title: Text(u.nombre,

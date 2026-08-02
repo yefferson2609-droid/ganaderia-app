@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/lote.dart';
 import '../../core/repositories/lote_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class LotesScreen extends StatefulWidget {
   const LotesScreen({super.key});
@@ -50,7 +51,7 @@ class _LotesScreenState extends State<LotesScreen>
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -77,13 +78,13 @@ class _LotesScreenState extends State<LotesScreen>
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: tipo == 'cerdo'
-                  ? const Color(0xFFE65100).withOpacity(0.15)
-                  : const Color(0xFF1565C0).withOpacity(0.15),
+                  ? AppColors.warning.withOpacity(0.15)
+                  : AppColors.info.withOpacity(0.15),
               child: Icon(
                 tipo == 'cerdo' ? Icons.set_meal : Icons.filter_vintage,
                 color: tipo == 'cerdo'
-                    ? const Color(0xFFE65100)
-                    : const Color(0xFF1565C0),
+                    ? AppColors.warning
+                    : AppColors.info,
               ),
             ),
             title: Text(l.nombre,
@@ -106,7 +107,7 @@ class _LotesScreenState extends State<LotesScreen>
                 PopupMenuItem(
                     value: 'eliminar',
                     child:
-                        Text('Eliminar', style: TextStyle(color: Colors.red))),
+                        Text('Eliminar', style: TextStyle(color: AppColors.danger))),
               ],
             ),
             onTap: () =>

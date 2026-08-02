@@ -7,6 +7,7 @@ import '../../core/models/vaca.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class ToroFormScreen extends StatefulWidget {
   final String? id;
@@ -96,7 +97,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Ya existe un toro con ese número'),
-            backgroundColor: Colors.red));
+            backgroundColor: AppColors.danger));
       }
       return;
     }

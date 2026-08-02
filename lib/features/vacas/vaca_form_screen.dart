@@ -7,6 +7,7 @@ import '../../core/models/vaca.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class VacaFormScreen extends StatefulWidget {
   final String? id;
@@ -106,7 +107,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Ya existe una vaca con ese número'),
-            backgroundColor: Colors.red));
+            backgroundColor: AppColors.danger));
       }
       return;
     }
@@ -249,13 +250,13 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
+                            color: AppColors.primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Parto estimado: ${DateFormat('dd/MM/yyyy').format(_fechaMonta!.add(const Duration(days: 283)))}',
                             style: const TextStyle(
-                                color: Color(0xFF2E7D32),
+                                color: AppColors.primary,
                                 fontWeight: FontWeight.bold),
                           ),
                         ),

@@ -7,6 +7,7 @@ import '../../core/models/vaca.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class ToroDetalleScreen extends StatefulWidget {
   final String id;
@@ -62,7 +63,7 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
               child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
             child: const Text('Eliminar'),
           ),
         ],
@@ -77,11 +78,11 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
   Color _estadoColor(String estado) {
     switch (estado) {
       case 'activo':
-        return Colors.green;
+        return AppColors.success;
       case 'vendido':
-        return Colors.orange;
+        return AppColors.warning;
       case 'muerto':
-        return Colors.red;
+        return AppColors.danger;
       default:
         return Colors.grey;
     }

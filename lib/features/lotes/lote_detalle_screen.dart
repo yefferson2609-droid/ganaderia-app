@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/lote.dart';
 import '../../core/models/movimiento_lote.dart';
 import '../../core/repositories/lote_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class LoteDetalleScreen extends StatefulWidget {
   final String id;
@@ -177,7 +178,7 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
                         _CountChip(
                             label: 'Total',
                             count: _lote!.total,
-                            color: Colors.green),
+                            color: AppColors.success),
                         _CountChip(
                             label: 'Hembras ♀',
                             count: _lote!.hembras,
@@ -185,7 +186,7 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
                         _CountChip(
                             label: 'Machos ♂',
                             count: _lote!.machos,
-                            color: Colors.blue),
+                            color: AppColors.info),
                       ],
                     ),
                   ],
@@ -221,15 +222,15 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: m.tipoMovimiento == 'muerte'
-                            ? Colors.red.withOpacity(0.15)
-                            : Colors.orange.withOpacity(0.15),
+                            ? AppColors.danger.withOpacity(0.15)
+                            : AppColors.warning.withOpacity(0.15),
                         child: Icon(
                           m.tipoMovimiento == 'muerte'
                               ? Icons.close
                               : Icons.sell_outlined,
                           color: m.tipoMovimiento == 'muerte'
-                              ? Colors.red
-                              : Colors.orange,
+                              ? AppColors.danger
+                              : AppColors.warning,
                         ),
                       ),
                       title: Text(

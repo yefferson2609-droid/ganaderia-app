@@ -5,6 +5,8 @@ class Lote {
   final int hembras;
   final int machos;
   final String? ubicacionId;
+  final String? createdBy;
+  final String? updatedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +17,8 @@ class Lote {
     required this.hembras,
     required this.machos,
     this.ubicacionId,
+    this.createdBy,
+    this.updatedBy,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -28,6 +32,8 @@ class Lote {
         hembras: map['hembras'] as int,
         machos: map['machos'] as int,
         ubicacionId: map['ubicacion_id'] as String?,
+        createdBy: map['created_by'] as String?,
+        updatedBy: map['updated_by'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -39,6 +45,8 @@ class Lote {
         'hembras': hembras,
         'machos': machos,
         'ubicacion_id': ubicacionId,
+        'created_by': createdBy,
+        'updated_by': updatedBy,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -58,6 +66,8 @@ class Lote {
         machos: machos ?? this.machos,
         ubicacionId:
             clearUbicacion ? null : (ubicacionId ?? this.ubicacionId),
+        createdBy: createdBy,
+        updatedBy: updatedBy,
         createdAt: createdAt,
         updatedAt: DateTime.now(),
       );

@@ -8,6 +8,7 @@ import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/auditoria.dart';
 
 class VacaFormScreen extends StatefulWidget {
   final String? id;
@@ -23,6 +24,8 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
   final _toroRepo = ToroRepository();
   final _ubicacionRepo = UbicacionRepository();
   final _numeroCtrl = TextEditingController();
+  final _colorCtrl = TextEditingController();
+  final _notaCtrl = TextEditingController();
 
   bool _loading = false;
   bool _loadingData = false;
@@ -51,21 +54,28 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
   @override
   void dispose() {
     _numeroCtrl.dispose();
+    _colorCtrl.dispose();
+    _notaCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _loadData() async {
     setState(() => _loadingData = true);
     _vacasDisponibles = await _repo.getAll();
-    _toros = await _toroRepo.getAll(soloActivos: true);
-    _ubicaciones = await _ubicacionRepo.getAll(soloActivas: true);
+    // Todos los toros: el padre puede estar vendido o fallecido.
+    _toros = await _toroRepo.getAll();
+    _ubicaciones = await _ubicacionRepo.getAll();
 
     if (_isEditing) {
       _vacaOriginal = await _repo.getById(widget.id!);
       if (_vacaOriginal != null) {
         _numeroCtrl.text = _vacaOriginal!.numero;
+        _colorCtrl.text = _vacaOriginal!.color ?? '';
+        _notaCtrl.text = _vacaOriginal!.nota ?? '';
         _fechaNacimiento = _vacaOriginal!.fechaNacimiento;
-        _estado = _vacaOriginal!.estado;
+        _estado = _vacaOriginal!.estado == 'muerta'
+            ? 'fallecida'
+            : _vacaOriginal!.estado;
         _padreId = _vacaOriginal!.padreId;
         _madreId = _vacaOriginal!.madreId;
         _estadoReproductivo = _vacaOriginal!.estadoReproductivo;
@@ -74,6 +84,11 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         _ubicacionId = _vacaOriginal!.ubicacionId;
       }
     }
+    // Evita valores que ya no existen en los desplegables.
+    if (!_toros.any((t) => t.id == _padreId)) _padreId = null;
+    if (!_toros.any((t) => t.id == _toroId)) _toroId = null;
+    if (!_vacasDisponibles.any((v) => v.id == _madreId)) _madreId = null;
+    if (!_ubicaciones.any((u) => u.id == _ubicacionId)) _ubicacionId = null;
     setState(() => _loadingData = false);
   }
 
@@ -133,6 +148,9 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         fechaEstimadaParto: fechaParto,
         clearFechaParto: _estadoReproductivo == 'vacia',
         ubicacionId: _ubicacionId,
+        clearUbicacion: _ubicacionId == null,
+        color: textoONull(_colorCtrl.text),
+        nota: textoONull(_notaCtrl.text),
       ));
     } else {
       await _repo.create(
@@ -146,6 +164,8 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         toroId: _estadoReproductivo == 'prenada' ? _toroId : null,
         fechaEstimadaParto: fechaParto,
         ubicacionId: _ubicacionId,
+        color: textoONull(_colorCtrl.text),
+        nota: textoONull(_notaCtrl.text),
       );
     }
 
@@ -197,7 +217,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                       items: const [
                         DropdownMenuItem(value: 'activa', child: Text('Activa')),
                         DropdownMenuItem(value: 'vendida', child: Text('Vendida')),
-                        DropdownMenuItem(value: 'muerta', child: Text('Muerta')),
+                        DropdownMenuItem(value: 'fallecida', child: Text('Fallecida')),
                       ],
                       onChanged: (v) => setState(() => _estado = v!),
                     ),
@@ -305,6 +325,21 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                                 value: v.id, child: Text('Vaca #${v.numero}'))),
                       ],
                       onChanged: (v) => setState(() => _madreId = v),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _colorCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Color',
+                          prefixIcon: Icon(Icons.palette_outlined)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notaCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Nota (opcional)',
+                          prefixIcon: Icon(Icons.notes)),
+                      maxLines: 3,
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(

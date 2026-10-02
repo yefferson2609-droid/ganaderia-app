@@ -1,8 +1,14 @@
+import '../utils/auditoria.dart';
+
 class Caballo {
   final String id;
   final String nombre;
   final String estado;
   final String? ubicacionId;
+  final String? color;
+  final String? nota;
+  final String? createdBy;
+  final String? updatedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -11,6 +17,10 @@ class Caballo {
     required this.nombre,
     required this.estado,
     this.ubicacionId,
+    this.color,
+    this.nota,
+    this.createdBy,
+    this.updatedBy,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -20,6 +30,10 @@ class Caballo {
         nombre: map['nombre'] as String,
         estado: map['estado'] as String,
         ubicacionId: map['ubicacion_id'] as String?,
+        color: map['color'] as String?,
+        nota: map['nota'] as String?,
+        createdBy: map['created_by'] as String?,
+        updatedBy: map['updated_by'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -29,15 +43,31 @@ class Caballo {
         'nombre': nombre,
         'estado': estado,
         'ubicacion_id': ubicacionId,
+        'color': color,
+        'nota': nota,
+        'created_by': createdBy,
+        'updated_by': updatedBy,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
 
-  Caballo copyWith({String? nombre, String? estado, String? ubicacionId, bool clearUbicacion = false}) => Caballo(
+  Caballo copyWith({
+    String? nombre,
+    String? estado,
+    String? ubicacionId,
+    bool clearUbicacion = false,
+    Object? color = sinCambio,
+    Object? nota = sinCambio,
+  }) =>
+      Caballo(
         id: id,
         nombre: nombre ?? this.nombre,
         estado: estado ?? this.estado,
         ubicacionId: clearUbicacion ? null : (ubicacionId ?? this.ubicacionId),
+        color: valorOAnterior<String>(color, this.color),
+        nota: valorOAnterior<String>(nota, this.nota),
+        createdBy: createdBy,
+        updatedBy: updatedBy,
         createdAt: createdAt,
         updatedAt: DateTime.now(),
       );

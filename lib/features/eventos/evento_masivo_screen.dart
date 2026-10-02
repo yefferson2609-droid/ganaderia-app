@@ -153,7 +153,7 @@ class _EventoMasivoScreenState extends State<EventoMasivoScreen> {
                       Text('${_seleccionadas.length} seleccionadas',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       const Spacer(),
-                      ...['todos', 'activa', 'vendida', 'muerta'].map((e) =>
+                      ...['todos', 'activa', 'vendida', 'fallecida'].map((e) =>
                           Padding(
                             padding: const EdgeInsets.only(left: 4),
                             child: FilterChip(

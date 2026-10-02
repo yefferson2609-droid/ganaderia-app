@@ -3,6 +3,17 @@ import 'package:go_router/go_router.dart';
 import '../../core/models/caballo.dart';
 import '../../core/repositories/caballo_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animal_face.dart';
+
+Color estadoCaballoColor(String estado) {
+  switch (estado) {
+    case 'activo': return AppColors.success;
+    case 'vendido': return AppColors.warning;
+    case 'fallecido':
+    case 'muerto': return AppColors.danger;
+    default: return Colors.grey;
+  }
+}
 
 class CaballosScreen extends StatefulWidget {
   const CaballosScreen({super.key});
@@ -52,15 +63,6 @@ class _CaballosScreenState extends State<CaballosScreen> {
     }
   }
 
-  Color _estadoColor(String estado) {
-    switch (estado) {
-      case 'activo': return AppColors.success;
-      case 'vendido': return AppColors.warning;
-      case 'muerto': return AppColors.danger;
-      default: return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,17 +88,18 @@ class _CaballosScreenState extends State<CaballosScreen> {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor:
-                                _estadoColor(c.estado).withOpacity(0.15),
-                            child: Icon(Icons.directions_run,
-                                color: _estadoColor(c.estado)),
-                          ),
+                          onTap: () => context
+                              .push('/caballos/${c.id}')
+                              .then((_) => _load()),
+                          leading: AnimalFace(
+                              tipo: 'caballo',
+                              estadoColor: estadoCaballoColor(c.estado)),
                           title: Text(c.nombre,
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold)),
                           subtitle: Text(
-                              'Estado: ${c.estado[0].toUpperCase()}${c.estado.substring(1)}'),
+                              'Estado: ${c.estado[0].toUpperCase()}${c.estado.substring(1)}'
+                              '${c.color != null ? ' · ${c.color}' : ''}'),
                           trailing: PopupMenuButton<String>(
                             onSelected: (v) {
                               if (v == 'editar') {

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animal_face.dart';
 
 class VacasScreen extends StatefulWidget {
   const VacasScreen({super.key});
@@ -57,6 +58,7 @@ class _VacasScreenState extends State<VacasScreen> {
         return AppColors.success;
       case 'vendida':
         return AppColors.warning;
+      case 'fallecida':
       case 'muerta':
         return AppColors.danger;
       default:
@@ -94,7 +96,7 @@ class _VacasScreenState extends State<VacasScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ['todos', 'activa', 'vendida', 'muerta'].map((e) {
+                children: ['todos', 'activa', 'vendida', 'fallecida'].map((e) {
                   final selected = _filtroEstado == e;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
@@ -126,25 +128,16 @@ class _VacasScreenState extends State<VacasScreen> {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor:
-                                      _estadoColor(vaca.estado).withOpacity(0.2),
-                                  child: Text(
-                                    vaca.numero.length > 3
-                                        ? vaca.numero.substring(0, 3)
-                                        : vaca.numero,
-                                    style: TextStyle(
-                                      color: _estadoColor(vaca.estado),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
+                                leading: AnimalFace(
+                                    tipo: 'vaca',
+                                    estadoColor: _estadoColor(vaca.estado)),
                                 title: Text('Vaca #${vaca.numero}',
                                     style: const TextStyle(
                                         fontWeight: FontWeight.bold)),
                                 subtitle: Text(
-                                    'Estado: ${vaca.estado[0].toUpperCase()}${vaca.estado.substring(1)}'),
+                                    'Estado: ${vaca.estado[0].toUpperCase()}${vaca.estado.substring(1)}'
+                                    '${vaca.estadoReproductivo == 'prenada' ? ' · Preñada' : ''}'
+                                    '${vaca.color != null ? ' · ${vaca.color}' : ''}'),
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: () => context
                                     .push('/vacas/${vaca.id}')

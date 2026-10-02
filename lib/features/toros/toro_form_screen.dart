@@ -8,6 +8,7 @@ import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/auditoria.dart';
 
 class ToroFormScreen extends StatefulWidget {
   final String? id;
@@ -24,6 +25,8 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
   final _ubicacionRepo = UbicacionRepository();
   final _numeroCtrl = TextEditingController();
   final _nombreCtrl = TextEditingController();
+  final _colorCtrl = TextEditingController();
+  final _notaCtrl = TextEditingController();
 
   DateTime? _fechaNacimiento;
   String _estado = 'activo';
@@ -51,6 +54,8 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
   void dispose() {
     _numeroCtrl.dispose();
     _nombreCtrl.dispose();
+    _colorCtrl.dispose();
+    _notaCtrl.dispose();
     super.dispose();
   }
 
@@ -58,7 +63,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
     setState(() => _loadingData = true);
     _torosDisponibles = await _repo.getAll();
     _vacas = await _vacaRepo.getAll();
-    _ubicaciones = await _ubicacionRepo.getAll(soloActivas: true);
+    _ubicaciones = await _ubicacionRepo.getAll();
 
     if (_isEditing) {
       _toroOriginal = await _repo.getById(widget.id!);
@@ -66,12 +71,19 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         _numeroCtrl.text = _toroOriginal!.numero;
         _nombreCtrl.text = _toroOriginal!.nombre;
         _fechaNacimiento = _toroOriginal!.fechaNacimiento;
-        _estado = _toroOriginal!.estado;
+        _estado = _toroOriginal!.estado == 'muerto'
+            ? 'fallecido'
+            : _toroOriginal!.estado;
+        _colorCtrl.text = _toroOriginal!.color ?? '';
+        _notaCtrl.text = _toroOriginal!.nota ?? '';
         _padreId = _toroOriginal!.padreId;
         _madreId = _toroOriginal!.madreId;
         _ubicacionId = _toroOriginal!.ubicacionId;
       }
     }
+    if (!_torosDisponibles.any((t) => t.id == _padreId)) _padreId = null;
+    if (!_vacas.any((v) => v.id == _madreId)) _madreId = null;
+    if (!_ubicaciones.any((u) => u.id == _ubicacionId)) _ubicacionId = null;
     setState(() => _loadingData = false);
   }
 
@@ -114,6 +126,8 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         clearMadreId: _madreId == null,
         ubicacionId: _ubicacionId,
         clearUbicacion: _ubicacionId == null,
+        color: textoONull(_colorCtrl.text),
+        nota: textoONull(_notaCtrl.text),
       ));
     } else {
       await _repo.create(
@@ -124,6 +138,8 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         padreId: _padreId,
         madreId: _madreId,
         ubicacionId: _ubicacionId,
+        color: textoONull(_colorCtrl.text),
+        nota: textoONull(_notaCtrl.text),
       );
     }
     if (mounted) context.pop();
@@ -192,7 +208,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                       items: const [
                         DropdownMenuItem(value: 'activo', child: Text('Activo')),
                         DropdownMenuItem(value: 'vendido', child: Text('Vendido')),
-                        DropdownMenuItem(value: 'muerto', child: Text('Muerto')),
+                        DropdownMenuItem(value: 'fallecido', child: Text('Fallecido')),
                       ],
                       onChanged: (v) => setState(() => _estado = v!),
                     ),
@@ -242,6 +258,21 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                             value: v.id, child: Text('Vaca #${v.numero}'))),
                       ],
                       onChanged: (v) => setState(() => _madreId = v),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _colorCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Color',
+                          prefixIcon: Icon(Icons.palette_outlined)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notaCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Nota (opcional)',
+                          prefixIcon: Icon(Icons.notes)),
+                      maxLines: 3,
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(

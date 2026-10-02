@@ -2,16 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../core/database/local_db.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/permisos_provider.dart';
 import '../../core/providers/sync_provider.dart';
+import '../../core/repositories/actividad_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
+import '../../core/repositories/registro_salud_repository.dart';
+import '../../core/repositories/solicitud_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/auditoria.dart';
+import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/creador_info.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$');
+
+const _kAvisoSolicitudesVistas = 'aviso_solicitudes_vistas';
+
+class _Aviso {
+  final IconData icon;
+  final Color color;
+  final String texto;
+  final String ruta;
+  final bool marcarSolicitudesVistas;
+  const _Aviso(this.icon, this.color, this.texto, this.ruta,
+      {this.marcarSolicitudesVistas = false});
+}
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,8 +42,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, int> _totales = {};
   List<Ubicacion> _ubicaciones = [];
   Map<String, Map<String, int>> _conteosPorUbicacion = {};
+  Map<String, int> _sinUbicacion = {};
+  List<_Aviso> _avisos = [];
   double _utilidadMes = 0;
   bool _loading = true;
+  DateTime? _ultimaSyncVista;
   final _ubicacionRepo = UbicacionRepository();
   final _movimientoRepo = MovimientoFinancieroRepository();
 
@@ -36,34 +57,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadConteos() async {
-    setState(() => _loading = true);
-    final db = LocalDb.instance.db;
+    if (_totales.isEmpty) setState(() => _loading = true);
 
-    final vacas = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM vacas WHERE deleted=0 AND estado='activa'");
-    final toros = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM toros WHERE deleted=0 AND estado='activo'");
-    final caballos = await db.rawQuery(
-        "SELECT COUNT(*) as c FROM caballos WHERE deleted=0 AND estado='activo'");
-    final cerdos = await db.rawQuery(
-        "SELECT COALESCE(SUM(hembras+machos),0) as c FROM lotes WHERE deleted=0 AND tipo='cerdo'");
-    final ovejos = await db.rawQuery(
-        "SELECT COALESCE(SUM(hembras+machos),0) as c FROM lotes WHERE deleted=0 AND tipo='ovejo'");
-
-    _totales = {
-      'vacas': (vacas.first['c'] as int?) ?? 0,
-      'toros': (toros.first['c'] as int?) ?? 0,
-      'caballos': (caballos.first['c'] as int?) ?? 0,
-      'cerdos': (cerdos.first['c'] as int?) ?? 0,
-      'ovejos': (ovejos.first['c'] as int?) ?? 0,
-    };
-
+    _totales = await _ubicacionRepo.getConteosPorUbicacion(null, todas: true);
     _ubicaciones = await _ubicacionRepo.getAll(soloActivas: true);
     _conteosPorUbicacion = {};
     for (final ub in _ubicaciones) {
       _conteosPorUbicacion[ub.id] =
           await _ubicacionRepo.getConteosPorUbicacion(ub.id);
     }
+    _sinUbicacion = await _ubicacionRepo.getConteosPorUbicacion(null);
 
     final now = DateTime.now();
     final totalesFinanzas = await _movimientoRepo.getTotales(
@@ -73,18 +76,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _utilidadMes = totalesFinanzas['utilidad'] ?? 0;
 
     if (mounted) await context.read<PermisosProvider>().cargar();
+    await _cargarAvisos();
 
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
+
+  Future<void> _cargarAvisos() async {
+    final uid = usuarioActualId();
+    if (uid == null || !mounted) return;
+    final permisos = context.read<PermisosProvider>();
+    final avisos = <_Aviso>[];
+    String plural(int n, String uno, String varios) => n == 1 ? uno : varios;
+
+    final actividadRepo = ActividadRepository();
+    final misPendientes = await actividadRepo.contarPendientesDe(uid);
+    if (misPendientes > 0) {
+      avisos.add(_Aviso(
+          Icons.assignment_late,
+          AppColors.warning,
+          plural(misPendientes, 'Tienes 1 actividad pendiente',
+              'Tienes $misPendientes actividades pendientes'),
+          '/actividades'));
+    }
+
+    final solicitudRepo = SolicitudRepository();
+    if (permisos.puedeEditar('solicitudes')) {
+      final porRevisar = await solicitudRepo.contarPendientes();
+      if (porRevisar > 0) {
+        avisos.add(_Aviso(
+            Icons.inventory_2,
+            AppColors.info,
+            plural(porRevisar, 'Tienes 1 solicitud pendiente de revisar',
+                'Tienes $porRevisar solicitudes pendientes de revisar'),
+            '/solicitudes'));
+      }
+    }
+
+    DateTime vistas = DateTime.now().subtract(const Duration(days: 7));
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final guardado = prefs.getString('$_kAvisoSolicitudesVistas:$uid');
+      if (guardado != null) vistas = DateTime.tryParse(guardado) ?? vistas;
+    } catch (_) {}
+    final resueltas = await solicitudRepo.contarResueltasDe(uid, vistas);
+    if (resueltas > 0) {
+      avisos.add(_Aviso(
+          Icons.mark_email_read,
+          AppColors.success,
+          plural(resueltas, '1 de tus solicitudes fue resuelta',
+              '$resueltas de tus solicitudes fueron resueltas'),
+          '/solicitudes',
+          marcarSolicitudesVistas: true));
+    }
+
+    if (permisos.puedeVer('salud')) {
+      final saludRepo = RegistroSaludRepository();
+      final enTratamiento = await saludRepo.contarEnTratamiento();
+      if (enTratamiento > 0) {
+        avisos.add(_Aviso(
+            Icons.healing,
+            AppColors.danger,
+            plural(enTratamiento, '1 animal en tratamiento',
+                '$enTratamiento animales en tratamiento'),
+            '/salud'));
+      }
+      final dosis = await saludRepo.contarDosisPendientes();
+      if (dosis > 0) {
+        avisos.add(_Aviso(
+            Icons.vaccines,
+            AppColors.danger,
+            plural(dosis, '1 dosis pendiente de aplicar',
+                '$dosis dosis pendientes de aplicar'),
+            '/salud'));
+      }
+    }
+
+    final completadas = await actividadRepo.contarCompletadasDesde(
+        DateTime.now().subtract(const Duration(days: 2)));
+    if (completadas > 0) {
+      avisos.add(_Aviso(
+          Icons.task_alt,
+          AppColors.success,
+          plural(completadas, '1 actividad completada recientemente',
+              '$completadas actividades completadas recientemente'),
+          '/actividades'));
+    }
+
+    _avisos = avisos;
+  }
+
+  Future<void> _abrirAviso(_Aviso a) async {
+    if (a.marcarSolicitudesVistas) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('$_kAvisoSolicitudesVistas:${usuarioActualId()}',
+            DateTime.now().toIso8601String());
+      } catch (_) {}
+    }
+    if (mounted) context.push(a.ruta).then((_) => _loadConteos());
+  }
+
+  void _abrir(String ruta) => context.push(ruta).then((_) => _loadConteos());
+
+  Widget _seccion(String titulo) => Padding(
+        padding: const EdgeInsets.only(top: 24, bottom: 12),
+        child: Text(titulo,
+            style: Theme.of(context)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.bold)),
+      );
+
+  Widget _filaConteos(Map<String, int> c) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _MiniCount(label: 'Vacas', count: c['vacas'] ?? 0, color: AppColors.primary),
+          _MiniCount(label: 'Toros', count: c['toros'] ?? 0, color: AppColors.info),
+          _MiniCount(label: 'Terneros', count: c['terneros'] ?? 0, color: AppColors.primaryLight),
+          _MiniCount(label: 'Caballos', count: c['caballos'] ?? 0, color: AppColors.secondary),
+          _MiniCount(label: 'Cerdos', count: c['cerdos'] ?? 0, color: AppColors.warning),
+          _MiniCount(label: 'Ovejos', count: c['ovejos'] ?? 0, color: AppColors.accentPurple),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {
     final sync = context.watch<SyncProvider>();
     final permisos = context.watch<PermisosProvider>();
 
+    // Al terminar una sincronización, recargar los números.
+    if (!sync.isSyncing &&
+        sync.lastSync != null &&
+        sync.lastSync != _ultimaSyncVista) {
+      _ultimaSyncVista = sync.lastSync;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadConteos();
+      });
+    }
+
+    final menu = <(String, String, String?)>[
+      ('/evento-masivo', 'Evento masivo', 'eventos'),
+      ('/salud', 'Salud', 'salud'),
+      ('/actividades', 'Actividades', 'actividades'),
+      ('/solicitudes', 'Solicitudes', 'solicitudes'),
+      ('/reportes', 'Reportes', 'reportes'),
+      ('/tipos-evento', 'Tipos de evento', 'eventos'),
+      ('/ubicaciones', 'Ubicaciones', 'ubicaciones'),
+      ('/finanzas', 'Finanzas', 'finanzas'),
+      ('/usuarios', 'Usuarios', 'usuarios'),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ganadería'),
+        titleSpacing: 8,
+        title: const Row(children: [
+          HierroLogo(size: 34),
+          SizedBox(width: 10),
+          Text('Ganadería'),
+        ]),
         actions: [
           if (sync.isSyncing)
             const Padding(
@@ -97,12 +246,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
             )
           else
             IconButton(
-              icon: Icon(sync.isOnline ? Icons.cloud_done : Icons.cloud_off),
-              tooltip: sync.isOnline ? 'En línea' : 'Sin conexión',
+              icon: Icon(!sync.isOnline
+                  ? Icons.cloud_off
+                  : sync.lastError != null
+                      ? Icons.sync_problem
+                      : Icons.cloud_done),
+              tooltip: !sync.isOnline
+                  ? 'Sin conexión'
+                  : sync.lastSync != null
+                      ? 'Actualizado ${haceCuanto(sync.lastSync!)}'
+                      : 'En línea',
               onPressed: sync.isOnline
                   ? () async {
                       await sync.syncAll();
-                      _loadConteos();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(sync.lastError == null
+                            ? 'Sincronizado correctamente'
+                            : 'Algunos datos no se sincronizaron. Intenta de nuevo.'),
+                        backgroundColor: sync.lastError == null
+                            ? AppColors.success
+                            : AppColors.danger,
+                      ));
                     }
                   : null,
             ),
@@ -110,26 +275,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onSelected: (v) async {
               if (v == 'logout') {
                 await context.read<AuthProvider>().signOut();
-                if (mounted) context.go('/login');
-              } else if (v == 'tipos') {
-                context.push('/tipos-evento');
-              } else if (v == 'ubicaciones') {
-                context.push('/ubicaciones').then((_) => _loadConteos());
-              } else if (v == 'evento_masivo') {
-                context.push('/evento-masivo').then((_) => _loadConteos());
-              } else if (v == 'finanzas') {
-                context.push('/finanzas').then((_) => _loadConteos());
-              } else if (v == 'usuarios') {
-                context.push('/usuarios').then((_) => _loadConteos());
+                if (context.mounted) context.go('/login');
+              } else {
+                _abrir(v);
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'evento_masivo', child: Text('Evento masivo')),
-              const PopupMenuItem(value: 'tipos', child: Text('Tipos de evento')),
-              const PopupMenuItem(value: 'ubicaciones', child: Text('Ubicaciones')),
-              const PopupMenuItem(value: 'finanzas', child: Text('Finanzas')),
-              if (permisos.puedeVer('usuarios'))
-                const PopupMenuItem(value: 'usuarios', child: Text('Usuarios')),
+              for (final (ruta, label, modulo) in menu)
+                if (modulo == null || permisos.puedeVer(modulo))
+                  PopupMenuItem(value: ruta, child: Text(label)),
               const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
             ],
           ),
@@ -138,139 +292,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadConteos,
+              onRefresh: () async {
+                if (sync.isOnline) await sync.syncAll();
+                await _loadConteos();
+              },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Totales generales
-                    Text('Total general',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
+                    if (_avisos.isNotEmpty) ...[
+                      _seccion('Avisos'),
+                      ..._avisos.map((a) => Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              dense: true,
+                              leading: Icon(a.icon, color: a.color),
+                              title: Text(a.texto,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600)),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _abrirAviso(a),
+                            ),
+                          )),
+                    ],
+
+                    _seccion('Total general'),
                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisCount: 3,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
-                      childAspectRatio: 1.1,
+                      childAspectRatio: 0.95,
                       children: [
-                        _AnimalCard(label: 'Vacas', count: _totales['vacas'] ?? 0,
-                            icon: Icons.local_activity, color: AppColors.primary,
-                            onTap: () => context.push('/vacas').then((_) => _loadConteos())),
-                        _AnimalCard(label: 'Toros', count: _totales['toros'] ?? 0,
-                            icon: Icons.male, color: AppColors.info,
-                            onTap: () => context.push('/toros').then((_) => _loadConteos())),
-                        _AnimalCard(label: 'Caballos', count: _totales['caballos'] ?? 0,
-                            icon: Icons.directions_run, color: AppColors.secondary,
-                            onTap: () => context.push('/caballos').then((_) => _loadConteos())),
-                        _AnimalCard(label: 'Cerdos', count: _totales['cerdos'] ?? 0,
-                            icon: Icons.set_meal, color: AppColors.warning,
-                            onTap: () => context.push('/lotes').then((_) => _loadConteos())),
-                        _AnimalCard(label: 'Ovejos', count: _totales['ovejos'] ?? 0,
-                            icon: Icons.filter_vintage, color: AppColors.accentPurple,
-                            onTap: () => context.push('/lotes').then((_) => _loadConteos())),
+                        if (permisos.puedeVer('vacas'))
+                          _AnimalCard(label: 'Vacas', tipo: 'vaca',
+                              count: _totales['vacas'] ?? 0, color: AppColors.primary,
+                              onTap: () => _abrir('/vacas')),
+                        if (permisos.puedeVer('toros'))
+                          _AnimalCard(label: 'Toros', tipo: 'toro',
+                              count: _totales['toros'] ?? 0, color: AppColors.info,
+                              onTap: () => _abrir('/toros')),
+                        if (permisos.puedeVer('terneros'))
+                          _AnimalCard(label: 'Terneros', tipo: 'ternero',
+                              count: _totales['terneros'] ?? 0, color: AppColors.primaryLight,
+                              onTap: () => _abrir('/terneros')),
+                        if (permisos.puedeVer('caballos'))
+                          _AnimalCard(label: 'Caballos', tipo: 'caballo',
+                              count: _totales['caballos'] ?? 0, color: AppColors.secondary,
+                              onTap: () => _abrir('/caballos')),
+                        if (permisos.puedeVer('lotes'))
+                          _AnimalCard(label: 'Cerdos', tipo: 'cerdo',
+                              count: _totales['cerdos'] ?? 0, color: AppColors.warning,
+                              onTap: () => _abrir('/lotes')),
+                        if (permisos.puedeVer('lotes'))
+                          _AnimalCard(label: 'Ovejos', tipo: 'ovejo',
+                              count: _totales['ovejos'] ?? 0, color: AppColors.accentPurple,
+                              onTap: () => _abrir('/lotes')),
                       ],
                     ),
 
-                    const SizedBox(height: 24),
-                    Text('Finanzas',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 12),
-                    Card(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => context
-                            .push('/finanzas')
-                            .then((_) => _loadConteos()),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Icon(Icons.account_balance_wallet,
-                                  color: _utilidadMes >= 0
-                                      ? AppColors.primary
-                                      : AppColors.danger),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Utilidad del mes',
-                                        style: TextStyle(fontSize: 12)),
-                                    Text(
-                                      _moneyFormat.format(_utilidadMes),
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: _utilidadMes >= 0
-                                            ? AppColors.primary
-                                            : AppColors.danger,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Por ubicación
-                    if (_ubicaciones.isNotEmpty) ...[
-                      const SizedBox(height: 24),
-                      Text('Por ubicación',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-                      ..._ubicaciones.map((ub) {
-                        final c = _conteosPorUbicacion[ub.id] ?? {};
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
+                    if (permisos.puedeVer('finanzas')) ...[
+                      _seccion('Finanzas'),
+                      Card(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _abrir('/finanzas'),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Row(children: [
-                                  const Icon(Icons.location_on,
-                                      color: AppColors.primary, size: 18),
-                                  const SizedBox(width: 6),
-                                  Text(ub.nombre,
-                                      style: const TextStyle(
+                                Icon(Icons.account_balance_wallet,
+                                    color: _utilidadMes >= 0
+                                        ? AppColors.primary
+                                        : AppColors.danger),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Utilidad del mes',
+                                          style: TextStyle(fontSize: 12)),
+                                      Text(
+                                        _moneyFormat.format(_utilidadMes),
+                                        style: TextStyle(
+                                          fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                ]),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: [
-                                    _MiniCount(label: 'Vacas', count: c['vacas'] ?? 0, color: AppColors.primary),
-                                    _MiniCount(label: 'Toros', count: c['toros'] ?? 0, color: AppColors.info),
-                                    _MiniCount(label: 'Caballos', count: c['caballos'] ?? 0, color: AppColors.secondary),
-                                    _MiniCount(label: 'Cerdos', count: c['cerdos'] ?? 0, color: AppColors.warning),
-                                    _MiniCount(label: 'Ovejos', count: c['ovejos'] ?? 0, color: AppColors.accentPurple),
-                                  ],
+                                          color: _utilidadMes >= 0
+                                              ? AppColors.primary
+                                              : AppColors.danger,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const Icon(Icons.chevron_right),
                               ],
                             ),
                           ),
-                        );
-                      }),
+                        ),
+                      ),
+                    ],
+
+                    // Por ubicación
+                    if (_ubicaciones.isNotEmpty) ...[
+                      _seccion('Por ubicación'),
+                      ..._ubicaciones.map((ub) => _UbicacionCard(
+                            nombre: ub.nombre,
+                            child: _filaConteos(_conteosPorUbicacion[ub.id] ?? {}),
+                          )),
+                      if (_sinUbicacion.values.any((v) => v > 0))
+                        _UbicacionCard(
+                          nombre: 'Sin ubicación',
+                          icon: Icons.location_off,
+                          child: _filaConteos(_sinUbicacion),
+                        ),
                     ],
                   ],
                 ),
@@ -280,16 +418,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+class _UbicacionCard extends StatelessWidget {
+  final String nombre;
+  final IconData icon;
+  final Widget child;
+  const _UbicacionCard(
+      {required this.nombre, required this.child, this.icon = Icons.location_on});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(icon, color: AppColors.primary, size: 18),
+              const SizedBox(width: 6),
+              Text(nombre,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+            ]),
+            const SizedBox(height: 12),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AnimalCard extends StatelessWidget {
   final String label;
+  final String tipo;
   final int count;
-  final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
   const _AnimalCard({
-    required this.label, required this.count,
-    required this.icon, required this.color, required this.onTap,
+    required this.label, required this.tipo, required this.count,
+    required this.color, required this.onTap,
   });
 
   @override
@@ -299,15 +469,15 @@ class _AnimalCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 28, color: color),
-              const SizedBox(height: 6),
+              AnimalFace(tipo: tipo, size: 44),
+              const SizedBox(height: 4),
               Text(count.toString(),
                   style: TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.bold, color: color)),
+                      fontSize: 20, fontWeight: FontWeight.bold, color: color)),
               Text(label,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall),
@@ -332,8 +502,8 @@ class _MiniCount extends StatelessWidget {
       children: [
         Text(count.toString(),
             style: TextStyle(
-                fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
     );
   }

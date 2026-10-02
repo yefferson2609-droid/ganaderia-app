@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const MODULOS = [
-  'vacas', 'toros', 'caballos', 'lotes', 'eventos',
-  'ubicaciones', 'finanzas', 'usuarios',
+  'vacas', 'toros', 'terneros', 'caballos', 'lotes', 'eventos',
+  'salud', 'actividades', 'solicitudes',
+  'ubicaciones', 'finanzas', 'reportes', 'usuarios',
 ];
 
 Deno.serve(async (req) => {

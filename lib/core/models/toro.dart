@@ -1,3 +1,5 @@
+import '../utils/auditoria.dart';
+
 class Toro {
   final String id;
   final String numero;
@@ -7,6 +9,10 @@ class Toro {
   final String? padreId;
   final String? madreId;
   final String? ubicacionId;
+  final String? color;
+  final String? nota;
+  final String? createdBy;
+  final String? updatedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +25,10 @@ class Toro {
     this.padreId,
     this.madreId,
     this.ubicacionId,
+    this.color,
+    this.nota,
+    this.createdBy,
+    this.updatedBy,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -47,6 +57,10 @@ class Toro {
         padreId: map['padre_id'] as String?,
         madreId: map['madre_id'] as String?,
         ubicacionId: map['ubicacion_id'] as String?,
+        color: map['color'] as String?,
+        nota: map['nota'] as String?,
+        createdBy: map['created_by'] as String?,
+        updatedBy: map['updated_by'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -60,6 +74,10 @@ class Toro {
         'padre_id': padreId,
         'madre_id': madreId,
         'ubicacion_id': ubicacionId,
+        'color': color,
+        'nota': nota,
+        'created_by': createdBy,
+        'updated_by': updatedBy,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };
@@ -75,6 +93,8 @@ class Toro {
     bool clearMadreId = false,
     String? ubicacionId,
     bool clearUbicacion = false,
+    Object? color = sinCambio,
+    Object? nota = sinCambio,
   }) =>
       Toro(
         id: id,
@@ -86,6 +106,10 @@ class Toro {
         madreId: clearMadreId ? null : (madreId ?? this.madreId),
         ubicacionId:
             clearUbicacion ? null : (ubicacionId ?? this.ubicacionId),
+        color: valorOAnterior<String>(color, this.color),
+        nota: valorOAnterior<String>(nota, this.nota),
+        createdBy: createdBy,
+        updatedBy: updatedBy,
         createdAt: createdAt,
         updatedAt: DateTime.now(),
       );

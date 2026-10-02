@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
+import '../utils/auditoria.dart';
 import '../models/vaca.dart';
 
 class VacaRepository {
@@ -32,6 +33,8 @@ class VacaRepository {
     String? toroId,
     DateTime? fechaEstimadaParto,
     String? ubicacionId,
+    String? color,
+    String? nota,
   }) async {
     final now = DateTime.now();
     final vaca = Vaca(
@@ -46,20 +49,18 @@ class VacaRepository {
       toroId: toroId,
       fechaEstimadaParto: fechaEstimadaParto,
       ubicacionId: ubicacionId,
+      color: color,
+      nota: nota,
       createdAt: now,
       updatedAt: now,
     );
-    final map = vaca.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaNueva(vaca.toMap());
     await _db.insert('vacas', map);
     return vaca;
   }
 
   Future<void> update(Vaca vaca) async {
-    final map = vaca.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaEditada(vaca.toMap());
     await _db.update('vacas', map, where: 'id = ?', whereArgs: [vaca.id]);
   }
 

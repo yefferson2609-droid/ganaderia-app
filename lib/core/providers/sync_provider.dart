@@ -4,19 +4,49 @@ import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/local_db.dart';
 
+/// Tablas sincronizadas con Supabase, en orden de dependencia.
+const kTablasSync = [
+  'ubicaciones',
+  'tipos_evento',
+  'perfiles_usuario',
+  'permisos_usuario',
+  'toros',
+  'vacas',
+  'caballos',
+  'terneros',
+  'pesadas_ternero',
+  'traslados_ternero',
+  'lotes',
+  'movimientos_lote',
+  'eventos_vaca',
+  'eventos_masivos',
+  'eventos_masivos_vacas',
+  'registros_salud',
+  'tratamientos_salud',
+  'conceptos_financieros',
+  'movimientos_financieros',
+  'actividades',
+  'solicitudes',
+];
+
 class SyncProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
   bool _isSyncing = false;
   bool _isOnline = false;
   DateTime? _lastSync;
+  String? _lastError;
 
   bool get isSyncing => _isSyncing;
   bool get isOnline => _isOnline;
   DateTime? get lastSync => _lastSync;
+  String? get lastError => _lastError;
 
   SyncProvider() {
     _initConnectivity();
     Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
+    _supabase.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.signedIn && _isOnline) syncAll();
+    });
   }
 
   Future<void> _initConnectivity() async {
@@ -40,168 +70,140 @@ class SyncProvider extends ChangeNotifier {
     if (_isSyncing) return;
     if (_supabase.auth.currentUser == null) return;
     _isSyncing = true;
+    _lastError = null;
     notifyListeners();
 
-    try {
-      await _pullFromSupabase();
-      await _pushToSupabase();
+    final errores = <String>[];
+    // La bajada no pisa filas con cambios locales pendientes (synced = 0),
+    // así que se puede bajar primero y luego subir.
+    for (final tabla in kTablasSync) {
+      try {
+        await _pull(tabla);
+      } catch (e) {
+        errores.add('Bajar $tabla: $e');
+      }
+    }
+    for (final tabla in kTablasSync) {
+      try {
+        await _push(tabla);
+      } catch (e) {
+        errores.add('Subir $tabla: $e');
+      }
+    }
+
+    if (errores.isEmpty) {
       _lastSync = DateTime.now();
-    } catch (_) {
-      // Silenciamos errores de sync, la app sigue funcionando offline
-    } finally {
-      _isSyncing = false;
-      notifyListeners();
+    } else {
+      _lastError = errores.join('\n');
+      debugPrint('Errores de sincronización:\n$_lastError');
     }
+    _isSyncing = false;
+    notifyListeners();
   }
 
-  Future<void> _pullFromSupabase() async {
+  Future<List<Map<String, dynamic>>> _fetchAll(String tabla) async {
+    const pagina = 1000;
+    final todos = <Map<String, dynamic>>[];
+    var desde = 0;
+    while (true) {
+      final rows = await _supabase
+          .from(tabla)
+          .select()
+          .order('id')
+          .range(desde, desde + pagina - 1);
+      todos.addAll(rows);
+      if (rows.length < pagina) break;
+      desde += pagina;
+    }
+    return todos;
+  }
+
+  Future<void> _pull(String tabla) async {
     final db = LocalDb.instance.db;
+    final columnas = await LocalDb.instance.columnas(tabla);
+    final remotos = await _fetchAll(tabla);
 
-    // Tipos de evento
-    final tiposEvento =
-        await _supabase.from('tipos_evento').select().order('nombre');
-    for (final row in tiposEvento) {
-      await db.insert('tipos_evento', _toLocalRow(row),
+    // Filas con cambios locales pendientes: no se sobrescriben.
+    final pendientes = (await db.query(tabla,
+            columns: ['id'], where: 'synced = 0'))
+        .map((r) => r['id'] as String)
+        .toSet();
+
+    final idsRemotos = <String>{};
+    final batch = db.batch();
+    for (final row in remotos) {
+      final id = row['id'] as String;
+      idsRemotos.add(id);
+      if (pendientes.contains(id)) continue;
+      batch.insert(tabla, _toLocalRow(row, columnas),
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
+    await batch.commit(noResult: true);
 
-    // Ubicaciones
-    final ubicaciones =
-        await _supabase.from('ubicaciones').select().order('nombre');
-    for (final row in ubicaciones) {
-      await db.insert('ubicaciones', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Toros
-    final toros = await _supabase.from('toros').select().order('numero');
-    for (final row in toros) {
-      await db.insert('toros', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-    // Vacas
-    final vacas = await _supabase.from('vacas').select().order('numero');
-    for (final row in vacas) {
-      await db.insert('vacas', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Caballos
-    final caballos = await _supabase.from('caballos').select().order('nombre');
-    for (final row in caballos) {
-      await db.insert('caballos', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Lotes
-    final lotes = await _supabase.from('lotes').select().order('nombre');
-    for (final row in lotes) {
-      await db.insert('lotes', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Movimientos lote
-    final movimientos =
-        await _supabase.from('movimientos_lote').select().order('fecha');
-    for (final row in movimientos) {
-      await db.insert('movimientos_lote', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Eventos vaca
-    final eventos =
-        await _supabase.from('eventos_vaca').select().order('fecha');
-    for (final row in eventos) {
-      await db.insert('eventos_vaca', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Conceptos financieros
-    final conceptos =
-        await _supabase.from('conceptos_financieros').select().order('nombre');
-    for (final row in conceptos) {
-      await db.insert('conceptos_financieros', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Movimientos financieros
-    final movimientosFinancieros = await _supabase
-        .from('movimientos_financieros')
-        .select()
-        .order('fecha');
-    for (final row in movimientosFinancieros) {
-      await db.insert('movimientos_financieros', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Perfiles de usuario
-    final perfiles =
-        await _supabase.from('perfiles_usuario').select().order('nombre');
-    for (final row in perfiles) {
-      await db.insert('perfiles_usuario', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    // Permisos de usuario
-    final permisos = await _supabase.from('permisos_usuario').select();
-    for (final row in permisos) {
-      await db.insert('permisos_usuario', _toLocalRow(row),
-          conflictAlgorithm: ConflictAlgorithm.replace);
+    // Lo que se borró en el servidor también se borra aquí.
+    final locales = await db.query(tabla, columns: ['id'], where: 'synced = 1');
+    for (final r in locales) {
+      final id = r['id'] as String;
+      if (!idsRemotos.contains(id)) {
+        await db.delete(tabla, where: 'id = ?', whereArgs: [id]);
+      }
     }
   }
 
-  Map<String, dynamic> _toLocalRow(Map<String, dynamic> row) {
-    final local = Map<String, dynamic>.from(row);
+  Map<String, dynamic> _toLocalRow(
+      Map<String, dynamic> row, Set<String> columnas) {
+    final local = <String, dynamic>{};
+    row.forEach((k, v) {
+      if (!columnas.contains(k)) return;
+      if (v is bool) {
+        _columnasBool.add(k);
+        local[k] = v ? 1 : 0;
+      } else {
+        local[k] = v;
+      }
+    });
     local['synced'] = 1;
     local['deleted'] = 0;
     return local;
   }
 
-  Future<void> _pushToSupabase() async {
+  Future<void> _push(String tabla) async {
     final db = LocalDb.instance.db;
 
-    // Push registros no sincronizados de cada tabla
-    final tables = [
-      'ubicaciones',
-      'tipos_evento',
-      'toros',
-      'vacas',
-      'caballos',
-      'lotes',
-      'movimientos_lote',
-      'eventos_vaca',
-      'eventos_masivos',
-      'eventos_masivos_vacas',
-      'conceptos_financieros',
-      'movimientos_financieros',
-      'perfiles_usuario',
-      'permisos_usuario',
-    ];
+    final unsynced = await db.query(tabla, where: 'synced = 0 AND deleted = 0');
+    for (final row in unsynced) {
+      await _supabase.from(tabla).upsert(_toRemoteRow(tabla, row));
+      await db.update(tabla, {'synced': 1},
+          where: 'id = ?', whereArgs: [row['id']]);
+    }
 
-    for (final table in tables) {
-      final unsynced =
-          await db.query(table, where: 'synced = 0 AND deleted = 0');
-      for (final row in unsynced) {
-        final remoteRow = _toRemoteRow(row);
-        await _supabase.from(table).upsert(remoteRow);
-        await db.update(table, {'synced': 1},
-            where: 'id = ?', whereArgs: [row['id']]);
-      }
-
-      // Eliminar en remoto los marcados como deleted
-      final deleted =
-          await db.query(table, where: 'deleted = 1 AND synced = 0');
-      for (final row in deleted) {
-        await _supabase.from(table).delete().eq('id', row['id'] as String);
-        await db.delete(table, where: 'id = ?', whereArgs: [row['id']]);
-      }
+    // Eliminar en remoto los marcados como deleted
+    final deleted = await db.query(tabla, where: 'deleted = 1 AND synced = 0');
+    for (final row in deleted) {
+      await _supabase.from(tabla).delete().eq('id', row['id'] as String);
+      await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
     }
   }
 
-  Map<String, dynamic> _toRemoteRow(Map<String, dynamic> row) {
+  // Columnas que Supabase guarda como boolean (SQLite las guarda como 0/1).
+  // Se completa con lo que llega en cada bajada.
+  final Set<String> _columnasBool = {
+    'activa',
+    'activo',
+    'puede_ver',
+    'puede_crear',
+    'puede_editar',
+    'puede_eliminar',
+  };
+
+  Map<String, dynamic> _toRemoteRow(String tabla, Map<String, dynamic> row) {
     final remote = Map<String, dynamic>.from(row);
     remote.remove('synced');
     remote.remove('deleted');
+    for (final c in _columnasBool) {
+      final v = remote[c];
+      if (v is int) remote[c] = v == 1;
+    }
     return remote;
   }
 }

@@ -10,6 +10,10 @@ import '../../core/repositories/tipo_evento_repository.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/creador_info.dart';
+import '../../core/widgets/salud_section.dart';
+import '../../core/widgets/venta_dialog.dart';
 
 class VacaDetalleScreen extends StatefulWidget {
   final String id;
@@ -181,6 +185,28 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
     }
   }
 
+  Future<void> _accion(String v) async {
+    final vaca = _vaca!;
+    switch (v) {
+      case 'vendida':
+        if (await confirmarVenta(context,
+            descripcion: 'Vaca #${vaca.numero}', ubicacionId: vaca.ubicacionId)) {
+          await _vacaRepo.update(vaca.copyWith(estado: 'vendida'));
+          _load();
+        }
+      case 'fallecida':
+        if (await confirmarFallecimiento(context, 'la vaca #${vaca.numero}')) {
+          await _vacaRepo.update(vaca.copyWith(estado: 'fallecida'));
+          _load();
+        }
+      case 'activa':
+        await _vacaRepo.update(vaca.copyWith(estado: 'activa'));
+        _load();
+      case 'eliminar':
+        await _eliminarVaca();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -202,9 +228,22 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
             onPressed: () =>
                 context.push('/vacas/${widget.id}/editar').then((_) => _load()),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _eliminarVaca,
+          PopupMenuButton<String>(
+            onSelected: _accion,
+            itemBuilder: (_) => [
+              if (_vaca!.estado == 'activa') ...[
+                const PopupMenuItem(
+                    value: 'vendida', child: Text('Marcar como vendida')),
+                const PopupMenuItem(
+                    value: 'fallecida', child: Text('Marcar como fallecida')),
+              ] else
+                const PopupMenuItem(
+                    value: 'activa', child: Text('Volver a activa')),
+              const PopupMenuItem(
+                  value: 'eliminar',
+                  child: Text('Eliminar vaca',
+                      style: TextStyle(color: AppColors.danger))),
+            ],
           ),
         ],
       ),
@@ -225,6 +264,16 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(children: [
+                      AnimalFace(
+                          tipo: 'vaca',
+                          size: 56,
+                          estadoColor: _estadoColor(_vaca!.estado)),
+                      const SizedBox(width: 12),
+                      Text('Vaca #${_vaca!.numero}',
+                          style: Theme.of(context).textTheme.titleLarge),
+                    ]),
+                    const Divider(height: 24),
                     _InfoRow(label: 'Número', value: _vaca!.numero),
                     _InfoRow(
                       label: 'Fecha de nacimiento',
@@ -238,6 +287,17 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                       value: _vaca!.estado[0].toUpperCase() +
                           _vaca!.estado.substring(1),
                       valueColor: _estadoColor(_vaca!.estado),
+                    ),
+                    if (_vaca!.color != null)
+                      _InfoRow(label: 'Color', value: _vaca!.color!),
+                    if (_vaca!.nota != null)
+                      _InfoRow(label: 'Nota', value: _vaca!.nota!),
+                    const SizedBox(height: 8),
+                    CreadorInfo(
+                      createdBy: _vaca!.createdBy,
+                      updatedBy: _vaca!.updatedBy,
+                      createdAt: _vaca!.createdAt,
+                      updatedAt: _vaca!.updatedAt,
                     ),
                   ],
                 ),
@@ -271,6 +331,9 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            SaludSection(
+                animalTipo: 'vaca', animalId: widget.id, femenino: true),
             const SizedBox(height: 12),
             // Historial
             Row(
@@ -334,6 +397,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
         return AppColors.success;
       case 'vendida':
         return AppColors.warning;
+      case 'fallecida':
       case 'muerta':
         return AppColors.danger;
       default:

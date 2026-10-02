@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/models/toro.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animal_face.dart';
 
 class TorosScreen extends StatefulWidget {
   const TorosScreen({super.key});
@@ -56,6 +57,7 @@ class _TorosScreenState extends State<TorosScreen> {
     switch (estado) {
       case 'activo': return AppColors.success;
       case 'vendido': return AppColors.warning;
+      case 'fallecido':
       case 'muerto': return AppColors.danger;
       default: return Colors.grey;
     }
@@ -86,20 +88,8 @@ class _TorosScreenState extends State<TorosScreen> {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor:
-                                _estadoColor(t.estado).withValues(alpha: 0.15),
-                            child: Text(
-                              t.numero.length > 3
-                                  ? t.numero.substring(0, 3)
-                                  : t.numero,
-                              style: TextStyle(
-                                color: _estadoColor(t.estado),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
+                          leading: AnimalFace(
+                              tipo: 'toro', estadoColor: _estadoColor(t.estado)),
                           title: Text(t.nombre,
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold)),

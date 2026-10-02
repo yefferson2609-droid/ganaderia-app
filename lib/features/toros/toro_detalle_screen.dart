@@ -8,6 +8,10 @@ import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/creador_info.dart';
+import '../../core/widgets/salud_section.dart';
+import '../../core/widgets/venta_dialog.dart';
 
 class ToroDetalleScreen extends StatefulWidget {
   final String id;
@@ -81,10 +85,33 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
         return AppColors.success;
       case 'vendido':
         return AppColors.warning;
+      case 'fallecido':
       case 'muerto':
         return AppColors.danger;
       default:
         return Colors.grey;
+    }
+  }
+
+  Future<void> _accion(String v) async {
+    final toro = _toro!;
+    switch (v) {
+      case 'vendido':
+        if (await confirmarVenta(context,
+            descripcion: 'Toro #${toro.numero}', ubicacionId: toro.ubicacionId)) {
+          await _toroRepo.update(toro.copyWith(estado: 'vendido'));
+          _load();
+        }
+      case 'fallecido':
+        if (await confirmarFallecimiento(context, 'el toro #${toro.numero}')) {
+          await _toroRepo.update(toro.copyWith(estado: 'fallecido'));
+          _load();
+        }
+      case 'activo':
+        await _toroRepo.update(toro.copyWith(estado: 'activo'));
+        _load();
+      case 'eliminar':
+        await _eliminarToro();
     }
   }
 
@@ -109,9 +136,22 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
             onPressed: () =>
                 context.push('/toros/${widget.id}/editar').then((_) => _load()),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _eliminarToro,
+          PopupMenuButton<String>(
+            onSelected: _accion,
+            itemBuilder: (_) => [
+              if (_toro!.estado == 'activo') ...[
+                const PopupMenuItem(
+                    value: 'vendido', child: Text('Marcar como vendido')),
+                const PopupMenuItem(
+                    value: 'fallecido', child: Text('Marcar como fallecido')),
+              ] else
+                const PopupMenuItem(
+                    value: 'activo', child: Text('Volver a activo')),
+              const PopupMenuItem(
+                  value: 'eliminar',
+                  child: Text('Eliminar toro',
+                      style: TextStyle(color: AppColors.danger))),
+            ],
           ),
         ],
       ),
@@ -126,6 +166,18 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(children: [
+                      AnimalFace(
+                          tipo: 'toro',
+                          size: 56,
+                          estadoColor: _estadoColor(_toro!.estado)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(_toro!.displayName,
+                            style: Theme.of(context).textTheme.titleLarge),
+                      ),
+                    ]),
+                    const Divider(height: 24),
                     _InfoRow(label: 'Número', value: _toro!.numero),
                     _InfoRow(label: 'Nombre', value: _toro!.nombre),
                     _InfoRow(
@@ -145,6 +197,17 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                     _InfoRow(
                         label: 'Ubicación',
                         value: _ubicacion?.nombre ?? 'Sin asignar'),
+                    if (_toro!.color != null)
+                      _InfoRow(label: 'Color', value: _toro!.color!),
+                    if (_toro!.nota != null)
+                      _InfoRow(label: 'Nota', value: _toro!.nota!),
+                    const SizedBox(height: 8),
+                    CreadorInfo(
+                      createdBy: _toro!.createdBy,
+                      updatedBy: _toro!.updatedBy,
+                      createdAt: _toro!.createdAt,
+                      updatedAt: _toro!.updatedAt,
+                    ),
                   ],
                 ),
               ),
@@ -176,6 +239,8 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            SaludSection(animalTipo: 'toro', animalId: widget.id),
           ],
         ),
       ),

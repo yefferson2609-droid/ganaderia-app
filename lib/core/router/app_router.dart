@@ -12,6 +12,14 @@ import '../../features/toros/toro_form_screen.dart';
 import '../../features/toros/toro_detalle_screen.dart';
 import '../../features/caballos/caballos_screen.dart';
 import '../../features/caballos/caballo_form_screen.dart';
+import '../../features/caballos/caballo_detalle_screen.dart';
+import '../../features/terneros/terneros_screen.dart';
+import '../../features/terneros/ternero_form_screen.dart';
+import '../../features/terneros/ternero_detalle_screen.dart';
+import '../../features/salud/salud_screen.dart';
+import '../../features/actividades/actividades_screen.dart';
+import '../../features/solicitudes/solicitudes_screen.dart';
+import '../../features/reportes/reportes_screen.dart';
 import '../../features/lotes/lotes_screen.dart';
 import '../../features/lotes/lote_form_screen.dart';
 import '../../features/lotes/lote_detalle_screen.dart';
@@ -93,12 +101,47 @@ class AppRouter {
         routes: [
           GoRoute(path: 'nuevo', builder: (_, __) => const CaballoFormScreen()),
           GoRoute(
-            path: ':id/editar',
+            path: ':id',
             builder: (_, state) =>
-                CaballoFormScreen(id: state.pathParameters['id']!),
+                CaballoDetalleScreen(id: state.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: 'editar',
+                builder: (_, state) =>
+                    CaballoFormScreen(id: state.pathParameters['id']!),
+              ),
+            ],
           ),
         ],
       ),
+
+      // Terneros
+      GoRoute(
+        path: '/terneros',
+        builder: (_, __) => const TernerosScreen(),
+        routes: [
+          GoRoute(path: 'nuevo', builder: (_, __) => const TerneroFormScreen()),
+          GoRoute(
+            path: ':id',
+            builder: (_, state) =>
+                TerneroDetalleScreen(id: state.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: 'editar',
+                builder: (_, state) =>
+                    TerneroFormScreen(id: state.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      GoRoute(path: '/salud', builder: (_, __) => const SaludScreen()),
+      GoRoute(
+          path: '/actividades', builder: (_, __) => const ActividadesScreen()),
+      GoRoute(
+          path: '/solicitudes', builder: (_, __) => const SolicitudesScreen()),
+      GoRoute(path: '/reportes', builder: (_, __) => const ReportesScreen()),
 
       // Lotes
       GoRoute(

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/models/ubicacion.dart';
 import '../../core/repositories/caballo_repository.dart';
+import '../../core/repositories/ubicacion_repository.dart';
+import '../../core/utils/auditoria.dart';
 
 class CaballoFormScreen extends StatefulWidget {
   final String? id;
@@ -14,31 +17,43 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _repo = CaballoRepository();
   final _nombreCtrl = TextEditingController();
+  final _colorCtrl = TextEditingController();
+  final _notaCtrl = TextEditingController();
   String _estado = 'activo';
+  String? _ubicacionId;
+  List<Ubicacion> _ubicaciones = [];
   bool _loading = false;
-  bool _loadingData = false;
+  bool _loadingData = true;
 
   bool get _isEditing => widget.id != null;
 
   @override
   void initState() {
     super.initState();
-    if (_isEditing) _loadData();
+    _loadData();
   }
 
   @override
   void dispose() {
     _nombreCtrl.dispose();
+    _colorCtrl.dispose();
+    _notaCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _loadData() async {
-    setState(() => _loadingData = true);
-    final c = await _repo.getById(widget.id!);
-    if (c != null) {
-      _nombreCtrl.text = c.nombre;
-      _estado = c.estado;
+    _ubicaciones = await UbicacionRepository().getAll(soloActivas: true);
+    if (_isEditing) {
+      final c = await _repo.getById(widget.id!);
+      if (c != null) {
+        _nombreCtrl.text = c.nombre;
+        _colorCtrl.text = c.color ?? '';
+        _notaCtrl.text = c.nota ?? '';
+        _estado = c.estado == 'muerto' ? 'fallecido' : c.estado;
+        _ubicacionId = c.ubicacionId;
+      }
     }
+    if (!_ubicaciones.any((u) => u.id == _ubicacionId)) _ubicacionId = null;
     setState(() => _loadingData = false);
   }
 
@@ -52,12 +67,19 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
         await _repo.update(c.copyWith(
           nombre: _nombreCtrl.text.trim(),
           estado: _estado,
+          ubicacionId: _ubicacionId,
+          clearUbicacion: _ubicacionId == null,
+          color: textoONull(_colorCtrl.text),
+          nota: textoONull(_notaCtrl.text),
         ));
       }
     } else {
       await _repo.create(
         nombre: _nombreCtrl.text.trim(),
         estado: _estado,
+        ubicacionId: _ubicacionId,
+        color: textoONull(_colorCtrl.text),
+        nota: textoONull(_notaCtrl.text),
       );
     }
     if (mounted) context.pop();
@@ -99,9 +121,38 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
                         DropdownMenuItem(
                             value: 'vendido', child: Text('Vendido')),
                         DropdownMenuItem(
-                            value: 'muerto', child: Text('Muerto')),
+                            value: 'fallecido', child: Text('Fallecido')),
                       ],
                       onChanged: (v) => setState(() => _estado = v!),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String?>(
+                      value: _ubicacionId,
+                      decoration: const InputDecoration(
+                          labelText: 'Ubicación',
+                          prefixIcon: Icon(Icons.location_on)),
+                      items: [
+                        const DropdownMenuItem(
+                            value: null, child: Text('Sin asignar')),
+                        ..._ubicaciones.map((u) => DropdownMenuItem(
+                            value: u.id, child: Text(u.nombre))),
+                      ],
+                      onChanged: (v) => setState(() => _ubicacionId = v),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _colorCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Color',
+                          prefixIcon: Icon(Icons.palette_outlined)),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notaCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Nota (opcional)',
+                          prefixIcon: Icon(Icons.notes)),
+                      maxLines: 3,
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(

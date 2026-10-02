@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
+import '../utils/auditoria.dart';
 import '../models/caballo.dart';
 
 class CaballoRepository {
@@ -22,26 +23,28 @@ class CaballoRepository {
   Future<Caballo> create({
     required String nombre,
     String estado = 'activo',
+    String? ubicacionId,
+    String? color,
+    String? nota,
   }) async {
     final now = DateTime.now();
     final caballo = Caballo(
       id: _uuid.v4(),
       nombre: nombre,
       estado: estado,
+      ubicacionId: ubicacionId,
+      color: color,
+      nota: nota,
       createdAt: now,
       updatedAt: now,
     );
-    final map = caballo.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaNueva(caballo.toMap());
     await _db.insert('caballos', map);
     return caballo;
   }
 
   Future<void> update(Caballo caballo) async {
-    final map = caballo.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaEditada(caballo.toMap());
     await _db.update('caballos', map,
         where: 'id = ?', whereArgs: [caballo.id]);
   }

@@ -53,30 +53,35 @@ class UbicacionRepository {
         where: 'id = ?', whereArgs: [id]);
   }
 
-  // Conteos por ubicación para dashboard
-  Future<Map<String, int>> getConteosPorUbicacion(String ubicacionId) async {
-    final vacas = await _db.rawQuery(
-        "SELECT COUNT(*) as c FROM vacas WHERE deleted=0 AND estado='activa' AND ubicacion_id=?",
-        [ubicacionId]);
-    final toros = await _db.rawQuery(
-        "SELECT COUNT(*) as c FROM toros WHERE deleted=0 AND estado='activo' AND ubicacion_id=?",
-        [ubicacionId]);
-    final caballos = await _db.rawQuery(
-        "SELECT COUNT(*) as c FROM caballos WHERE deleted=0 AND estado='activo' AND ubicacion_id=?",
-        [ubicacionId]);
-    final cerdos = await _db.rawQuery(
-        "SELECT COALESCE(SUM(hembras+machos),0) as c FROM lotes WHERE deleted=0 AND tipo='cerdo' AND ubicacion_id=?",
-        [ubicacionId]);
-    final ovejos = await _db.rawQuery(
-        "SELECT COALESCE(SUM(hembras+machos),0) as c FROM lotes WHERE deleted=0 AND tipo='ovejo' AND ubicacion_id=?",
-        [ubicacionId]);
+  /// Conteos de animales activos. Con [ubicacionId] null cuenta los que no
+  /// tienen ubicación; con [todas] cuenta todos sin filtrar por ubicación.
+  Future<Map<String, int>> getConteosPorUbicacion(String? ubicacionId,
+      {bool todas = false}) async {
+    final filtro = todas
+        ? ''
+        : ubicacionId == null
+            ? ' AND ubicacion_id IS NULL'
+            : ' AND ubicacion_id=?';
+    final args = (todas || ubicacionId == null) ? null : [ubicacionId];
+
+    Future<int> contar(String sql) async {
+      final r = await _db.rawQuery('$sql$filtro', args);
+      return (r.first['c'] as int?) ?? 0;
+    }
 
     return {
-      'vacas': (vacas.first['c'] as int?) ?? 0,
-      'toros': (toros.first['c'] as int?) ?? 0,
-      'caballos': (caballos.first['c'] as int?) ?? 0,
-      'cerdos': (cerdos.first['c'] as int?) ?? 0,
-      'ovejos': (ovejos.first['c'] as int?) ?? 0,
+      'vacas': await contar(
+          "SELECT COUNT(*) as c FROM vacas WHERE deleted=0 AND estado='activa'"),
+      'toros': await contar(
+          "SELECT COUNT(*) as c FROM toros WHERE deleted=0 AND estado='activo'"),
+      'terneros': await contar(
+          "SELECT COUNT(*) as c FROM terneros WHERE deleted=0 AND estado='activo'"),
+      'caballos': await contar(
+          "SELECT COUNT(*) as c FROM caballos WHERE deleted=0 AND estado='activo'"),
+      'cerdos': await contar(
+          "SELECT COALESCE(SUM(hembras+machos),0) as c FROM lotes WHERE deleted=0 AND tipo='cerdo'"),
+      'ovejos': await contar(
+          "SELECT COALESCE(SUM(hembras+machos),0) as c FROM lotes WHERE deleted=0 AND tipo='ovejo'"),
     };
   }
 }

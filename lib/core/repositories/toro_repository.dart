@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
+import '../utils/auditoria.dart';
 import '../models/toro.dart';
 
 class ToroRepository {
@@ -30,6 +31,8 @@ class ToroRepository {
     String? padreId,
     String? madreId,
     String? ubicacionId,
+    String? color,
+    String? nota,
   }) async {
     final now = DateTime.now();
     final toro = Toro(
@@ -41,20 +44,18 @@ class ToroRepository {
       padreId: padreId,
       madreId: madreId,
       ubicacionId: ubicacionId,
+      color: color,
+      nota: nota,
       createdAt: now,
       updatedAt: now,
     );
-    final map = toro.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaNueva(toro.toMap());
     await _db.insert('toros', map);
     return toro;
   }
 
   Future<void> update(Toro toro) async {
-    final map = toro.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaEditada(toro.toMap());
     await _db.update('toros', map, where: 'id = ?', whereArgs: [toro.id]);
   }
 

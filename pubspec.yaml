@@ -1,7 +1,7 @@
 name: ganaderia
 description: App de gestión ganadera para finca.
 publish_to: 'none'
-version: 1.0.6+6
+version: 1.0.8+8
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -33,6 +33,13 @@ dependencies:
   # UUID
   uuid: ^4.5.1
 
+  # Reportes PDF
+  pdf: ^3.11.1
+  printing: ^5.13.4
+
+  # Preferencias locales (avisos vistos)
+  shared_preferences: ^2.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -40,3 +47,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/

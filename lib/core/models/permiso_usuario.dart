@@ -1,24 +1,38 @@
 const kModulos = [
   'vacas',
   'toros',
+  'terneros',
   'caballos',
   'lotes',
   'eventos',
+  'salud',
+  'actividades',
+  'solicitudes',
   'ubicaciones',
   'finanzas',
+  'reportes',
   'usuarios',
 ];
 
 const kModuloLabels = {
   'vacas': 'Vacas',
   'toros': 'Toros',
+  'terneros': 'Terneros',
   'caballos': 'Caballos',
   'lotes': 'Lotes',
   'eventos': 'Eventos',
+  'salud': 'Salud',
+  'actividades': 'Actividades',
+  'solicitudes': 'Solicitudes',
   'ubicaciones': 'Ubicaciones',
   'finanzas': 'Finanzas',
+  'reportes': 'Reportes',
   'usuarios': 'Usuarios',
 };
+
+/// Módulos que todo usuario puede ver y usar aunque no tenga una fila de
+/// permiso (sus propias actividades y pedidos de insumos).
+const kModulosAbiertos = {'actividades', 'solicitudes'};
 
 class PermisoUsuario {
   final String id;

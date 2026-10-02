@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
+import '../utils/auditoria.dart';
 import '../models/lote.dart';
 import '../models/movimiento_lote.dart';
 
@@ -39,17 +40,13 @@ class LoteRepository {
       createdAt: now,
       updatedAt: now,
     );
-    final map = lote.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaNueva(lote.toMap());
     await _db.insert('lotes', map);
     return lote;
   }
 
   Future<void> update(Lote lote) async {
-    final map = lote.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaEditada(lote.toMap());
     await _db.update('lotes', map, where: 'id = ?', whereArgs: [lote.id]);
   }
 
@@ -99,9 +96,7 @@ class LoteRepository {
       notas: notas,
       createdAt: now,
     );
-    final map = movimiento.toMap();
-    map['synced'] = 0;
-    map['deleted'] = 0;
+    final map = filaNueva(movimiento.toMap(), conAuditoria: false);
     await _db.insert('movimientos_lote', map);
     return movimiento;
   }

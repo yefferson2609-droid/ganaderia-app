@@ -30,6 +30,14 @@ android {
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = "ganaderia"
+
+        // Versión de prueba instalable junto a la normal:
+        // GANADERIA_PRUEBA=1 flutter build apk --release
+        if (System.getenv("GANADERIA_PRUEBA") == "1") {
+            applicationIdSuffix = ".prueba"
+            manifestPlaceholders["appLabel"] = "Ganadería (nueva)"
+        }
     }
 
     signingConfigs {

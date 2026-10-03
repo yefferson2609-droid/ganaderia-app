@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/local_db.dart';
@@ -38,17 +39,52 @@ class SyncProvider extends ChangeNotifier {
   DateTime? _lastSync;
   String? _lastError;
 
+  int _pendientes = 0;
+
   bool get isSyncing => _isSyncing;
   bool get isOnline => _isOnline;
   DateTime? get lastSync => _lastSync;
   String? get lastError => _lastError;
 
+  /// Cambios hechos en el teléfono que todavía no se subieron.
+  int get pendientes => _pendientes;
+
+  static const _kUltimaSync = 'ultima_sincronizacion';
+
   SyncProvider() {
+    _cargarUltimaSync();
     _initConnectivity();
     Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
     _supabase.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.signedIn && _isOnline) syncAll();
     });
+  }
+
+  Future<void> _cargarUltimaSync() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final s = prefs.getString(_kUltimaSync);
+      if (s != null && _lastSync == null) _lastSync = DateTime.tryParse(s);
+    } catch (_) {}
+    await contarPendientes();
+  }
+
+  /// Recalcula cuántas filas locales esperan subirse.
+  Future<int> contarPendientes() async {
+    final db = LocalDb.instance.db;
+    var total = 0;
+    for (final tabla in kTablasSync) {
+      try {
+        final r = await db
+            .rawQuery('SELECT COUNT(*) AS c FROM $tabla WHERE synced = 0');
+        total += (r.first['c'] as int?) ?? 0;
+      } catch (_) {}
+    }
+    if (total != _pendientes) {
+      _pendientes = total;
+      notifyListeners();
+    }
+    return total;
   }
 
   Future<void> _initConnectivity() async {
@@ -95,10 +131,15 @@ class SyncProvider extends ChangeNotifier {
 
     if (errores.isEmpty) {
       _lastSync = DateTime.now();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kUltimaSync, _lastSync!.toIso8601String());
+      } catch (_) {}
     } else {
       _lastError = errores.join('\n');
       debugPrint('Errores de sincronización:\n$_lastError');
     }
+    await contarPendientes();
     _isSyncing = false;
     notifyListeners();
   }

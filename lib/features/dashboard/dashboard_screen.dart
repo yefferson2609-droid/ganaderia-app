@@ -80,6 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (mounted) await context.read<PermisosProvider>().cargar();
     await _cargarAvisos();
+    if (mounted) await context.read<SyncProvider>().contarPendientes();
 
     if (mounted) setState(() => _loading = false);
   }
@@ -306,6 +307,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 12),
+                    _EstadoSync(sync: sync),
                     if (_avisos.isNotEmpty) ...[
                       _seccion('Avisos'),
                       ..._avisos.map((a) => Card(
@@ -448,6 +451,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// "Última sincronización: hoy a las 3:45 p. m." + cambios sin subir.
+class _EstadoSync extends StatelessWidget {
+  final SyncProvider sync;
+  const _EstadoSync({required this.sync});
+
+  String _cuando(DateTime f) {
+    final hoy = DateTime.now();
+    final dia = DateTime(f.year, f.month, f.day);
+    final hora = DateFormat('h:mm a', 'en_US')
+        .format(f)
+        .replaceAll('AM', 'a. m.')
+        .replaceAll('PM', 'p. m.');
+    final diff = DateTime(hoy.year, hoy.month, hoy.day).difference(dia).inDays;
+    if (diff == 0) return 'hoy a las $hora';
+    if (diff == 1) return 'ayer a las $hora';
+    return 'el ${DateFormat('dd/MM/yyyy').format(f)} a las $hora';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final IconData icono;
+    final Color color;
+    final String texto;
+    if (sync.isSyncing) {
+      icono = Icons.sync;
+      color = AppColors.info;
+      texto = 'Sincronizando...';
+    } else if (sync.lastSync == null) {
+      icono = Icons.cloud_off;
+      color = Colors.grey;
+      texto = 'Todavía no se ha sincronizado';
+    } else {
+      icono = sync.lastError != null ? Icons.sync_problem : Icons.cloud_done;
+      color = sync.lastError != null ? AppColors.warning : AppColors.success;
+      texto = 'Última sincronización: ${_cuando(sync.lastSync!)}';
+    }
+
+    final detalles = <String>[
+      if (!sync.isOnline) 'Sin conexión',
+      if (sync.lastError != null && !sync.isSyncing)
+        'El último intento tuvo errores',
+      if (sync.pendientes > 0)
+        '${sync.pendientes} cambio${sync.pendientes == 1 ? '' : 's'} sin subir'
+      else if (sync.lastSync != null)
+        'Todo está subido',
+    ];
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: color.withOpacity(0.08),
+      child: ListTile(
+        dense: true,
+        leading: Icon(icono, color: color),
+        title: Text(texto, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: detalles.isEmpty ? null : Text(detalles.join(' · ')),
+        trailing: sync.isOnline && !sync.isSyncing
+            ? IconButton(
+                tooltip: 'Sincronizar ahora',
+                icon: const Icon(Icons.refresh),
+                onPressed: sync.syncAll,
+              )
+            : null,
+      ),
     );
   }
 }

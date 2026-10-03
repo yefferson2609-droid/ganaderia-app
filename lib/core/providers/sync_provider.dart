@@ -116,28 +116,33 @@ class SyncProvider extends ChangeNotifier {
     // así que se puede bajar primero y luego subir.
     for (final tabla in kTablasSync) {
       try {
-        await _pull(tabla);
+        await _pull(tabla, errores);
       } catch (e) {
-        errores.add('Bajar $tabla: $e');
+        errores.add('Bajar ${_nombreTabla(tabla)}: ${_mensaje(e)}');
       }
     }
     for (final tabla in kTablasSync) {
       try {
-        await _push(tabla);
+        await _push(tabla, errores);
       } catch (e) {
-        errores.add('Subir $tabla: $e');
+        errores.add('Subir ${_nombreTabla(tabla)}: ${_mensaje(e)}');
       }
     }
 
-    if (errores.isEmpty) {
-      _lastSync = DateTime.now();
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_kUltimaSync, _lastSync!.toIso8601String());
-      } catch (_) {}
-    } else {
-      _lastError = errores.join('\n');
-      debugPrint('Errores de sincronización:\n$_lastError');
+    // Se registra la hora aunque haya errores: lo que no falló sí quedó
+    // sincronizado, y los errores se muestran aparte.
+    _lastSync = DateTime.now();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kUltimaSync, _lastSync!.toIso8601String());
+    } catch (_) {}
+    if (errores.isNotEmpty) {
+      const max = 25;
+      _lastError = [
+        ...errores.take(max),
+        if (errores.length > max) '… y ${errores.length - max} errores más',
+      ].join('\n');
+      debugPrint('Errores de sincronización:\n${errores.join('\n')}');
     }
     await contarPendientes();
     _isSyncing = false;
@@ -161,7 +166,7 @@ class SyncProvider extends ChangeNotifier {
     return todos;
   }
 
-  Future<void> _pull(String tabla) async {
+  Future<void> _pull(String tabla, List<String> errores) async {
     final db = LocalDb.instance.db;
     final columnas = await LocalDb.instance.columnas(tabla);
     final remotos = await _fetchAll(tabla);
@@ -174,14 +179,24 @@ class SyncProvider extends ChangeNotifier {
 
     final idsRemotos = <String>{};
     final batch = db.batch();
+    final ids = <String>[];
     for (final row in remotos) {
       final id = row['id'] as String;
       idsRemotos.add(id);
       if (pendientes.contains(id)) continue;
+      ids.add(id);
       batch.insert(tabla, _toLocalRow(row, columnas),
           conflictAlgorithm: ConflictAlgorithm.replace);
     }
-    await batch.commit(noResult: true);
+    // Un registro que no se pueda guardar (p. ej. un dato obligatorio vacío
+    // en el servidor) no impide guardar los demás.
+    final resultados = await batch.commit(continueOnError: true);
+    for (var i = 0; i < resultados.length; i++) {
+      final r = resultados[i];
+      if (r is DatabaseException || r is Exception) {
+        errores.add('Bajar ${_nombreTabla(tabla)} (${ids[i]}): ${_mensaje(r!)}');
+      }
+    }
 
     // Lo que se borró en el servidor también se borra aquí.
     final locales = await db.query(tabla, columns: ['id'], where: 'synced = 1');
@@ -210,7 +225,9 @@ class SyncProvider extends ChangeNotifier {
     return local;
   }
 
-  Future<void> _push(String tabla) async {
+  /// Sube los cambios de [tabla]. Un registro con error no frena a los
+  /// demás: el error se anota en [errores] y el registro queda pendiente.
+  Future<void> _push(String tabla, List<String> errores) async {
     final db = LocalDb.instance.db;
 
     final unsynced = await db.query(tabla, where: 'synced = 0 AND deleted = 0');
@@ -236,14 +253,31 @@ class SyncProvider extends ChangeNotifier {
           fotoPendiente = true;
         }
       }
+      if (tabla == 'solicitudes' && !_servidorTieneFotoUrl) {
+        remoto.remove('foto_url');
+        if (row['foto_local'] != null) fotoPendiente = true;
+      }
       try {
         await _supabase.from(tabla).upsert(remoto);
       } on PostgrestException catch (e) {
-        // El servidor aún no tiene la columna foto_url: se sube sin foto.
-        if (e.code != 'PGRST204' || !remoto.containsKey('foto_url')) rethrow;
+        // El servidor aún no tiene la columna foto_url (falta ejecutar
+        // 005_fotos_solicitudes.sql): se sube sin ella.
+        if (e.code != 'PGRST204' || !remoto.containsKey('foto_url')) {
+          errores.add('Subir ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+          continue;
+        }
+        _servidorTieneFotoUrl = false;
         remoto.remove('foto_url');
-        await _supabase.from(tabla).upsert(remoto);
-        fotoPendiente = true;
+        try {
+          await _supabase.from(tabla).upsert(remoto);
+        } catch (e2) {
+          errores.add('Subir ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e2)}');
+          continue;
+        }
+        if (row['foto_local'] != null) fotoPendiente = true;
+      } catch (e) {
+        errores.add('Subir ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+        continue;
       }
       // Con la foto pendiente la fila sigue marcada para reintentar
       // (y la bajada no la pisa, así no se pierde la foto local).
@@ -256,9 +290,49 @@ class SyncProvider extends ChangeNotifier {
     // Eliminar en remoto los marcados como deleted
     final deleted = await db.query(tabla, where: 'deleted = 1 AND synced = 0');
     for (final row in deleted) {
-      await _supabase.from(tabla).delete().eq('id', row['id'] as String);
-      await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
+      try {
+        await _supabase.from(tabla).delete().eq('id', row['id'] as String);
+        await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
+      } catch (e) {
+        errores.add('Borrar ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+      }
     }
+  }
+
+  bool _servidorTieneFotoUrl = true;
+
+  static const _nombres = {
+    'tipos_evento': 'tipos de evento',
+    'perfiles_usuario': 'usuarios',
+    'permisos_usuario': 'permisos',
+    'pesadas_ternero': 'pesadas',
+    'traslados_ternero': 'traslados',
+    'movimientos_lote': 'movimientos de lote',
+    'eventos_vaca': 'eventos',
+    'eventos_masivos': 'eventos masivos',
+    'eventos_masivos_vacas': 'eventos masivos',
+    'registros_salud': 'salud',
+    'tratamientos_salud': 'tratamientos',
+    'conceptos_financieros': 'conceptos',
+    'movimientos_financieros': 'finanzas',
+  };
+
+  String _nombreTabla(String t) => _nombres[t] ?? t;
+
+  /// Mensaje corto y útil de un error de Supabase u otro.
+  String _mensaje(Object e) {
+    if (e is PostgrestException) {
+      final partes = [
+        e.message,
+        if (e.details != null && '${e.details}'.isNotEmpty) '${e.details}',
+        if (e.hint != null && e.hint!.isNotEmpty) e.hint!,
+        if (e.code != null) '[${e.code}]',
+      ];
+      return partes.join(' · ');
+    }
+    if (e is SocketException) return 'Sin conexión con el servidor';
+    final s = e.toString();
+    return s.length > 300 ? '${s.substring(0, 300)}…' : s;
   }
 
   // Columnas que Supabase guarda como boolean (SQLite las guarda como 0/1).

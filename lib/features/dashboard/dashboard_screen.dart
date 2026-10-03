@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -460,6 +461,33 @@ class _EstadoSync extends StatelessWidget {
   final SyncProvider sync;
   const _EstadoSync({required this.sync});
 
+  void _verErrores(BuildContext context, String errores) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Errores de sincronización'),
+        content: SingleChildScrollView(
+          child: SelectableText(errores, style: const TextStyle(fontSize: 12)),
+        ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.copy),
+            label: const Text('Copiar'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: errores));
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text('Copiado. Puedes pegarlo en un mensaje.')));
+              }
+            },
+          ),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
+        ],
+      ),
+    );
+  }
+
   String _cuando(DateTime f) {
     final hoy = DateTime.now();
     final dia = DateTime(f.year, f.month, f.day);
@@ -491,14 +519,14 @@ class _EstadoSync extends StatelessWidget {
       color = sync.lastError != null ? AppColors.warning : AppColors.success;
       texto = 'Última sincronización: ${_cuando(sync.lastSync!)}';
     }
+    final conErrores = sync.lastError != null && !sync.isSyncing;
 
     final detalles = <String>[
       if (!sync.isOnline) 'Sin conexión',
-      if (sync.lastError != null && !sync.isSyncing)
-        'El último intento tuvo errores',
+      if (conErrores) 'Hubo errores · toca para ver',
       if (sync.pendientes > 0)
         '${sync.pendientes} cambio${sync.pendientes == 1 ? '' : 's'} sin subir'
-      else if (sync.lastSync != null)
+      else if (sync.lastSync != null && !conErrores)
         'Todo está subido',
     ];
 
@@ -507,6 +535,7 @@ class _EstadoSync extends StatelessWidget {
       color: color.withOpacity(0.08),
       child: ListTile(
         dense: true,
+        onTap: conErrores ? () => _verErrores(context, sync.lastError!) : null,
         leading: Icon(icono, color: color),
         title: Text(texto, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: detalles.isEmpty ? null : Text(detalles.join(' · ')),

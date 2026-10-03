@@ -16,7 +16,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -232,6 +232,11 @@ class LocalDb {
       await _createSaludTables(db);
       await _createOperacionTables(db);
     }
+    // Las tablas creadas en el paso anterior ya incluyen las columnas de foto.
+    if (oldVersion == 5) {
+      await db.execute('ALTER TABLE solicitudes ADD COLUMN foto_url TEXT');
+      await db.execute('ALTER TABLE solicitudes ADD COLUMN foto_local TEXT');
+    }
   }
 
   Future<void> _createUsuariosTables(Database db) async {
@@ -417,6 +422,8 @@ class LocalDb {
         solicitado_por TEXT,
         resuelto_por TEXT,
         fecha_resolucion TEXT,
+        foto_url TEXT,
+        foto_local TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         synced INTEGER NOT NULL DEFAULT 1,

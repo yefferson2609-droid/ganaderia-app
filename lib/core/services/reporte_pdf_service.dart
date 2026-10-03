@@ -13,15 +13,18 @@ import '../repositories/perfil_usuario_repository.dart';
 import '../repositories/registro_salud_repository.dart';
 import '../repositories/ubicacion_repository.dart';
 import '../utils/animal_nombre.dart';
+import 'inventario_service.dart';
 
 class SeccionesReporte {
   final bool inventario;
+  final bool detalleAnimales; // ficha de cada animal dentro del inventario
   final bool finanzas;
   final bool salud;
   final bool eventos;
 
   const SeccionesReporte({
     this.inventario = true,
+    this.detalleAnimales = true,
     this.finanzas = true,
     this.salud = true,
     this.eventos = true,
@@ -33,6 +36,14 @@ class SeccionesReporte {
 final _fmt = DateFormat('dd/MM/yyyy');
 final _money = NumberFormat.currency(locale: 'en_US', symbol: r'$');
 const _verde = PdfColor.fromInt(0xFF2F6B3A);
+
+/// La fuente base del PDF solo cubre Latin-1: se reemplaza lo demás
+/// (guiones largos, flechas, emojis escritos por el usuario).
+String _l(String s) => s
+    .replaceAll('–', '-')
+    .replaceAll('—', '-')
+    .replaceAll('→', '->')
+    .replaceAll(RegExp(r'[^\u0000-ÿ]'), '?');
 
 class ReportePdfService {
   /// Nombre de archivo sugerido para el reporte.
@@ -50,7 +61,12 @@ class ReportePdfService {
             .asUint8List());
 
     final contenido = <pw.Widget>[];
-    if (secciones.inventario) contenido.addAll(await _inventario());
+    if (secciones.inventario) {
+      contenido.addAll(await _inventario());
+      if (secciones.detalleAnimales) {
+        contenido.addAll(await _inventarioDetallado());
+      }
+    }
     if (secciones.finanzas) contenido.addAll(await _finanzas(desde, hasta));
     if (secciones.salud) contenido.addAll(await _salud(desde, hasta));
     if (secciones.eventos) contenido.addAll(await _eventos(desde, hasta));
@@ -77,7 +93,7 @@ class ReportePdfService {
                         fontWeight: pw.FontWeight.bold,
                         color: _verde)),
                 pw.Text(
-                    'Rango de fechas: ${_fmt.format(desde)} – ${_fmt.format(hasta)}',
+                    'Rango de fechas: ${_fmt.format(desde)} - ${_fmt.format(hasta)}',
                     style: const pw.TextStyle(fontSize: 9)),
               ],
             ),
@@ -111,7 +127,7 @@ class ReportePdfService {
     }
     return pw.TableHelper.fromTextArray(
       headers: encabezados,
-      data: filas,
+      data: filas.map((f) => f.map(_l).toList()).toList(),
       headerStyle: pw.TextStyle(
           fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
       headerDecoration: const pw.BoxDecoration(color: _verde),
@@ -155,6 +171,55 @@ class ReportePdfService {
     ];
   }
 
+  Future<List<pw.Widget>> _inventarioDetallado() async {
+    final grupos = await InventarioService().generar();
+    final w = <pw.Widget>[_titulo('Inventario detallado por ubicación')];
+    const chico = pw.TextStyle(fontSize: 8);
+    for (final g in grupos) {
+      w.add(pw.Container(
+        margin: const pw.EdgeInsets.only(top: 8, bottom: 4),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+        color: PdfColors.green50,
+        child: pw.Text(
+          _l('${g.nombre} - ${g.animales.length} animales'
+              '${g.cerdos > 0 ? ' · ${g.cerdos} cerdos' : ''}'
+              '${g.ovejos > 0 ? ' · ${g.ovejos} ovejos' : ''}'),
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+        ),
+      ));
+      for (final a in g.animales) {
+        w.add(pw.Container(
+          margin: const pw.EdgeInsets.only(bottom: 6),
+          padding: const pw.EdgeInsets.all(6),
+          decoration: pw.BoxDecoration(
+              border: pw.Border.all(
+                  color: a.enTratamiento ? PdfColors.red300 : PdfColors.grey300),
+              borderRadius: pw.BorderRadius.circular(3)),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                  _l('${a.titulo}  ·  ${a.resumen}'
+                      '${a.enTratamiento ? '  ·  EN TRATAMIENTO' : ''}'),
+                  style:
+                      pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+              if (a.datos.isNotEmpty)
+                pw.Text(
+                    _l(a.datos.map((d) => '${d.$1}: ${d.$2}').join('  |  ')),
+                    style: chico),
+              pw.Text(
+                  _l('Salud: ${a.salud.isEmpty ? 'sin registros' : a.salud.join('; ')}'),
+                  style: chico),
+              if (a.eventos.isNotEmpty)
+                pw.Text(_l('Eventos: ${a.eventos.join('; ')}'), style: chico),
+            ],
+          ),
+        ));
+      }
+    }
+    return w;
+  }
+
   Future<List<pw.Widget>> _finanzas(DateTime desde, DateTime hasta) async {
     final repo = MovimientoFinancieroRepository();
     final conceptos = {
@@ -177,7 +242,7 @@ class ReportePdfService {
             .map((m) => [
                   _fmt.format(m.fecha),
                   m.tipo == 'ingreso' ? 'Ingreso' : 'Gasto',
-                  conceptos[m.conceptoId] ?? '—',
+                  conceptos[m.conceptoId] ?? '-',
                   m.nota ?? '',
                   '${m.tipo == 'gasto' ? '-' : ''}${_money.format(m.monto)}',
                 ])
@@ -278,7 +343,7 @@ class ReportePdfService {
         eventos
             .map((e) => [
                   _fmt.format(DateTime.parse(e['fecha'] as String)),
-                  e['numero'] != null ? '#${e['numero']}' : '—',
+                  e['numero'] != null ? '#${e['numero']}' : '-',
                   (e['tipo'] as String?) ?? 'Evento',
                   (e['notas'] as String?) ?? '',
                 ])

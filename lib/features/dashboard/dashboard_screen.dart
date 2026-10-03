@@ -10,6 +10,7 @@ import '../../core/providers/sync_provider.dart';
 import '../../core/repositories/actividad_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/registro_salud_repository.dart';
+import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/solicitud_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
@@ -43,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Ubicacion> _ubicaciones = [];
   Map<String, Map<String, int>> _conteosPorUbicacion = {};
   Map<String, int> _sinUbicacion = {};
+  Map<EstadoProduccion, int> _produccion = {};
   List<_Aviso> _avisos = [];
   double _utilidadMes = 0;
   bool _loading = true;
@@ -67,6 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           await _ubicacionRepo.getConteosPorUbicacion(ub.id);
     }
     _sinUbicacion = await _ubicacionRepo.getConteosPorUbicacion(null);
+    _produccion = await ReproduccionRepository().conteoProduccion();
 
     final now = DateTime.now();
     final totalesFinanzas = await _movimientoRepo.getTotales(
@@ -215,6 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final menu = <(String, String, String?)>[
+      ('/inventario', 'Inventario', null),
       ('/evento-masivo', 'Evento masivo', 'eventos'),
       ('/salud', 'Salud', 'salud'),
       ('/actividades', 'Actividades', 'actividades'),
@@ -353,6 +357,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onTap: () => _abrir('/lotes')),
                       ],
                     ),
+
+                    if (permisos.puedeVer('vacas') && (_totales['vacas'] ?? 0) > 0) ...[
+                      _seccion('Producción'),
+                      Card(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _abrir('/inventario'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _MiniCount(
+                                    label: 'En ordeño',
+                                    count: _produccion[EstadoProduccion.enOrdeno] ?? 0,
+                                    color: AppColors.info),
+                                _MiniCount(
+                                    label: 'Secas',
+                                    count: _produccion[EstadoProduccion.seca] ?? 0,
+                                    color: AppColors.warning),
+                                _MiniCount(
+                                    label: 'Sin partos',
+                                    count: _produccion[EstadoProduccion.sinPartos] ?? 0,
+                                    color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
 
                     if (permisos.puedeVer('finanzas')) ...[
                       _seccion('Finanzas'),

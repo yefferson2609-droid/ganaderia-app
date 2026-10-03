@@ -20,6 +20,7 @@ import '../../features/salud/salud_screen.dart';
 import '../../features/actividades/actividades_screen.dart';
 import '../../features/solicitudes/solicitudes_screen.dart';
 import '../../features/reportes/reportes_screen.dart';
+import '../../features/inventario/inventario_screen.dart';
 import '../../features/lotes/lotes_screen.dart';
 import '../../features/lotes/lote_form_screen.dart';
 import '../../features/lotes/lote_detalle_screen.dart';
@@ -142,6 +143,8 @@ class AppRouter {
       GoRoute(
           path: '/solicitudes', builder: (_, __) => const SolicitudesScreen()),
       GoRoute(path: '/reportes', builder: (_, __) => const ReportesScreen()),
+      GoRoute(
+          path: '/inventario', builder: (_, __) => const InventarioScreen()),
 
       // Lotes
       GoRoute(

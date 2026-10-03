@@ -17,6 +17,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
   late DateTime _desde;
   late DateTime _hasta;
   bool _inventario = true;
+  bool _detalle = true;
   bool _finanzas = true;
   bool _salud = true;
   bool _eventos = true;
@@ -70,6 +71,7 @@ class _ReportesScreenState extends State<ReportesScreen> {
 
   SeccionesReporte get _secciones => SeccionesReporte(
         inventario: _inventario,
+        detalleAnimales: _detalle,
         finanzas: _finanzas,
         salud: _salud,
         eventos: _eventos,
@@ -155,6 +157,15 @@ class _ReportesScreenState extends State<ReportesScreen> {
             title: const Text('Inventario de animales'),
             contentPadding: EdgeInsets.zero,
           ),
+          if (_inventario)
+            CheckboxListTile(
+              value: _detalle,
+              onChanged: (v) => setState(() => _detalle = v!),
+              title: const Text('Detalle de cada animal'),
+              subtitle: const Text(
+                  'Partos, intervalos, enfermedades, última vitamina e historial'),
+              contentPadding: const EdgeInsets.only(left: 24),
+            ),
           CheckboxListTile(
             value: _finanzas,
             onChanged: (v) => setState(() => _finanzas = v!),

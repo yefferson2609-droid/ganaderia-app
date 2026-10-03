@@ -16,6 +16,8 @@ class Solicitud {
   final String? solicitadoPor;
   final String? resueltoPor;
   final DateTime? fechaResolucion;
+  final String? fotoUrl; // foto subida a Supabase Storage
+  final String? fotoLocal; // ruta en el teléfono (solo local)
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -30,11 +32,15 @@ class Solicitud {
     this.solicitadoPor,
     this.resueltoPor,
     this.fechaResolucion,
+    this.fotoUrl,
+    this.fotoLocal,
     required this.createdAt,
     required this.updatedAt,
   });
 
   bool get pendiente => estado == 'pendiente';
+
+  bool get tieneFoto => fotoUrl != null || fotoLocal != null;
 
   factory Solicitud.fromMap(Map<String, dynamic> map) => Solicitud(
         id: map['id'] as String,
@@ -49,6 +55,8 @@ class Solicitud {
         fechaResolucion: map['fecha_resolucion'] != null
             ? DateTime.tryParse(map['fecha_resolucion'] as String)
             : null,
+        fotoUrl: map['foto_url'] as String?,
+        fotoLocal: map['foto_local'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
         updatedAt: DateTime.parse(map['updated_at'] as String),
       );
@@ -64,6 +72,8 @@ class Solicitud {
         'solicitado_por': solicitadoPor,
         'resuelto_por': resueltoPor,
         'fecha_resolucion': fechaResolucion?.toIso8601String(),
+        'foto_url': fotoUrl,
+        'foto_local': fotoLocal,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
       };

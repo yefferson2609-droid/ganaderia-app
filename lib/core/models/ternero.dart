@@ -3,9 +3,11 @@ import '../utils/auditoria.dart';
 /// Etapas de crecimiento del ternero, en orden.
 const kEtapasTernero = ['lactancia', 'destete', 'ceba'];
 
+// El valor guardado sigue siendo 'destete' (compatible con el servidor);
+// en pantalla se muestra como "Levante".
 const kEtapaLabels = {
   'lactancia': 'Lactancia',
-  'destete': 'Destete',
+  'destete': 'Levante',
   'ceba': 'Ceba',
 };
 

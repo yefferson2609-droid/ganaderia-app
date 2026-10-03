@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/perfil_usuario.dart';
@@ -26,6 +29,52 @@ Color estadoSolicitudColor(String e) {
       return AppColors.danger;
   }
   return Colors.grey;
+}
+
+/// Foto de la solicitud: la del teléfono si existe, si no la de Supabase.
+class FotoSolicitud extends StatelessWidget {
+  final Solicitud solicitud;
+  final double? size;
+  final BoxFit fit;
+  const FotoSolicitud(
+      {super.key, required this.solicitud, this.size, this.fit = BoxFit.cover});
+
+  @override
+  Widget build(BuildContext context) {
+    final local = solicitud.fotoLocal;
+    final error = Container(
+      width: size,
+      height: size,
+      color: Colors.grey.shade300,
+      child: const Icon(Icons.broken_image, color: Colors.grey),
+    );
+    if (local != null && File(local).existsSync()) {
+      return Image.file(File(local),
+          width: size, height: size, fit: fit,
+          errorBuilder: (_, __, ___) => error);
+    }
+    if (solicitud.fotoUrl != null) {
+      return Image.network(solicitud.fotoUrl!,
+          width: size, height: size, fit: fit,
+          errorBuilder: (_, __, ___) => error);
+    }
+    return error;
+  }
+}
+
+void verFotoSolicitud(BuildContext context, Solicitud s) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      insetPadding: const EdgeInsets.all(12),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        InteractiveViewer(
+            child: FotoSolicitud(solicitud: s, fit: BoxFit.contain)),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
+      ]),
+    ),
+  );
 }
 
 class SolicitudesScreen extends StatefulWidget {
@@ -90,7 +139,21 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     final cantCtrl = TextEditingController();
     final notaCtrl = TextEditingController();
     String? ubicacionId;
+    String? fotoPath;
     final activas = _ubicaciones.values.where((u) => u.activa).toList();
+
+    Future<void> elegirFoto(ImageSource origen, StateSetter setSt) async {
+      try {
+        final x = await ImagePicker().pickImage(
+            source: origen, maxWidth: 1280, imageQuality: 70);
+        if (x != null) setSt(() => fotoPath = x.path);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('No se pudo abrir la cámara/galería: $e')));
+        }
+      }
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -128,6 +191,44 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                 decoration: const InputDecoration(labelText: 'Nota (opcional)'),
                 maxLines: 2,
               ),
+              const SizedBox(height: 12),
+              if (fotoPath != null)
+                Stack(children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(File(fotoPath!),
+                        height: 160, width: double.infinity, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: IconButton.filledTonal(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setSt(() => fotoPath = null),
+                    ),
+                  ),
+                ])
+              else
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => elegirFoto(ImageSource.camera, setSt),
+                      icon: const Icon(Icons.photo_camera),
+                      label: const Text('Foto'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => elegirFoto(ImageSource.gallery, setSt),
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Galería'),
+                    ),
+                  ),
+                ]),
+              const SizedBox(height: 4),
+              Text('Foto opcional, para mostrar lo que se necesita',
+                  style: Theme.of(ctx).textTheme.bodySmall),
             ]),
           ),
           actions: [
@@ -150,6 +251,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
       cantidad: textoONull(cantCtrl.text),
       ubicacionId: ubicacionId,
       nota: textoONull(notaCtrl.text),
+      fotoPath: fotoPath,
     );
     _load();
   }
@@ -289,11 +391,20 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: color.withOpacity(0.15),
-                                  child: Icon(Icons.inventory_2_outlined,
-                                      color: color),
-                                ),
+                                leading: s.tieneFoto
+                                    ? GestureDetector(
+                                        onTap: () => verFotoSolicitud(context, s),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: FotoSolicitud(
+                                              solicitud: s, size: 52),
+                                        ),
+                                      )
+                                    : CircleAvatar(
+                                        backgroundColor: color.withOpacity(0.15),
+                                        child: Icon(Icons.inventory_2_outlined,
+                                            color: color),
+                                      ),
                                 title: Text(
                                     '${s.item}${s.cantidad != null ? ' · ${s.cantidad}' : ''}',
                                     style: const TextStyle(

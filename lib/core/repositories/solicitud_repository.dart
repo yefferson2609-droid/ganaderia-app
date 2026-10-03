@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
 import '../models/solicitud.dart';
@@ -27,19 +31,33 @@ class SolicitudRepository {
     return rows.map(Solicitud.fromMap).toList();
   }
 
+  /// Copia la foto elegida a la carpeta de la app (la de la cámara o
+  /// galería puede borrarse) y devuelve la nueva ruta.
+  Future<String> _guardarFoto(String id, String origen) async {
+    final dir = Directory(
+        p.join((await getApplicationDocumentsDirectory()).path, 'solicitudes'));
+    await dir.create(recursive: true);
+    final destino = p.join(dir.path, '$id.jpg');
+    await File(origen).copy(destino);
+    return destino;
+  }
+
   Future<void> create({
     required String item,
     String? cantidad,
     String? ubicacionId,
     String? nota,
+    String? fotoPath,
   }) async {
     final now = DateTime.now();
+    final id = _uuid.v4();
     final s = Solicitud(
-      id: _uuid.v4(),
+      id: id,
       item: item,
       cantidad: cantidad,
       ubicacionId: ubicacionId,
       nota: nota,
+      fotoLocal: fotoPath != null ? await _guardarFoto(id, fotoPath) : null,
       solicitadoPor: usuarioActualId(),
       createdAt: now,
       updatedAt: now,

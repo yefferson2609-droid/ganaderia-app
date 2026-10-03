@@ -14,6 +14,7 @@ import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/creador_info.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
+import 'reproduccion_section.dart';
 
 class VacaDetalleScreen extends StatefulWidget {
   final String id;
@@ -35,6 +36,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
   List<EventoVaca> _eventos = [];
   List<TipoEvento> _tipos = [];
   bool _loading = true;
+  int _version = 0; // fuerza recargar las secciones tras un cambio
 
   @override
   void initState() {
@@ -330,6 +332,15 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 12),
+            ReproduccionSection(
+              key: ValueKey('repro$_version'),
+              vaca: _vaca!,
+              onCambio: () {
+                _version++;
+                _load();
+              },
             ),
             const SizedBox(height: 12),
             SaludSection(

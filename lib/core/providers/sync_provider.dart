@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:sqflite/sqflite.dart';
@@ -172,9 +174,42 @@ class SyncProvider extends ChangeNotifier {
 
     final unsynced = await db.query(tabla, where: 'synced = 0 AND deleted = 0');
     for (final row in unsynced) {
-      await _supabase.from(tabla).upsert(_toRemoteRow(tabla, row));
-      await db.update(tabla, {'synced': 1},
-          where: 'id = ?', whereArgs: [row['id']]);
+      final remoto = _toRemoteRow(tabla, row);
+      var fotoPendiente = false;
+      if (tabla == 'solicitudes' &&
+          row['foto_local'] != null &&
+          row['foto_url'] == null &&
+          !await File(row['foto_local'] as String).exists()) {
+        // La foto ya no está en el teléfono: no hay nada que subir.
+        await db.update(tabla, {'foto_local': null},
+            where: 'id = ?', whereArgs: [row['id']]);
+      } else if (tabla == 'solicitudes' &&
+          row['foto_local'] != null &&
+          row['foto_url'] == null) {
+        final url = await _subirFoto(row['id'] as String, row['foto_local'] as String);
+        if (url != null) {
+          remoto['foto_url'] = url;
+          await db.update(tabla, {'foto_url': url},
+              where: 'id = ?', whereArgs: [row['id']]);
+        } else {
+          fotoPendiente = true;
+        }
+      }
+      try {
+        await _supabase.from(tabla).upsert(remoto);
+      } on PostgrestException catch (e) {
+        // El servidor aún no tiene la columna foto_url: se sube sin foto.
+        if (e.code != 'PGRST204' || !remoto.containsKey('foto_url')) rethrow;
+        remoto.remove('foto_url');
+        await _supabase.from(tabla).upsert(remoto);
+        fotoPendiente = true;
+      }
+      // Con la foto pendiente la fila sigue marcada para reintentar
+      // (y la bajada no la pisa, así no se pierde la foto local).
+      if (!fotoPendiente) {
+        await db.update(tabla, {'synced': 1},
+            where: 'id = ?', whereArgs: [row['id']]);
+      }
     }
 
     // Eliminar en remoto los marcados como deleted
@@ -196,10 +231,28 @@ class SyncProvider extends ChangeNotifier {
     'puede_eliminar',
   };
 
+  /// Sube la foto de una solicitud al bucket "solicitudes" y devuelve su URL
+  /// pública, o null si no se pudo (sin bucket, archivo borrado, etc.).
+  Future<String?> _subirFoto(String id, String rutaLocal) async {
+    try {
+      final archivo = File(rutaLocal);
+      if (!await archivo.exists()) return null;
+      final ruta = '$id.jpg';
+      await _supabase.storage.from('solicitudes').upload(ruta, archivo,
+          fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'));
+      return _supabase.storage.from('solicitudes').getPublicUrl(ruta);
+    } catch (e) {
+      debugPrint('No se pudo subir la foto de la solicitud $id: $e');
+      return null;
+    }
+  }
+
+  // Columnas que solo existen en el teléfono.
+  static const _columnasLocales = {'synced', 'deleted', 'foto_local'};
+
   Map<String, dynamic> _toRemoteRow(String tabla, Map<String, dynamic> row) {
     final remote = Map<String, dynamic>.from(row);
-    remote.remove('synced');
-    remote.remove('deleted');
+    remote.removeWhere((k, _) => _columnasLocales.contains(k));
     for (final c in _columnasBool) {
       final v = remote[c];
       if (v is int) remote[c] = v == 1;

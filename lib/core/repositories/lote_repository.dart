@@ -9,11 +9,11 @@ class LoteRepository {
   final _uuid = const Uuid();
 
   Future<List<Lote>> getAll({String? tipo}) async {
-    final where = tipo != null
-        ? 'deleted = 0 AND tipo = "$tipo"'
-        : 'deleted = 0';
-    final rows =
-        await _db.query('lotes', where: where, orderBy: 'tipo ASC, nombre ASC');
+    final where = tipo != null ? 'deleted = 0 AND tipo = ?' : 'deleted = 0';
+    final rows = await _db.query('lotes',
+        where: where,
+        whereArgs: tipo != null ? [tipo] : null,
+        orderBy: 'tipo ASC, nombre ASC');
     return rows.map(Lote.fromMap).toList();
   }
 

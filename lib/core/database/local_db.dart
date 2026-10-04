@@ -10,9 +10,10 @@ class LocalDb {
   // Columnas de cada tabla local, para filtrar lo que llega de Supabase.
   final Map<String, Set<String>> _columnas = {};
 
-  Future<void> init() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'ganaderia_v2.db');
+  /// [path] solo se usa en pruebas; la app usa la ruta por defecto.
+  Future<void> init({String? path}) async {
+    path ??= join(await getDatabasesPath(), 'ganaderia_v2.db');
+    _columnas.clear();
 
     _db = await openDatabase(
       path,

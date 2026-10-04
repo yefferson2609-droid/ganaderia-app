@@ -9,7 +9,7 @@ class ToroRepository {
 
   Future<List<Toro>> getAll({bool soloActivos = false}) async {
     final where = soloActivos
-        ? 'deleted = 0 AND estado = "activo"'
+        ? "deleted = 0 AND estado = 'activo'"
         : 'deleted = 0';
     final rows =
         await _db.query('toros', where: where, orderBy: 'numero ASC');

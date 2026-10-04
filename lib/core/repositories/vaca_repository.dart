@@ -10,7 +10,7 @@ class VacaRepository {
   Future<List<Vaca>> getAll({bool soloActivas = false, String? ubicacionId}) async {
     String where = 'deleted = 0';
     List<dynamic> args = [];
-    if (soloActivas) { where += ' AND estado = "activa"'; }
+    if (soloActivas) { where += " AND estado = 'activa'"; }
     if (ubicacionId != null) { where += ' AND ubicacion_id = ?'; args.add(ubicacionId); }
     final rows = await _db.query('vacas', where: where, whereArgs: args.isEmpty ? null : args, orderBy: 'numero ASC');
     return rows.map(Vaca.fromMap).toList();

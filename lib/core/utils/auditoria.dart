@@ -1,7 +1,13 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Id del usuario con sesión iniciada (o null si no hay sesión).
-String? usuarioActualId() => Supabase.instance.client.auth.currentUser?.id;
+String? usuarioActualId() {
+  try {
+    return Supabase.instance.client.auth.currentUser?.id;
+  } catch (_) {
+    return null; // Supabase sin inicializar (p. ej. en pruebas)
+  }
+}
 
 /// Marca una fila nueva como pendiente de subir y registra quién la creó.
 Map<String, dynamic> filaNueva(Map<String, dynamic> map,

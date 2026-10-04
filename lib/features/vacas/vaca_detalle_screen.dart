@@ -8,6 +8,7 @@ import '../../core/models/vaca.dart';
 import '../../core/repositories/evento_vaca_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
 import '../../core/repositories/toro_repository.dart';
+import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
@@ -33,6 +34,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
   Vaca? _vaca;
   Toro? _padre;
   Vaca? _madre;
+  String? _ubicacion;
   List<EventoVaca> _eventos = [];
   List<TipoEvento> _tipos = [];
   bool _loading = true;
@@ -51,6 +53,9 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
       if (_vaca!.padreId != null) _padre = await _toroRepo.getById(_vaca!.padreId!);
       if (_vaca!.madreId != null) _madre = await _vacaRepo.getById(_vaca!.madreId!);
       _eventos = await _eventoRepo.getByVaca(widget.id);
+      _ubicacion = _vaca!.ubicacionId != null
+          ? (await UbicacionRepository().getById(_vaca!.ubicacionId!))?.nombre
+          : null;
     }
     _tipos = await _tipoRepo.getAll(soloActivos: true);
     setState(() => _loading = false);
@@ -290,10 +295,10 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                           _vaca!.estado.substring(1),
                       valueColor: _estadoColor(_vaca!.estado),
                     ),
-                    if (_vaca!.color != null)
-                      _InfoRow(label: 'Color', value: _vaca!.color!),
-                    if (_vaca!.nota != null)
-                      _InfoRow(label: 'Nota', value: _vaca!.nota!),
+                    _InfoRow(label: 'Edad', value: _vaca!.edad),
+                    _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
+                    _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
+                    _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
                     const SizedBox(height: 8),
                     CreadorInfo(
                       createdBy: _vaca!.createdBy,

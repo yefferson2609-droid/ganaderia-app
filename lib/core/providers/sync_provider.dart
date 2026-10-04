@@ -253,35 +253,47 @@ class SyncProvider extends ChangeNotifier {
           fotoPendiente = true;
         }
       }
-      if (tabla == 'solicitudes' && !_servidorTieneFotoUrl) {
-        remoto.remove('foto_url');
-        if (row['foto_local'] != null) fotoPendiente = true;
+      // Columnas que el servidor todavía no tiene (falta ejecutar un script
+      // de supabase_migrations): se envía sin ellas. Si traían un dato, la
+      // fila queda pendiente para reenviarla completa cuando existan.
+      var datoPendiente = fotoPendiente;
+      final faltantes = _columnasFaltantes.putIfAbsent(tabla, () => {});
+      for (final c in faltantes) {
+        if (remoto.remove(c) != null) datoPendiente = true;
       }
-      try {
-        await _supabase.from(tabla).upsert(remoto);
-      } on PostgrestException catch (e) {
-        // El servidor aún no tiene la columna foto_url (falta ejecutar
-        // 005_fotos_solicitudes.sql): se sube sin ella.
-        if (e.code != 'PGRST204' || !remoto.containsKey('foto_url')) {
-          errores.add('No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
-          continue;
-        }
-        _servidorTieneFotoUrl = false;
-        remoto.remove('foto_url');
+      var enviado = false;
+      for (var intento = 0; intento < 6 && !enviado; intento++) {
         try {
           await _supabase.from(tabla).upsert(remoto);
-        } catch (e2) {
-          errores.add('No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e2)}');
-          continue;
+          enviado = true;
+        } on PostgrestException catch (e) {
+          final col = e.code == 'PGRST204'
+              ? RegExp(r"'(\w+)' column").firstMatch(e.message)?.group(1)
+              : null;
+          if (col == null || !remoto.containsKey(col)) {
+            errores.add(
+                'No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+            break;
+          }
+          faltantes.add(col);
+          if (remoto.remove(col) != null) datoPendiente = true;
+        } catch (e) {
+          errores.add(
+              'No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+          break;
         }
-        if (row['foto_local'] != null) fotoPendiente = true;
-      } catch (e) {
-        errores.add('No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
-        continue;
       }
-      // Con la foto pendiente la fila sigue marcada para reintentar
-      // (y la bajada no la pisa, así no se pierde la foto local).
-      if (!fotoPendiente) {
+      if (!enviado) continue;
+      if (datoPendiente) {
+        for (final c in faltantes) {
+          final aviso = 'Falta actualizar Supabase: ${_nombreTabla(tabla)} no '
+              'tiene el campo "$c" (ejecuta el script pendiente).';
+          if (!errores.contains(aviso)) errores.add(aviso);
+        }
+      }
+      // Con un dato pendiente la fila sigue marcada para reintentar
+      // (y la bajada no la pisa, así no se pierde el dato local).
+      if (!datoPendiente) {
         await db.update(tabla, {'synced': 1},
             where: 'id = ?', whereArgs: [row['id']]);
       }
@@ -299,7 +311,8 @@ class SyncProvider extends ChangeNotifier {
     }
   }
 
-  bool _servidorTieneFotoUrl = true;
+  // Por tabla, columnas locales que el servidor aún no tiene.
+  final Map<String, Set<String>> _columnasFaltantes = {};
 
   static const _nombres = {
     'tipos_evento': 'tipos de evento',

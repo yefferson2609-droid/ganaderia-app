@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/repositories/caballo_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/utils/edad.dart';
 
 class CaballoFormScreen extends StatefulWidget {
   final String? id;
@@ -20,6 +22,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
   final _colorCtrl = TextEditingController();
   final _notaCtrl = TextEditingController();
   String _estado = 'activo';
+  DateTime? _fechaNacimiento;
   String? _ubicacionId;
   List<Ubicacion> _ubicaciones = [];
   bool _loading = false;
@@ -50,6 +53,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
         _colorCtrl.text = c.color ?? '';
         _notaCtrl.text = c.nota ?? '';
         _estado = c.estado == 'muerto' ? 'fallecido' : c.estado;
+        _fechaNacimiento = c.fechaNacimiento;
         _ubicacionId = c.ubicacionId;
       }
     }
@@ -67,6 +71,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
         await _repo.update(c.copyWith(
           nombre: _nombreCtrl.text.trim(),
           estado: _estado,
+          fechaNacimiento: _fechaNacimiento,
           ubicacionId: _ubicacionId,
           clearUbicacion: _ubicacionId == null,
           color: textoONull(_colorCtrl.text),
@@ -77,6 +82,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
       await _repo.create(
         nombre: _nombreCtrl.text.trim(),
         estado: _estado,
+        fechaNacimiento: _fechaNacimiento,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
         nota: textoONull(_notaCtrl.text),
@@ -108,6 +114,40 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
                       ),
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Campo requerido' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: () async {
+                        final p = await showDatePicker(
+                          context: context,
+                          initialDate: _fechaNacimiento ?? DateTime.now(),
+                          firstDate: DateTime(1990),
+                          lastDate: DateTime.now(),
+                        );
+                        if (p != null) setState(() => _fechaNacimiento = p);
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Fecha de nacimiento',
+                          prefixIcon: const Icon(Icons.calendar_today),
+                          suffixIcon: _fechaNacimiento != null
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () =>
+                                      setState(() => _fechaNacimiento = null))
+                              : null,
+                        ),
+                        child: Text(
+                          _fechaNacimiento != null
+                              ? '${DateFormat('dd/MM/yyyy').format(_fechaNacimiento!)}'
+                                  ' (${edadTexto(_fechaNacimiento)})'
+                              : 'Seleccionar fecha',
+                          style: TextStyle(
+                              color: _fechaNacimiento != null
+                                  ? null
+                                  : Colors.grey[600]),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(

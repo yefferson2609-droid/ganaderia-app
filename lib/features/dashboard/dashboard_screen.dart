@@ -17,7 +17,6 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/auditoria.dart';
 import '../../core/widgets/animal_face.dart';
-import '../../core/widgets/creador_info.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$');
 

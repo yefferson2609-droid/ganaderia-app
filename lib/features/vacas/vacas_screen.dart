@@ -137,6 +137,7 @@ class _VacasScreenState extends State<VacasScreen> {
                                 subtitle: Text(
                                     'Estado: ${vaca.estado[0].toUpperCase()}${vaca.estado.substring(1)}'
                                     '${vaca.estadoReproductivo == 'prenada' ? ' · Preñada' : ''}'
+                                    '${vaca.fechaNacimiento != null ? ' · ${vaca.edad}' : ''}'
                                     '${vaca.color != null ? ' · ${vaca.color}' : ''}'),
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: () => context

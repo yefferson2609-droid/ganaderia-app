@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../core/models/caballo.dart';
 import '../../core/repositories/caballo_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/creador_info.dart';
+import '../../core/widgets/dato_fila.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
 import 'caballos_screen.dart';
@@ -154,9 +156,15 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
                       ),
                     ]),
                     const Divider(height: 24),
-                    Text('Ubicación: ${_ubicacion ?? 'Sin ubicación'}'),
-                    if (c.color != null) Text('Color: ${c.color}'),
-                    if (c.nota != null) Text('Nota: ${c.nota}'),
+                    DatoFila('Edad', c.edad),
+                    DatoFila(
+                        'Nacimiento',
+                        c.fechaNacimiento != null
+                            ? DateFormat('dd/MM/yyyy').format(c.fechaNacimiento!)
+                            : 'No registrada'),
+                    DatoFila('Color', c.color ?? 'Sin registrar'),
+                    DatoFila('Ubicación', _ubicacion ?? 'Sin ubicación'),
+                    DatoFila('Notas', c.nota ?? 'Sin notas'),
                     const SizedBox(height: 8),
                     CreadorInfo(
                       createdBy: c.createdBy,

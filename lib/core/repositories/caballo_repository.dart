@@ -23,6 +23,7 @@ class CaballoRepository {
   Future<Caballo> create({
     required String nombre,
     String estado = 'activo',
+    DateTime? fechaNacimiento,
     String? ubicacionId,
     String? color,
     String? nota,
@@ -32,6 +33,7 @@ class CaballoRepository {
       id: _uuid.v4(),
       nombre: nombre,
       estado: estado,
+      fechaNacimiento: fechaNacimiento,
       ubicacionId: ubicacionId,
       color: color,
       nota: nota,

@@ -16,7 +16,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -112,6 +112,7 @@ class LocalDb {
       CREATE TABLE caballos (
         id TEXT PRIMARY KEY,
         nombre TEXT NOT NULL,
+        fecha_nacimiento TEXT,
         estado TEXT NOT NULL DEFAULT 'activo',
         ubicacion_id TEXT,
         color TEXT,
@@ -236,6 +237,9 @@ class LocalDb {
     if (oldVersion == 5) {
       await db.execute('ALTER TABLE solicitudes ADD COLUMN foto_url TEXT');
       await db.execute('ALTER TABLE solicitudes ADD COLUMN foto_local TEXT');
+    }
+    if (oldVersion < 7) {
+      await db.execute('ALTER TABLE caballos ADD COLUMN fecha_nacimiento TEXT');
     }
   }
 

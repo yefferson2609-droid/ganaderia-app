@@ -3,6 +3,8 @@ import '../../core/models/perfil_usuario.dart';
 import '../../core/models/permiso_usuario.dart';
 import '../../core/repositories/perfil_usuario_repository.dart';
 import '../../core/repositories/permiso_usuario_repository.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/auditoria.dart';
 
 class UsuarioPermisosScreen extends StatefulWidget {
   final String id;
@@ -32,6 +34,44 @@ class _UsuarioPermisosScreenState extends State<UsuarioPermisosScreen> {
     final lista = await _permisoRepo.getByUsuario(widget.id);
     _permisos = {for (final p in lista) p.modulo: p};
     setState(() => _loading = false);
+  }
+
+  Future<void> _eliminar() async {
+    final p = _perfil!;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar usuario'),
+        content: Text(
+            '¿Eliminar a ${p.nombre} (${p.correo})?\n\n'
+            'Ya no podrá entrar a la app y se le quitan todos los permisos. '
+            'Su nombre se conserva en el historial de lo que registró.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _perfilRepo.eliminar(p.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('${p.nombre} fue eliminado')));
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.toString().replaceFirst('Exception: ', '')),
+        backgroundColor: AppColors.danger,
+      ));
+    }
   }
 
   Future<void> _toggleActivo(bool value) async {
@@ -65,8 +105,19 @@ class _UsuarioPermisosScreenState extends State<UsuarioPermisosScreen> {
       );
     }
 
+    final esYo = _perfil!.id == usuarioActualId();
     return Scaffold(
-      appBar: AppBar(title: Text(_perfil!.nombre)),
+      appBar: AppBar(
+        title: Text(_perfil!.nombre),
+        actions: [
+          if (!esYo)
+            IconButton(
+              tooltip: 'Eliminar usuario',
+              icon: const Icon(Icons.person_remove),
+              onPressed: _eliminar,
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

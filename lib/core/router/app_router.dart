@@ -39,12 +39,27 @@ import '../../features/usuarios/usuarios_screen.dart';
 import '../../features/usuarios/usuario_form_screen.dart';
 import '../../features/usuarios/usuario_permisos_screen.dart';
 
+class _CambioSesion extends ChangeNotifier {
+  _CambioSesion(Stream<AuthState> cambios) {
+    cambios.listen((e) {
+      if (e.event == AuthChangeEvent.signedIn ||
+          e.event == AuthChangeEvent.signedOut) {
+        notifyListeners();
+      }
+    });
+  }
+}
+
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/dashboard',
+    // Vuelve a evaluar la redirección al iniciar o cerrar sesión (p. ej. si
+    // un administrador desactiva al usuario mientras usa la app).
+    refreshListenable:
+        _CambioSesion(Supabase.instance.client.auth.onAuthStateChange),
     redirect: (context, state) {
       final user = Supabase.instance.client.auth.currentUser;
       final isLoginRoute = state.matchedLocation == '/login';

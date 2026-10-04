@@ -54,7 +54,7 @@ flutter build apk --release
   mostrar (los acentos "se ven mal" pero están bien).
 
 ## Arquitectura
-- `lib/core/database/local_db.dart`: SQLite local, versión **9**. Migraciones en
+- `lib/core/database/local_db.dart`: SQLite local, versión **10**. Migraciones en
   `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal;
   `_createV9` agrega `categoria` y `fecha_destete` a terneros.
 - **"Levante y ceba"** (tabla/ruta `terneros`): categorías en
@@ -80,9 +80,10 @@ flutter build apk --release
 
 ## Supabase (proyecto actual, una sola finca)
 - URL `https://punqawvuwxlrdipapnja.supabase.co` (clave anon en lib/main.dart).
-- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 008**
+- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 009**
   (la 007 reúne 005 y 006). Ejecutadas por Claude desde el navegador integrado
   con la sesión del usuario (editor SQL vía `monaco.editor.getEditors()[0]`).
+- Usuarios: "Eliminar" llama a la función `eliminar_usuario` (solo admin, no a sí mismo): bloquea la cuenta (banned_until), cierra sesiones, borra permisos y marca `eliminado` (no se borra la cuenta porque hay FK created_by → auth.users). Usuario inactivo/eliminado no puede entrar y se le cierra la sesión al sincronizar. La sync, si un upsert es rechazado por RLS (42501), intenta update.
 - RLS actual: cualquier usuario autenticado ve todo → **no crear usuarios de
   otras fincas aquí**.
 

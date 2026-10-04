@@ -190,6 +190,21 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
+    // Si un administrador desactivó o eliminó a este usuario, se cierra
+    // su sesión (el router lo lleva a la pantalla de inicio).
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid != null) {
+      final yo = await LocalDb.instance.db.query('perfiles_usuario',
+          columns: ['activo', 'eliminado'], where: 'id = ?', whereArgs: [uid]);
+      if (yo.isNotEmpty &&
+          (yo.first['activo'] == 0 || yo.first['eliminado'] == 1)) {
+        _isSyncing = false;
+        notifyListeners();
+        await _supabase.auth.signOut();
+        return;
+      }
+    }
+
     // Se registra la hora aunque haya errores: lo que no falló sí quedó
     // sincronizado, y los errores se muestran aparte.
     _lastSync = DateTime.now();
@@ -325,7 +340,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       var enviado = false;
       for (var intento = 0; intento < 6 && !enviado; intento++) {
         try {
-          await _supabase.from(tabla).upsert(remoto);
+          await _upsertOActualizar(tabla, remoto);
           enviado = true;
         } on PostgrestException catch (e) {
           final col = e.code == 'PGRST204'
@@ -369,6 +384,23 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       } catch (e) {
         errores.add('No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
       }
+    }
+  }
+
+  /// Envía una fila con "insertar o actualizar". Si la seguridad del servidor
+  /// no permite insertar en esa tabla (p. ej. perfiles de usuario), pero la
+  /// fila ya existe, la actualiza directamente.
+  Future<void> _upsertOActualizar(String tabla, Map<String, dynamic> fila) async {
+    try {
+      await _supabase.from(tabla).upsert(fila);
+    } on PostgrestException catch (e) {
+      if (e.code != '42501') rethrow; // 42501 = no permitido por seguridad
+      final actualizadas = await _supabase
+          .from(tabla)
+          .update(Map.of(fila)..remove('id'))
+          .eq('id', fila['id'] as String)
+          .select('id');
+      if (actualizadas.isEmpty) rethrow;
     }
   }
 
@@ -421,6 +453,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   final Set<String> _columnasBool = {
     'activa',
     'activo',
+    'eliminado',
     'puede_ver',
     'puede_crear',
     'puede_editar',

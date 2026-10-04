@@ -4,6 +4,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:ganaderia/core/database/local_db.dart';
 import 'package:ganaderia/core/models/vaca.dart';
 import 'package:ganaderia/core/repositories/leche_repository.dart';
+import 'package:ganaderia/core/repositories/perfil_usuario_repository.dart';
 import 'package:ganaderia/core/repositories/pesaje_repository.dart';
 import 'package:ganaderia/core/repositories/reproduccion_repository.dart';
 import 'package:ganaderia/core/repositories/ternero_repository.dart';
@@ -299,6 +300,22 @@ void main() {
     expect(t.categoria, 'ternero');
   });
 
+  test('usuarios eliminados no salen en la lista pero sí su nombre', () async {
+    final db = LocalDb.instance.db;
+    await db.delete('perfiles_usuario');
+    final ahora = DateTime.now().toIso8601String();
+    for (final (id, nombre, elim) in [('u1', 'Ana', 0), ('u2', 'Beto', 1)]) {
+      await db.insert('perfiles_usuario', {
+        'id': id, 'nombre': nombre, 'correo': '$id@x.com', 'activo': 1,
+        'eliminado': elim, 'created_at': ahora, 'updated_at': ahora,
+      });
+    }
+    final repo = PerfilUsuarioRepository();
+    expect((await repo.getAll()).map((p) => p.nombre), ['Ana']);
+    expect((await repo.getById('u2'))!.nombre, 'Beto');
+    expect((await repo.getById('u2'))!.eliminado, isTrue);
+  });
+
   // Va al final: cambia la base abierta por LocalDb.
   test('migración real desde la versión 6 (la que tiene el teléfono)', () async {
     final path = '${await getDatabasesPath()}/migracion_test.db';
@@ -310,14 +327,17 @@ void main() {
       await db.execute('CREATE TABLE toros (id TEXT PRIMARY KEY, color TEXT)');
       await db.execute('CREATE TABLE terneros (id TEXT PRIMARY KEY, color TEXT, etapa TEXT)');
       await db.execute(
+          'CREATE TABLE perfiles_usuario (id TEXT PRIMARY KEY, nombre TEXT, activo INTEGER)');
+      await db.execute(
           'CREATE TABLE caballos (id TEXT PRIMARY KEY, nombre TEXT, color TEXT)');
       await db.insert('vacas', {'id': 'v1', 'numero': '12', 'color': 'Roja'});
     });
     await v6.close();
 
-    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 9
+    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 10
     final db = LocalDb.instance.db;
-    expect(await db.getVersion(), 9);
+    expect(await db.getVersion(), 10);
+    expect(await LocalDb.instance.columnas('perfiles_usuario'), contains('eliminado'));
     expect(await LocalDb.instance.columnas('terneros'),
         containsAll(['categoria', 'fecha_destete']));
     expect(await LocalDb.instance.columnas('caballos'),

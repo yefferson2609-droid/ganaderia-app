@@ -17,7 +17,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -203,6 +203,7 @@ class LocalDb {
     await _createOperacionTables(db);
     await _createV8(db);
     await _createV9(db);
+    await _createV10(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -250,6 +251,15 @@ class LocalDb {
     if (oldVersion < 9) {
       await _createV9(db);
     }
+    if (oldVersion < 10) {
+      await _createV10(db);
+    }
+  }
+
+  /// Usuarios eliminados (se conservan para el historial "creado por").
+  Future<void> _createV10(Database db) async {
+    await db.execute(
+        'ALTER TABLE perfiles_usuario ADD COLUMN eliminado INTEGER NOT NULL DEFAULT 0');
   }
 
   /// Categoría ganadera y fecha de destete en "Levante y ceba".

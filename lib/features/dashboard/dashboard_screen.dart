@@ -11,7 +11,10 @@ import '../../core/providers/sync_provider.dart';
 import '../../core/repositories/actividad_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/registro_salud_repository.dart';
+import '../../core/repositories/leche_repository.dart';
 import '../../core/repositories/reproduccion_repository.dart';
+import '../../core/repositories/vaca_repository.dart';
+import '../../core/services/alertas_service.dart';
 import '../../core/repositories/solicitud_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
@@ -45,6 +48,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, Map<String, int>> _conteosPorUbicacion = {};
   Map<String, int> _sinUbicacion = {};
   Map<EstadoProduccion, int> _produccion = {};
+  double _lecheHoy = 0;
+  int _prenadas = 0;
+
+  DateTime now0() {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
+  }
   List<_Aviso> _avisos = [];
   double _utilidadMes = 0;
   bool _loading = true;
@@ -70,6 +80,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     _sinUbicacion = await _ubicacionRepo.getConteosPorUbicacion(null);
     _produccion = await ReproduccionRepository().conteoProduccion();
+    final hoy = (await LecheRepository().diasFinca(now0(), now0())).first;
+    _lecheHoy = hoy.total;
+    _prenadas = (await VacaRepository().getAll(soloActivas: true))
+        .where((v) => v.estadoReproductivo == 'prenada')
+        .length;
 
     final now = DateTime.now();
     final totalesFinanzas = await _movimientoRepo.getTotales(
@@ -155,6 +170,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
 
+    if (permisos.puedeVer('vacas')) {
+      final hato = await AlertasService().generar();
+      const textos = {
+        TipoAlerta.partos: ('1 parto próximo', 'partos próximos', Icons.child_friendly, AppColors.info),
+        TipoAlerta.secar: ('1 vaca para secar', 'vacas para secar', Icons.water_drop_outlined, AppColors.warning),
+        TipoAlerta.vacias: ('1 vaca vacía mucho tiempo', 'vacas vacías mucho tiempo', Icons.hourglass_bottom, AppColors.danger),
+        TipoAlerta.vitamina: ('1 vaca con vitamina vencida', 'vacas con vitamina vencida', Icons.medication_liquid, AppColors.accentPurple),
+      };
+      for (final t in TipoAlerta.values) {
+        final n = hato[t]?.length ?? 0;
+        if (n == 0) continue;
+        final (uno, varios, icono, color) = textos[t]!;
+        avisos.add(_Aviso(icono, color, n == 1 ? uno : '$n $varios', '/alertas'));
+      }
+    }
+
     final completadas = await actividadRepo.contarCompletadasDesde(
         DateTime.now().subtract(const Duration(days: 2)));
     if (completadas > 0) {
@@ -220,6 +251,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final menu = <(String, String, String?)>[
       ('/inventario', 'Inventario', null),
+      ('/leche', 'Producción de leche', 'vacas'),
+      ('/alertas', 'Alertas del hato', 'vacas'),
+      ('/palpacion', 'Palpación (veterinario)', 'vacas'),
       ('/evento-masivo', 'Evento masivo', 'eventos'),
       ('/salud', 'Salud', 'salud'),
       ('/actividades', 'Actividades', 'actividades'),
@@ -364,30 +398,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     if (permisos.puedeVer('vacas') && (_totales['vacas'] ?? 0) > 0) ...[
                       _seccion('Producción'),
                       Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _abrir('/inventario'),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Column(children: [
+                          ListTile(
+                            leading: const Icon(Icons.water_drop,
+                                color: AppColors.info),
+                            title: Text('Leche hoy: ${_lecheHoy.toStringAsFixed(_lecheHoy % 1 == 0 ? 0 : 1)} L',
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(_lecheHoy == 0
+                                ? 'Toca para anotar el ordeño'
+                                : (_produccion[EstadoProduccion.enOrdeno] ?? 0) > 0
+                                    ? '${(_lecheHoy / _produccion[EstadoProduccion.enOrdeno]!).toStringAsFixed(1)} L por vaca en ordeño'
+                                    : 'Total de mañana y tarde'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => _abrir('/leche'),
+                          ),
+                          const Divider(height: 1),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
-                                _MiniCount(
-                                    label: 'En ordeño',
-                                    count: _produccion[EstadoProduccion.enOrdeno] ?? 0,
-                                    color: AppColors.info),
-                                _MiniCount(
-                                    label: 'Secas',
-                                    count: _produccion[EstadoProduccion.seca] ?? 0,
-                                    color: AppColors.warning),
-                                _MiniCount(
-                                    label: 'Sin partos',
-                                    count: _produccion[EstadoProduccion.sinPartos] ?? 0,
-                                    color: Colors.grey),
+                                InkWell(
+                                  onTap: () => _abrir('/vacas?filtro=ordeno'),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: _MiniCount(
+                                        label: 'En ordeño',
+                                        count: _produccion[EstadoProduccion.enOrdeno] ?? 0,
+                                        color: AppColors.info),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () => _abrir('/vacas?filtro=seca'),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: _MiniCount(
+                                        label: 'Secas',
+                                        count: _produccion[EstadoProduccion.seca] ?? 0,
+                                        color: AppColors.warning),
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () => _abrir('/vacas?filtro=prenada'),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: _MiniCount(
+                                        label: 'Preñadas',
+                                        count: _prenadas,
+                                        color: AppColors.success),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ),
+                        ]),
                       ),
                     ],
 

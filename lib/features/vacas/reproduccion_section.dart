@@ -34,6 +34,7 @@ class ReproduccionSection extends StatefulWidget {
 class _ReproduccionSectionState extends State<ReproduccionSection> {
   final _repo = ReproduccionRepository();
   ResumenReproductivo? _r;
+  SugerenciaSecado? _secado;
 
   @override
   void initState() {
@@ -49,7 +50,13 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
 
   Future<void> _load() async {
     final r = await _repo.resumen(widget.vaca.id);
-    if (mounted) setState(() => _r = r);
+    final s = await _repo.sugerenciaSecado(widget.vaca);
+    if (mounted) {
+      setState(() {
+        _r = r;
+        _secado = s;
+      });
+    }
   }
 
   Future<DateTime?> _fecha(BuildContext ctx, DateTime inicial) => showDatePicker(
@@ -239,7 +246,39 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
             const SizedBox(height: 8),
             _fila('Partos registrados', '${r.partos.length}'),
             if (r.ultimoParto != null)
-              _fila('Último parto', _fmt.format(r.ultimoParto!)),
+              _fila(
+                  estado == EstadoProduccion.enOrdeno
+                      ? 'Entró a ordeño'
+                      : 'Último parto',
+                  _fmt.format(r.ultimoParto!)),
+            if (_secado != null) ...[
+              const SizedBox(height: 4),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Secar sugerido: ${_fmt.format(_secado!.fecha)}'
+                      '${_secado!.fecha.isBefore(DateTime.now()) && estado == EstadoProduccion.enOrdeno ? ' (¡ya toca!)' : ''}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      '${_secado!.diasDescanso} días de descanso antes del parto '
+                      '(${_fmt.format(widget.vaca.fechaEstimadaParto!)}) · '
+                      'según ${_secado!.fuente}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+            ],
             if (r.intervaloPromedio != null)
               _fila('Intervalo promedio', '${r.intervaloPromedio} días'
                   ' (${(r.intervaloPromedio! / 30.4).toStringAsFixed(1)} meses)'),

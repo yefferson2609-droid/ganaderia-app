@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/vaca.dart';
+import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 
+const _filtroLabels = {
+  'todos': 'Todas',
+  'activa': 'Activas',
+  'ordeno': 'En ordeño',
+  'seca': 'Secas',
+  'prenada': 'Preñadas',
+  'vendida': 'Vendidas',
+  'fallecida': 'Fallecidas',
+};
+
 class VacasScreen extends StatefulWidget {
-  const VacasScreen({super.key});
+  /// Filtro inicial, p. ej. 'ordeno' desde el panel principal.
+  final String? filtro;
+  const VacasScreen({super.key, this.filtro});
 
   @override
   State<VacasScreen> createState() => _VacasScreenState();
@@ -16,6 +29,7 @@ class _VacasScreenState extends State<VacasScreen> {
   final _repo = VacaRepository();
   List<Vaca> _vacas = [];
   List<Vaca> _filtradas = [];
+  Map<String, EstadoProduccion> _produccion = {};
   bool _loading = true;
   String _filtroEstado = 'todos';
   final _searchCtrl = TextEditingController();
@@ -23,6 +37,7 @@ class _VacasScreenState extends State<VacasScreen> {
   @override
   void initState() {
     super.initState();
+    if (_filtroLabels.containsKey(widget.filtro)) _filtroEstado = widget.filtro!;
     _load();
     _searchCtrl.addListener(_filtrar);
   }
@@ -36,16 +51,32 @@ class _VacasScreenState extends State<VacasScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     _vacas = await _repo.getAll();
+    _produccion = await ReproduccionRepository().estadosProduccion();
     _filtrar();
     setState(() => _loading = false);
+  }
+
+  bool _cumple(Vaca v, [String? filtro]) {
+    final f = filtro ?? _filtroEstado;
+    switch (f) {
+      case 'todos':
+        return true;
+      case 'ordeno':
+        return _produccion[v.id] == EstadoProduccion.enOrdeno;
+      case 'seca':
+        return _produccion[v.id] == EstadoProduccion.seca;
+      case 'prenada':
+        return v.estado == 'activa' && v.estadoReproductivo == 'prenada';
+      default:
+        return v.estado == f;
+    }
   }
 
   void _filtrar() {
     final q = _searchCtrl.text.toLowerCase();
     setState(() {
       _filtradas = _vacas.where((v) {
-        final matchEstado =
-            _filtroEstado == 'todos' || v.estado == _filtroEstado;
+        final matchEstado = _cumple(v);
         final matchSearch = q.isEmpty || v.numero.toLowerCase().contains(q);
         return matchEstado && matchSearch;
       }).toList();
@@ -96,12 +127,15 @@ class _VacasScreenState extends State<VacasScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ['todos', 'activa', 'vendida', 'fallecida'].map((e) {
+                children: _filtroLabels.keys.map((e) {
                   final selected = _filtroEstado == e;
+                  final n = _vacas.isEmpty
+                      ? null
+                      : _vacas.where((v) => _cumple(v, e)).length;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
-                      label: Text(e == 'todos' ? 'Todas' : e[0].toUpperCase() + e.substring(1)),
+                      label: Text('${_filtroLabels[e]}${n != null ? ' ($n)' : ''}'),
                       selected: selected,
                       onSelected: (_) {
                         setState(() => _filtroEstado = e);

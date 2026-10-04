@@ -1,3 +1,4 @@
+import '../config/ajustes.dart';
 import '../database/local_db.dart';
 import '../models/vaca.dart';
 import 'evento_vaca_repository.dart';
@@ -10,6 +11,7 @@ import 'vaca_repository.dart';
 /// tablas nuevas en el servidor.
 const kTipoParto = 'Parto';
 const kTipoSecado = 'Secado';
+const kTipoPalpacion = 'Palpación';
 
 // Condiciones SQL sobre el nombre del tipo de evento (alias t).
 const _esParto = "lower(t.nombre) LIKE 'parto%'";
@@ -57,6 +59,50 @@ class ResumenReproductivo {
   int? get diasEnLeche => estado == EstadoProduccion.enOrdeno
       ? DateTime.now().difference(ultimoParto!).inDays
       : null;
+}
+
+class PromediosCiclo {
+  final int? diasLactancia; // días en ordeño (parto → secado)
+  final int? diasSeco; // días de descanso (secado → parto)
+  final int? intervalo; // días entre partos
+  final int casosLactancia;
+  final int casosSeco;
+  final int casosIntervalo;
+
+  const PromediosCiclo({
+    this.diasLactancia,
+    this.diasSeco,
+    this.intervalo,
+    this.casosLactancia = 0,
+    this.casosSeco = 0,
+    this.casosIntervalo = 0,
+  });
+}
+
+class _Acumulado {
+  final lactancias = <int>[];
+  final secos = <int>[];
+  final intervalos = <int>[];
+
+  int? _prom(List<int> l) =>
+      l.isEmpty ? null : (l.reduce((a, b) => a + b) / l.length).round();
+
+  PromediosCiclo promedios() => PromediosCiclo(
+        diasLactancia: _prom(lactancias),
+        diasSeco: _prom(secos),
+        intervalo: _prom(intervalos),
+        casosLactancia: lactancias.length,
+        casosSeco: secos.length,
+        casosIntervalo: intervalos.length,
+      );
+}
+
+class SugerenciaSecado {
+  final DateTime fecha;
+  final int diasDescanso;
+  final String fuente;
+  const SugerenciaSecado(
+      {required this.fecha, required this.diasDescanso, required this.fuente});
 }
 
 EstadoProduccion estadoProduccion(DateTime? ultimoParto, DateTime? ultimoSecado) {
@@ -114,6 +160,103 @@ class ReproduccionRepository {
       ultimaVitamina: vitamina.isEmpty ? null : _fecha(vitamina.first['fecha']),
       ultimaVitaminaNombre:
           vitamina.isEmpty ? null : vitamina.first['nombre'] as String?,
+    );
+  }
+
+  /// Estado de producción de cada vaca activa (id → estado).
+  Future<Map<String, EstadoProduccion>> estadosProduccion() async {
+    final rows = await _db.rawQuery('''
+      SELECT v.id,
+        (SELECT MAX(e.fecha) FROM eventos_vaca e
+           JOIN tipos_evento t ON t.id = e.tipo_evento_id
+           WHERE e.vaca_id = v.id AND e.deleted = 0 AND $_esParto) AS parto,
+        (SELECT MAX(e.fecha) FROM eventos_vaca e
+           JOIN tipos_evento t ON t.id = e.tipo_evento_id
+           WHERE e.vaca_id = v.id AND e.deleted = 0 AND $_esSecado) AS secado
+      FROM vacas v
+      WHERE v.deleted = 0 AND v.estado = 'activa'
+    ''');
+    return {
+      for (final r in rows)
+        r['id'] as String:
+            estadoProduccion(_fecha(r['parto']), _fecha(r['secado'])),
+    };
+  }
+
+  /// Promedios de días en ordeño, días secas e intervalo entre partos,
+  /// calculados con el historial de las vacas, por raza y en total ('Todas').
+  Future<Map<String, PromediosCiclo>> promediosPorRaza() async {
+    final rows = await _db.rawQuery('''
+      SELECT e.vaca_id, e.fecha, v.raza,
+        CASE WHEN $_esParto THEN 'P' ELSE 'S' END AS tipo
+      FROM eventos_vaca e
+      JOIN tipos_evento t ON t.id = e.tipo_evento_id
+      JOIN vacas v ON v.id = e.vaca_id
+      WHERE e.deleted = 0 AND v.deleted = 0 AND ($_esParto OR $_esSecado)
+      ORDER BY e.vaca_id, e.fecha
+    ''');
+    final porVaca = <String, List<(DateTime, String)>>{};
+    final razaDe = <String, String>{};
+    for (final r in rows) {
+      final id = r['vaca_id'] as String;
+      porVaca.putIfAbsent(id, () => []).add((_fecha(r['fecha'])!, r['tipo'] as String));
+      final raza = (r['raza'] as String?)?.trim();
+      razaDe[id] = (raza == null || raza.isEmpty) ? 'Sin raza' : raza;
+    }
+
+    final acum = <String, _Acumulado>{};
+    void sumar(String clave, void Function(_Acumulado a) f) =>
+        f(acum.putIfAbsent(clave, () => _Acumulado()));
+
+    porVaca.forEach((id, eventos) {
+      for (var i = 0; i < eventos.length - 1; i++) {
+        final (f1, t1) = eventos[i];
+        final (f2, t2) = eventos[i + 1];
+        final dias = f2.difference(f1).inDays;
+        if (dias <= 0) continue;
+        for (final clave in [razaDe[id]!, 'Todas']) {
+          if (t1 == 'P' && t2 == 'S') sumar(clave, (a) => a.lactancias.add(dias));
+          if (t1 == 'S' && t2 == 'P') sumar(clave, (a) => a.secos.add(dias));
+        }
+      }
+      final partos = eventos.where((e) => e.$2 == 'P').map((e) => e.$1).toList();
+      for (var i = 1; i < partos.length; i++) {
+        final dias = partos[i].difference(partos[i - 1]).inDays;
+        if (dias <= 0) continue;
+        for (final clave in [razaDe[id]!, 'Todas']) {
+          sumar(clave, (a) => a.intervalos.add(dias));
+        }
+      }
+    });
+    return acum.map((k, v) => MapEntry(k, v.promedios()));
+  }
+
+  /// Fecha sugerida para secar una vaca preñada y días de descanso.
+  /// Usa el promedio de su raza (o de todas) si hay suficientes casos;
+  /// si no, el valor por defecto de la finca.
+  Future<SugerenciaSecado?> sugerenciaSecado(Vaca vaca) async {
+    if (vaca.estadoReproductivo != 'prenada' || vaca.fechaEstimadaParto == null) {
+      return null;
+    }
+    final promedios = await promediosPorRaza();
+    final raza = (vaca.raza == null || vaca.raza!.trim().isEmpty)
+        ? 'Sin raza'
+        : vaca.raza!.trim();
+    int dias = kDiasSecadoPorDefecto;
+    String fuente = 'valor por defecto de la finca';
+    final deRaza = promedios[raza];
+    final todas = promedios['Todas'];
+    if (deRaza != null && deRaza.casosSeco >= kMinimoCasosPromedio) {
+      dias = deRaza.diasSeco!;
+      fuente = 'promedio de tus vacas ${raza.toLowerCase()} (${deRaza.casosSeco} casos)';
+    } else if (todas != null && todas.casosSeco >= kMinimoCasosPromedio) {
+      dias = todas.diasSeco!;
+      fuente = 'promedio de todas tus vacas (${todas.casosSeco} casos)';
+    }
+    return SugerenciaSecado(
+      fecha: vaca.fechaEstimadaParto!.subtract(Duration(days: dias)),
+      diasDescanso: dias,
+      fuente: fuente,
     );
   }
 
@@ -175,6 +318,47 @@ class ReproduccionRepository {
       clearFechaParto: true,
     ));
     return terneroId;
+  }
+
+  /// Resultado de la palpación del veterinario. Si está preñada, se estima
+  /// la fecha de monta con los meses de preñez y de ahí la de parto.
+  Future<void> registrarPalpacion({
+    required Vaca vaca,
+    required DateTime fecha,
+    required bool prenada,
+    int? meses,
+    String? notas,
+  }) async {
+    final resultado = prenada
+        ? 'Preñada${meses != null ? ' de $meses ${meses == 1 ? 'mes' : 'meses'}' : ''}'
+        : 'Vacía';
+    await EventoVacaRepository().create(
+      vacaId: vaca.id,
+      tipoEventoId: await _tipoId(kTipoPalpacion),
+      fecha: fecha,
+      notas: notas != null && notas.isNotEmpty ? '$resultado · $notas' : resultado,
+    );
+
+    if (prenada) {
+      final monta = meses != null
+          ? fecha.subtract(Duration(days: (meses * 30.4).round()))
+          : vaca.fechaMonta;
+      await VacaRepository().update(vaca.copyWith(
+        estadoReproductivo: 'prenada',
+        fechaMonta: monta,
+        fechaEstimadaParto:
+            monta?.add(const Duration(days: kDiasGestacion)),
+        clearFechaMonta: monta == null,
+        clearFechaParto: monta == null,
+      ));
+    } else {
+      await VacaRepository().update(vaca.copyWith(
+        estadoReproductivo: 'vacia',
+        clearFechaMonta: true,
+        clearToroId: true,
+        clearFechaParto: true,
+      ));
+    }
   }
 
   Future<void> secar({

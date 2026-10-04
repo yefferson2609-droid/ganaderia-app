@@ -21,6 +21,9 @@ import '../../features/actividades/actividades_screen.dart';
 import '../../features/solicitudes/solicitudes_screen.dart';
 import '../../features/reportes/reportes_screen.dart';
 import '../../features/inventario/inventario_screen.dart';
+import '../../features/leche/leche_screen.dart';
+import '../../features/alertas/alertas_screen.dart';
+import '../../features/palpacion/palpacion_screen.dart';
 import '../../features/lotes/lotes_screen.dart';
 import '../../features/lotes/lote_form_screen.dart';
 import '../../features/lotes/lote_detalle_screen.dart';
@@ -56,7 +59,8 @@ class AppRouter {
       // Vacas
       GoRoute(
         path: '/vacas',
-        builder: (_, __) => const VacasScreen(),
+        builder: (_, state) =>
+            VacasScreen(filtro: state.uri.queryParameters['filtro']),
         routes: [
           GoRoute(path: 'nueva', builder: (_, __) => const VacaFormScreen()),
           GoRoute(
@@ -145,6 +149,9 @@ class AppRouter {
       GoRoute(path: '/reportes', builder: (_, __) => const ReportesScreen()),
       GoRoute(
           path: '/inventario', builder: (_, __) => const InventarioScreen()),
+      GoRoute(path: '/leche', builder: (_, __) => const LecheScreen()),
+      GoRoute(path: '/alertas', builder: (_, __) => const AlertasScreen()),
+      GoRoute(path: '/palpacion', builder: (_, __) => const PalpacionScreen()),
 
       // Lotes
       GoRoute(

@@ -10,6 +10,7 @@ import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/creador_info.dart';
+import '../../core/widgets/pesajes_section.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
 
@@ -243,6 +244,8 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
             ),
             const SizedBox(height: 12),
             SaludSection(animalTipo: 'toro', animalId: widget.id),
+            const SizedBox(height: 12),
+            PesajesSection(animalTipo: 'toro', animalId: widget.id),
           ],
         ),
       ),

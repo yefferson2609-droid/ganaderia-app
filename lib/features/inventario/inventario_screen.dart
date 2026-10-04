@@ -152,6 +152,8 @@ class _FichaCard extends StatelessWidget {
       child: ExpansionTile(
         leading: AnimalFace(
           tipo: ficha.tipo,
+          fotoLocal: ficha.fotoLocal,
+          fotoUrl: ficha.fotoUrl,
           estadoColor: ficha.enTratamiento ? AppColors.danger : null,
         ),
         title: Text(ficha.titulo,

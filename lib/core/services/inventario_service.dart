@@ -21,12 +21,16 @@ class FichaAnimal {
   final List<(String, String)> datos;
   final List<String> salud; // historial de salud, del más reciente
   final List<String> eventos; // historial de eventos, del más reciente
+  final String? fotoLocal;
+  final String? fotoUrl;
 
   const FichaAnimal({
     required this.tipo,
     required this.id,
     required this.titulo,
     required this.resumen,
+    this.fotoLocal,
+    this.fotoUrl,
     this.enTratamiento = false,
     this.datos = const [],
     this.salud = const [],
@@ -95,6 +99,8 @@ class InventarioService {
       animales.add(FichaAnimal(
         tipo: 'vaca',
         id: v.id,
+        fotoLocal: v.fotoLocal,
+        fotoUrl: v.fotoUrl,
         titulo: 'Vaca #${v.numero}',
         resumen: [
           kEstadoProduccionLabels[r.estado]!,
@@ -105,6 +111,7 @@ class InventarioService {
         enTratamiento: salud.$1,
         datos: [
           ('Edad', _edad(v.fechaNacimiento)),
+          if (v.raza != null) ('Raza', v.raza!),
           if (v.color != null) ('Color', v.color!),
           ('Producción', kEstadoProduccionLabels[r.estado]! +
               (r.diasEnLeche != null ? ' (${r.diasEnLeche} días en leche)' : '')),
@@ -133,11 +140,14 @@ class InventarioService {
       animales.add(FichaAnimal(
         tipo: 'toro',
         id: t.id,
+        fotoLocal: t.fotoLocal,
+        fotoUrl: t.fotoUrl,
         titulo: 'Toro ${t.displayName}',
         resumen: _edad(t.fechaNacimiento),
         enTratamiento: salud.$1,
         datos: [
           ('Edad', _edad(t.fechaNacimiento)),
+          if (t.raza != null) ('Raza', t.raza!),
           if (t.color != null) ('Color', t.color!),
           if (t.nota != null) ('Nota', t.nota!),
         ],
@@ -156,6 +166,8 @@ class InventarioService {
       animales.add(FichaAnimal(
         tipo: 'ternero',
         id: t.id,
+        fotoLocal: t.fotoLocal,
+        fotoUrl: t.fotoUrl,
         titulo: 'Ternero #${t.numero}',
         resumen: [
           t.esMacho ? 'Macho' : 'Hembra',
@@ -167,6 +179,7 @@ class InventarioService {
         datos: [
           ('Sexo', t.esMacho ? (t.capado ? 'Macho capado' : 'Macho') : 'Hembra'),
           ('Etapa', kEtapaLabels[t.etapa] ?? t.etapa),
+          if (t.raza != null) ('Raza', t.raza!),
           ('Edad', _edad(t.fechaNacimiento)),
           if (madre != null) ('Madre', 'Vaca #${madre.numero}'),
           if (pesadas.isNotEmpty)
@@ -186,10 +199,14 @@ class InventarioService {
       animales.add(FichaAnimal(
         tipo: 'caballo',
         id: c.id,
+        fotoLocal: c.fotoLocal,
+        fotoUrl: c.fotoUrl,
         titulo: 'Caballo ${c.nombre}',
         resumen: c.color ?? 'Activo',
         enTratamiento: salud.$1,
         datos: [
+          if (c.fechaNacimiento != null) ('Edad', _edad(c.fechaNacimiento)),
+          if (c.raza != null) ('Raza', c.raza!),
           if (c.color != null) ('Color', c.color!),
           if (c.nota != null) ('Nota', c.nota!),
         ],

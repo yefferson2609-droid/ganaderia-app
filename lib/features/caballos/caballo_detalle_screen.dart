@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/creador_info.dart';
 import '../../core/widgets/dato_fila.dart';
+import '../../core/widgets/pesajes_section.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
 import 'caballos_screen.dart';
@@ -182,6 +183,8 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
             ),
             const SizedBox(height: 12),
             SaludSection(animalTipo: 'caballo', animalId: c.id),
+            const SizedBox(height: 12),
+            PesajesSection(animalTipo: 'caballo', animalId: c.id),
           ],
         ),
       ),

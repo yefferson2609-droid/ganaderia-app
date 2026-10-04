@@ -33,6 +33,12 @@ const kTablasSync = [
   'solicitudes',
   'produccion_leche',
   'pesajes_animal',
+  'trabajadores',
+  'prestamos_trabajador',
+  'nomina_novedades',
+  'nomina_semanas',
+  'nomina_detalle',
+  'prestamo_cuotas',
 ];
 
 /// Tablas con foto y el bucket de Supabase Storage donde se guarda.
@@ -423,6 +429,12 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     'movimientos_financieros': 'finanzas',
     'produccion_leche': 'leche',
     'pesajes_animal': 'pesajes',
+    'trabajadores': 'trabajadores',
+    'prestamos_trabajador': 'préstamos',
+    'nomina_novedades': 'bonos y anticipos',
+    'nomina_semanas': 'nómina',
+    'nomina_detalle': 'detalle de nómina',
+    'prestamo_cuotas': 'cuotas de préstamos',
   };
 
   String _nombreTabla(String t) => _nombres[t] ?? t;
@@ -454,6 +466,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     'activa',
     'activo',
     'eliminado',
+    'automatica',
     'puede_ver',
     'puede_crear',
     'puede_editar',

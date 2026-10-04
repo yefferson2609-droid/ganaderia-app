@@ -5,6 +5,7 @@ import '../../core/models/concepto_financiero.dart';
 import '../../core/models/movimiento_financiero.dart';
 import '../../core/repositories/concepto_financiero_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
+import '../../core/repositories/nomina_repository.dart';
 import '../../core/theme/app_theme.dart';
 
 final _moneyFormat = NumberFormat.currency(locale: 'en_US', symbol: r'$');
@@ -64,6 +65,17 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
       setState(() => _rango = picked);
       _load();
     }
+  }
+
+  Future<void> _verNomina(String movimientoId) async {
+    final semana = await NominaRepository().getSemanaPorMovimiento(movimientoId);
+    if (!mounted) return;
+    if (semana == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('El detalle aún no llega. Toca Actualizar e intenta de nuevo.')));
+      return;
+    }
+    context.push('/nomina/semana/${semana.id}');
   }
 
   Future<void> _delete(MovimientoFinanciero mov) async {
@@ -221,9 +233,12 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                   ? _conceptosPorId[m.conceptoId]
                                   : null;
                               final esIngreso = m.tipo == 'ingreso';
+                              final esNomina =
+                                  (m.nota ?? '').startsWith('Pago de nómina');
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 child: ListTile(
+                                  onTap: esNomina ? () => _verNomina(m.id) : null,
                                   leading: CircleAvatar(
                                     backgroundColor: esIngreso
                                         ? AppColors.primaryContainer
@@ -243,7 +258,8 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                           fontWeight: FontWeight.bold)),
                                   subtitle: Text(
                                       '${_dateFormat.format(m.fecha)}'
-                                      '${concepto != null && m.nota != null && m.nota!.isNotEmpty ? ' · ${m.nota}' : ''}'),
+                                      '${concepto != null && m.nota != null && m.nota!.isNotEmpty ? ' · ${m.nota}' : ''}'
+                                      '${esNomina ? '\nToca para ver el detalle de cada trabajador' : ''}'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [

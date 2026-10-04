@@ -54,10 +54,10 @@ flutter build apk --release
   mostrar (los acentos "se ven mal" pero están bien).
 
 ## Arquitectura
-- `lib/core/database/local_db.dart`: SQLite local, versión **10**. Migraciones en
+- `lib/core/database/local_db.dart`: SQLite local, versión **11**. Migraciones en
   `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal;
   `_createV9` agrega `categoria` y `fecha_destete` a terneros; `_createV10`
-  agrega `eliminado` a perfiles_usuario.
+  agrega `eliminado` a perfiles_usuario; `_createV11` las tablas de nómina.
 - **"Levante y ceba"** (tabla/ruta `terneros`): categorías en
   `lib/core/models/ternero.dart` (ternera, novilla_levante, novilla_vientre,
   ternero, torete, torete_venta, novillo_ceba). `categoria` null = sin
@@ -66,6 +66,17 @@ flutter build apk --release
   Novilla preñada (ficha o Palpación) pasa a Vacas con fecha de parto.
 - Sincronización automática: revisa cada minuto (envía cambios nuevos), trae
   datos cada 5 min y al volver a la app.
+- **Nómina** (`lib/features/nomina`, `nomina_repository.dart`): trabajadores
+  con sueldo semanal fijo, bonos (se suman), anticipos y préstamos (gasto al
+  entregarlos, se descuentan el domingo). El pago lo hace **el servidor**:
+  función `pagar_nomina(semana_domingo)` (botón "Pagar ahora" o tarea pg_cron
+  `nomina-domingo` a las 23:55 de Caracas = '55 3 * * 1' UTC). Registra UN
+  gasto "Pago de nómina semana…" (concepto Nómina) y guarda el detalle en
+  `nomina_detalle`; en Finanzas al tocarlo se abre el detalle. La vista previa
+  de la app replica el mismo cálculo. Las tablas nomina_semanas/detalle/
+  prestamo_cuotas solo las escribe el servidor.
+- Supabase da EXECUTE de funciones al rol anon por defecto: en funciones
+  nuevas siempre `revoke ... from public, anon` y probar con la clave anon.
   Cada tabla tiene `synced` (0 = pendiente de subir) y `deleted` (borrado lógico).
 - `lib/core/providers/sync_provider.dart`: baja (filtra columnas, no pisa filas
   con synced=0, borra localmente lo eliminado en el servidor) y luego sube.
@@ -81,7 +92,7 @@ flutter build apk --release
 
 ## Supabase (proyecto actual, una sola finca)
 - URL `https://punqawvuwxlrdipapnja.supabase.co` (clave anon en lib/main.dart).
-- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 009**
+- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 010**
   (la 007 reúne 005 y 006). Ejecutadas por Claude desde el navegador integrado
   con la sesión del usuario (editor SQL vía `monaco.editor.getEditors()[0]`).
 - Usuarios: "Eliminar" llama a la función `eliminar_usuario` (solo admin, no a sí mismo): bloquea la cuenta (banned_until), cierra sesiones, borra permisos y marca `eliminado` (no se borra la cuenta porque hay FK created_by → auth.users). Usuario inactivo/eliminado no puede entrar y se le cierra la sesión al sincronizar. La sync, si un upsert es rechazado por RLS (42501), intenta update.

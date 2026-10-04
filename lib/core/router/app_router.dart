@@ -24,6 +24,9 @@ import '../../features/inventario/inventario_screen.dart';
 import '../../features/leche/leche_screen.dart';
 import '../../features/alertas/alertas_screen.dart';
 import '../../features/palpacion/palpacion_screen.dart';
+import '../../features/nomina/nomina_screen.dart';
+import '../../features/nomina/nomina_semana_screen.dart';
+import '../../features/nomina/trabajadores_screen.dart';
 import '../../features/lotes/lotes_screen.dart';
 import '../../features/lotes/lote_form_screen.dart';
 import '../../features/lotes/lote_detalle_screen.dart';
@@ -167,6 +170,20 @@ class AppRouter {
       GoRoute(path: '/leche', builder: (_, __) => const LecheScreen()),
       GoRoute(path: '/alertas', builder: (_, __) => const AlertasScreen()),
       GoRoute(path: '/palpacion', builder: (_, __) => const PalpacionScreen()),
+      GoRoute(
+        path: '/nomina',
+        builder: (_, __) => const NominaScreen(),
+        routes: [
+          GoRoute(
+              path: 'trabajadores',
+              builder: (_, __) => const TrabajadoresScreen()),
+          GoRoute(
+            path: 'semana/:id',
+            builder: (_, state) =>
+                NominaSemanaScreen(id: state.pathParameters['id']!),
+          ),
+        ],
+      ),
 
       // Lotes
       GoRoute(

@@ -36,7 +36,7 @@ begin
 end;
 $$;
 
-revoke all on function eliminar_usuario(uuid) from public;
+revoke all on function eliminar_usuario(uuid) from public, anon;
 grant execute on function eliminar_usuario(uuid) to authenticated;
 
 -- 4) Permisos: aceptar también los módulos nuevos de la app.

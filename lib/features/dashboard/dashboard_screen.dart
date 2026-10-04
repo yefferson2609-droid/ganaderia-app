@@ -11,7 +11,9 @@ import '../../core/providers/sync_provider.dart';
 import '../../core/repositories/actividad_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/registro_salud_repository.dart';
+import '../../core/models/nomina.dart';
 import '../../core/repositories/leche_repository.dart';
+import '../../core/repositories/nomina_repository.dart';
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/services/alertas_service.dart';
@@ -170,6 +172,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
 
+    // Domingo: recordar revisar la nómina antes de que se registre sola.
+    if (permisos.puedeVer('finanzas') &&
+        DateTime.now().weekday == DateTime.sunday) {
+      final nomina = NominaRepository();
+      final semana = semanaFin(DateTime.now());
+      final estado = await nomina.getSemana(semana);
+      if (estado?.pagada != true) {
+        final filas = await nomina.calcular(semana);
+        if (filas.isNotEmpty) {
+          final total = filas.fold(0.0, (a, f) => a + f.neto);
+          avisos.insert(
+              0,
+              _Aviso(
+                  Icons.payments,
+                  AppColors.warning,
+                  'Nómina de hoy: ${_moneyFormat.format(total)} · revísala, '
+                  'se registra sola a las 11:55 p. m.',
+                  '/nomina'));
+        }
+      }
+    }
+
     if (permisos.puedeVer('vacas')) {
       final hato = await AlertasService().generar();
       const textos = {
@@ -264,6 +288,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ('/tipos-evento', 'Tipos de evento', 'eventos'),
       ('/ubicaciones', 'Ubicaciones', 'ubicaciones'),
       ('/finanzas', 'Finanzas', 'finanzas'),
+      ('/nomina', 'Nómina', 'finanzas'),
       ('/usuarios', 'Usuarios', 'usuarios'),
     ];
 

@@ -4,6 +4,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:ganaderia/core/database/local_db.dart';
 import 'package:ganaderia/core/models/vaca.dart';
 import 'package:ganaderia/core/repositories/leche_repository.dart';
+import 'package:ganaderia/core/models/nomina.dart';
+import 'package:ganaderia/core/repositories/movimiento_financiero_repository.dart';
+import 'package:ganaderia/core/repositories/nomina_repository.dart';
 import 'package:ganaderia/core/repositories/perfil_usuario_repository.dart';
 import 'package:ganaderia/core/repositories/pesaje_repository.dart';
 import 'package:ganaderia/core/repositories/reproduccion_repository.dart';
@@ -316,6 +319,50 @@ void main() {
     expect((await repo.getById('u2'))!.eliminado, isTrue);
   });
 
+  test('nómina: domingo de la semana, bonos, anticipos y préstamos', () async {
+    final db = LocalDb.instance.db;
+    for (final t in ['trabajadores', 'nomina_novedades', 'prestamos_trabajador',
+      'nomina_semanas', 'prestamo_cuotas', 'movimientos_financieros']) {
+      await db.delete(t);
+    }
+    expect(semanaFin(d(2026, 10, 1)), d(2026, 10, 4)); // jueves → domingo
+    expect(semanaFin(d(2026, 10, 4)), d(2026, 10, 4)); // domingo → mismo día
+    expect(semanaFin(d(2026, 10, 5)), d(2026, 10, 11)); // lunes → siguiente
+
+    final repo = NominaRepository();
+    await repo.guardarTrabajador(nombre: 'Luis', salarioSemanal: 100);
+    await repo.guardarTrabajador(nombre: 'Ana', salarioSemanal: 80, activo: false);
+    final luis = (await repo.getTrabajadores(soloActivos: true)).single;
+
+    final semana = d(2026, 10, 11);
+    await repo.agregarNovedad(trabajador: luis, tipo: 'bono', monto: 20, fecha: d(2026, 10, 7));
+    await repo.agregarNovedad(trabajador: luis, tipo: 'anticipo', monto: 30, fecha: d(2026, 10, 8));
+    await repo.agregarPrestamo(trabajador: luis, monto: 50, cuotaSemanal: 15, fecha: d(2026, 10, 6));
+
+    final filas = await repo.calcular(semana);
+    expect(filas.length, 1); // Ana está inactiva
+    final f = filas.single;
+    expect(f.salario, 100);
+    expect(f.bonos, 20);
+    expect(f.anticipos, 30);
+    expect(f.cuotas, 15);
+    expect(f.neto, 75); // 100 + 20 − 30 − 15
+
+    // El anticipo y el préstamo ya salieron como gasto, con concepto Nómina.
+    final gastos = await MovimientoFinancieroRepository().getAll(tipo: 'gasto');
+    expect(gastos.map((g) => g.monto).toSet(), {30.0, 50.0});
+    expect(gastos.every((g) => g.conceptoId == gastos.first.conceptoId), isTrue);
+
+    // Si la semana ya está pagada, un bono nuevo pasa a la semana siguiente.
+    final ahora = DateTime.now().toIso8601String();
+    await db.insert('nomina_semanas', {
+      'id': 's1', 'semana_fin': '2026-10-11', 'estado': 'pagada', 'total': 75,
+      'trabajadores': 1, 'automatica': 1, 'created_at': ahora, 'updated_at': ahora,
+    });
+    await repo.agregarNovedad(trabajador: luis, tipo: 'bono', monto: 5, fecha: d(2026, 10, 10));
+    expect((await repo.getNovedades(d(2026, 10, 18))).single.monto, 5);
+  });
+
   // Va al final: cambia la base abierta por LocalDb.
   test('migración real desde la versión 6 (la que tiene el teléfono)', () async {
     final path = '${await getDatabasesPath()}/migracion_test.db';
@@ -334,9 +381,10 @@ void main() {
     });
     await v6.close();
 
-    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 10
+    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 11
     final db = LocalDb.instance.db;
-    expect(await db.getVersion(), 10);
+    expect(await db.getVersion(), 11);
+    expect(await LocalDb.instance.columnas('trabajadores'), contains('salario_semanal'));
     expect(await LocalDb.instance.columnas('perfiles_usuario'), contains('eliminado'));
     expect(await LocalDb.instance.columnas('terneros'),
         containsAll(['categoria', 'fecha_destete']));

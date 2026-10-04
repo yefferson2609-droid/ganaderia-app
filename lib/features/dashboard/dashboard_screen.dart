@@ -258,18 +258,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ? Icons.sync_problem
                       : Icons.cloud_done),
               tooltip: !sync.isOnline
-                  ? 'Sin conexión'
+                  ? 'Sin internet'
                   : sync.lastSync != null
-                      ? 'Actualizado ${haceCuanto(sync.lastSync!)}'
-                      : 'En línea',
+                      ? 'Datos al día'
+                      : 'Actualizar',
               onPressed: sync.isOnline
                   ? () async {
                       await sync.syncAll();
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                         content: Text(sync.lastError == null
-                            ? 'Sincronizado correctamente'
-                            : 'Algunos datos no se sincronizaron. Intenta de nuevo.'),
+                            ? 'Datos al día'
+                            : 'Algunos datos no se guardaron · Ver detalle arriba'),
                         backgroundColor: sync.lastError == null
                             ? AppColors.success
                             : AppColors.danger,
@@ -465,7 +465,7 @@ class _EstadoSync extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Errores de sincronización'),
+        title: const Text('Datos que no se guardaron'),
         content: SingleChildScrollView(
           child: SelectableText(errores, style: const TextStyle(fontSize: 12)),
         ),
@@ -496,39 +496,53 @@ class _EstadoSync extends StatelessWidget {
         .replaceAll('AM', 'a. m.')
         .replaceAll('PM', 'p. m.');
     final diff = DateTime(hoy.year, hoy.month, hoy.day).difference(dia).inDays;
-    if (diff == 0) return 'hoy a las $hora';
-    if (diff == 1) return 'ayer a las $hora';
-    return 'el ${DateFormat('dd/MM/yyyy').format(f)} a las $hora';
+    if (diff == 0) return 'hoy $hora';
+    if (diff == 1) return 'ayer $hora';
+    return '${DateFormat('dd/MM').format(f)} $hora';
   }
+
+  String _cambios(int n) => n == 1 ? '1 cambio' : '$n cambios';
 
   @override
   Widget build(BuildContext context) {
     final IconData icono;
     final Color color;
     final String texto;
+    String? detalle;
+    final conErrores = sync.lastError != null && !sync.isSyncing;
+    final hora = sync.lastSync != null ? _cuando(sync.lastSync!) : null;
+
     if (sync.isSyncing) {
       icono = Icons.sync;
       color = AppColors.info;
-      texto = 'Sincronizando...';
-    } else if (sync.lastSync == null) {
-      icono = Icons.cloud_off;
+      texto = 'Actualizando datos...';
+    } else if (!sync.isOnline) {
+      icono = Icons.signal_cellular_connected_no_internet_4_bar;
       color = Colors.grey;
-      texto = 'Todavía no se ha sincronizado';
+      texto = 'Sin internet · se guardará al volver la señal';
+      detalle = [
+        if (sync.pendientes > 0) '${_cambios(sync.pendientes)} esperando señal',
+        if (hora != null) 'Datos de $hora',
+      ].join(' · ');
+    } else if (conErrores) {
+      icono = Icons.warning_amber_rounded;
+      color = AppColors.warning;
+      texto = 'Algunos datos no se guardaron · Ver detalle';
+      detalle = hora;
+    } else if (sync.pendientes > 0) {
+      icono = Icons.schedule;
+      color = AppColors.warning;
+      texto = '${_cambios(sync.pendientes)} esperando envío';
+      detalle = hora != null ? 'Datos de $hora' : null;
+    } else if (hora != null) {
+      icono = Icons.check_circle;
+      color = AppColors.success;
+      texto = 'Datos al día · $hora';
     } else {
-      icono = sync.lastError != null ? Icons.sync_problem : Icons.cloud_done;
-      color = sync.lastError != null ? AppColors.warning : AppColors.success;
-      texto = 'Última sincronización: ${_cuando(sync.lastSync!)}';
+      icono = Icons.cloud_download_outlined;
+      color = Colors.grey;
+      texto = 'Toca Actualizar para traer los datos';
     }
-    final conErrores = sync.lastError != null && !sync.isSyncing;
-
-    final detalles = <String>[
-      if (!sync.isOnline) 'Sin conexión',
-      if (conErrores) 'Hubo errores · toca para ver',
-      if (sync.pendientes > 0)
-        '${sync.pendientes} cambio${sync.pendientes == 1 ? '' : 's'} sin subir'
-      else if (sync.lastSync != null && !conErrores)
-        'Todo está subido',
-    ];
 
     return Card(
       margin: EdgeInsets.zero,
@@ -538,12 +552,11 @@ class _EstadoSync extends StatelessWidget {
         onTap: conErrores ? () => _verErrores(context, sync.lastError!) : null,
         leading: Icon(icono, color: color),
         title: Text(texto, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: detalles.isEmpty ? null : Text(detalles.join(' · ')),
+        subtitle: (detalle == null || detalle.isEmpty) ? null : Text(detalle),
         trailing: sync.isOnline && !sync.isSyncing
-            ? IconButton(
-                tooltip: 'Sincronizar ahora',
-                icon: const Icon(Icons.refresh),
+            ? TextButton(
                 onPressed: sync.syncAll,
+                child: const Text('Actualizar'),
               )
             : null,
       ),

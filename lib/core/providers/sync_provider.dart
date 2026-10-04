@@ -118,14 +118,14 @@ class SyncProvider extends ChangeNotifier {
       try {
         await _pull(tabla, errores);
       } catch (e) {
-        errores.add('Bajar ${_nombreTabla(tabla)}: ${_mensaje(e)}');
+        errores.add('No se recibió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
       }
     }
     for (final tabla in kTablasSync) {
       try {
         await _push(tabla, errores);
       } catch (e) {
-        errores.add('Subir ${_nombreTabla(tabla)}: ${_mensaje(e)}');
+        errores.add('No se envió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
       }
     }
 
@@ -194,7 +194,7 @@ class SyncProvider extends ChangeNotifier {
     for (var i = 0; i < resultados.length; i++) {
       final r = resultados[i];
       if (r is DatabaseException || r is Exception) {
-        errores.add('Bajar ${_nombreTabla(tabla)} (${ids[i]}): ${_mensaje(r!)}');
+        errores.add('No se recibió ${_nombreTabla(tabla)} (${ids[i]}): ${_mensaje(r!)}');
       }
     }
 
@@ -263,7 +263,7 @@ class SyncProvider extends ChangeNotifier {
         // El servidor aún no tiene la columna foto_url (falta ejecutar
         // 005_fotos_solicitudes.sql): se sube sin ella.
         if (e.code != 'PGRST204' || !remoto.containsKey('foto_url')) {
-          errores.add('Subir ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+          errores.add('No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
           continue;
         }
         _servidorTieneFotoUrl = false;
@@ -271,12 +271,12 @@ class SyncProvider extends ChangeNotifier {
         try {
           await _supabase.from(tabla).upsert(remoto);
         } catch (e2) {
-          errores.add('Subir ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e2)}');
+          errores.add('No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e2)}');
           continue;
         }
         if (row['foto_local'] != null) fotoPendiente = true;
       } catch (e) {
-        errores.add('Subir ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+        errores.add('No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
         continue;
       }
       // Con la foto pendiente la fila sigue marcada para reintentar
@@ -294,7 +294,7 @@ class SyncProvider extends ChangeNotifier {
         await _supabase.from(tabla).delete().eq('id', row['id'] as String);
         await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
       } catch (e) {
-        errores.add('Borrar ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+        errores.add('No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
       }
     }
   }
@@ -330,7 +330,7 @@ class SyncProvider extends ChangeNotifier {
       ];
       return partes.join(' · ');
     }
-    if (e is SocketException) return 'Sin conexión con el servidor';
+    if (e is SocketException) return 'Sin internet';
     final s = e.toString();
     return s.length > 300 ? '${s.substring(0, 300)}…' : s;
   }

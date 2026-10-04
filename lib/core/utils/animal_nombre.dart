@@ -14,7 +14,7 @@ Future<String> nombreAnimal(String tipo, String id) async {
       return t != null ? 'Toro ${t.displayName}' : 'Toro (eliminado)';
     case 'ternero':
       final t = await TerneroRepository().getById(id);
-      return t != null ? 'Ternero #${t.numero}' : 'Ternero (eliminado)';
+      return t != null ? '${t.categoriaLabel} #${t.numero}' : 'Animal de levante (eliminado)';
     case 'caballo':
       final c = await CaballoRepository().getById(id);
       return c != null ? 'Caballo ${c.nombre}' : 'Caballo (eliminado)';

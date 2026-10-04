@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/vaca.dart';
+import '../../core/models/ternero.dart';
 import '../../core/repositories/reproduccion_repository.dart';
+import '../../core/repositories/ternero_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -25,6 +27,7 @@ class PalpacionScreen extends StatefulWidget {
 
 class _PalpacionScreenState extends State<PalpacionScreen> {
   List<Vaca> _vacas = [];
+  List<Ternero> _novillas = [];
   final Map<String, _Resultado> _res = {};
   DateTime _fecha = DateTime.now();
   final _notasCtrl = TextEditingController();
@@ -48,6 +51,15 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
     _vacas = await VacaRepository().getAll(soloActivas: true);
     for (final v in _vacas) {
       _res[v.id] = _Resultado();
+    }
+    // Novillas destetadas: si quedan preñadas pasan a Vacas.
+    _novillas = (await TerneroRepository().getAll(soloActivos: true))
+        .where((t) =>
+            t.categoriaActual == 'novilla_levante' ||
+            t.categoriaActual == 'novilla_vientre')
+        .toList();
+    for (final t in _novillas) {
+      _res[t.id] = _Resultado();
     }
     if (mounted) setState(() => _loading = false);
   }
@@ -76,7 +88,23 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
         notas: notas.isEmpty ? null : notas,
       );
     }
+    var aVacas = 0;
+    for (final t in _novillas) {
+      final r = _res[t.id]!;
+      if (r.prenada != true) continue; // vacía: sigue como novilla
+      prenadas++;
+      aVacas++;
+      await TerneroRepository().promoverAVaca(t,
+          prenadaMeses: r.meses,
+          fechaChequeo: _fecha,
+          notas: notas.isEmpty ? null : notas);
+    }
     if (!mounted) return;
+    if (aVacas > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '$aVacas novilla${aVacas == 1 ? '' : 's'} preñada${aVacas == 1 ? '' : 's'} pasaron a Vacas')));
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
             'Palpación guardada: $prenadas preñadas, ${_marcadas - prenadas} vacías')));
@@ -85,10 +113,11 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final visibles = _vacas
-        .where((v) =>
-            _buscar.isEmpty || v.numero.toLowerCase().contains(_buscar.toLowerCase()))
-        .toList();
+    bool coincide(String numero) =>
+        _buscar.isEmpty || numero.toLowerCase().contains(_buscar.toLowerCase());
+    final visibles = _vacas.where((v) => coincide(v.numero)).toList();
+    final novillasVisibles =
+        _novillas.where((t) => coincide(t.numero)).toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Palpación (veterinario)')),
@@ -144,16 +173,38 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
                     style: TextStyle(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 8),
                 ...visibles.map((v) => _fila(v)),
+                if (novillasVisibles.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text('Novillas',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...novillasVisibles.map(_filaNovilla),
+                ],
               ],
             ),
     );
   }
 
-  Widget _fila(Vaca v) {
-    final r = _res[v.id]!;
-    final actual = v.estadoReproductivo == 'prenada'
-        ? 'Hoy figura: preñada${v.fechaEstimadaParto != null ? ' · parto ${_fmt.format(v.fechaEstimadaParto!)}' : ''}'
-        : 'Hoy figura: vacía';
+  Widget _fila(Vaca v) => _filaAnimal(
+        id: v.id,
+        titulo: 'Vaca #${v.numero}',
+        actual: v.estadoReproductivo == 'prenada'
+            ? 'Hoy figura: preñada${v.fechaEstimadaParto != null ? ' · parto ${_fmt.format(v.fechaEstimadaParto!)}' : ''}'
+            : 'Hoy figura: vacía',
+      );
+
+  Widget _filaNovilla(Ternero t) => _filaAnimal(
+        id: t.id,
+        titulo: '${t.categoriaLabel} #${t.numero}',
+        actual: '${t.edad} · si está preñada pasa a Vacas',
+      );
+
+  Widget _filaAnimal(
+      {required String id, required String titulo, required String actual}) {
+    final r = _res[id]!;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       color: r.prenada == null
@@ -170,7 +221,7 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Vaca #${v.numero}',
+                    Text(titulo,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
                     Text(actual, style: const TextStyle(fontSize: 12)),
                   ],

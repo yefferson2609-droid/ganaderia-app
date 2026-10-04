@@ -47,8 +47,17 @@ flutter build apk --release
   mostrar (los acentos "se ven mal" pero están bien).
 
 ## Arquitectura
-- `lib/core/database/local_db.dart`: SQLite local, versión **8**. Migraciones en
-  `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal.
+- `lib/core/database/local_db.dart`: SQLite local, versión **9**. Migraciones en
+  `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal;
+  `_createV9` agrega `categoria` y `fecha_destete` a terneros.
+- **"Levante y ceba"** (tabla/ruta `terneros`): categorías en
+  `lib/core/models/ternero.dart` (ternera, novilla_levante, novilla_vientre,
+  ternero, torete, torete_venta, novillo_ceba). `categoria` null = sin
+  clasificar (se usa la sugerida). La columna antigua `etapa` se deriva de la
+  categoría. Destete a los 9 meses, novilla de vientre a los 24 (ajustes.dart).
+  Novilla preñada (ficha o Palpación) pasa a Vacas con fecha de parto.
+- Sincronización automática: revisa cada minuto (envía cambios nuevos), trae
+  datos cada 5 min y al volver a la app.
   Cada tabla tiene `synced` (0 = pendiente de subir) y `deleted` (borrado lógico).
 - `lib/core/providers/sync_provider.dart`: baja (filtra columnas, no pisa filas
   con synced=0, borra localmente lo eliminado en el servidor) y luego sube.
@@ -64,7 +73,7 @@ flutter build apk --release
 
 ## Supabase (proyecto actual, una sola finca)
 - URL `https://punqawvuwxlrdipapnja.supabase.co` (clave anon en lib/main.dart).
-- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 007**
+- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 008**
   (la 007 reúne 005 y 006). Ejecutadas por Claude desde el navegador integrado
   con la sesión del usuario (editor SQL vía `monaco.editor.getEditors()[0]`).
 - RLS actual: cualquier usuario autenticado ve todo → **no crear usuarios de
@@ -80,6 +89,8 @@ flutter build apk --release
 - El usuario tiene instaladas la app vieja (v1.0.7, firma de otra PC) y
   "Ganadería (nueva)" de prueba (última entregada: 1.0.13).
 - Pendiente de que el usuario pruebe la 1.0.13 en el teléfono.
+- Hecho en código y sin compilar aún (será la 1.0.14): Levante y ceba por
+  categorías + sincronización automática.
 
 ## Próximo trabajo: versión comercial multi-finca
 Ver `docs/PLAN_MULTIFINCA.md`.

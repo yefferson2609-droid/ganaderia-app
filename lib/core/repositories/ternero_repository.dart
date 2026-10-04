@@ -2,6 +2,8 @@ import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
 import '../models/ternero.dart';
 import '../utils/auditoria.dart';
+import '../config/ajustes.dart';
+import 'reproduccion_repository.dart';
 import 'toro_repository.dart';
 import 'vaca_repository.dart';
 
@@ -53,6 +55,9 @@ class TerneroRepository {
     required String sexo,
     DateTime? fechaNacimiento,
     String etapa = 'lactancia',
+    String? categoria,
+    DateTime? fechaDestete,
+    bool capado = false,
     String? padreId,
     String? madreId,
     String? ubicacionId,
@@ -66,7 +71,10 @@ class TerneroRepository {
       numero: numero,
       sexo: sexo,
       fechaNacimiento: fechaNacimiento,
-      etapa: etapa,
+      etapa: categoria != null ? etapaDeCategoria(categoria) : etapa,
+      categoria: categoria,
+      fechaDestete: fechaDestete,
+      capado: capado,
       padreId: padreId,
       madreId: madreId,
       ubicacionId: ubicacionId,
@@ -93,8 +101,43 @@ class TerneroRepository {
   Future<void> avanzarEtapa(Ternero ternero, String nuevaEtapa) =>
       update(ternero.copyWith(etapa: nuevaEtapa));
 
-  Future<void> marcarCapado(Ternero ternero) =>
-      update(ternero.copyWith(capado: true));
+  Future<void> cambiarCategoria(Ternero t, String categoria) =>
+      update(t.copyWith(categoria: categoria));
+
+  /// Capar: un macho ya destetado pasa a novillo de ceba.
+  Future<void> marcarCapado(Ternero t) {
+    final cat = t.categoriaActual;
+    return update(t.copyWith(
+      capado: true,
+      categoria: (cat == 'torete' || cat == 'torete_venta') ? 'novillo_ceba' : cat,
+    ));
+  }
+
+  /// Destete: la ternera pasa a novilla de levante (o de vientre si ya
+  /// tiene la edad); el macho a torete, o novillo de ceba si está capado.
+  Future<void> registrarDestete(Ternero t, DateTime fecha) {
+    final String categoria;
+    if (!t.esMacho) {
+      categoria = (t.meses ?? 0) >= kMesesNovillaVientre
+          ? 'novilla_vientre'
+          : 'novilla_levante';
+    } else {
+      categoria = t.capado ? 'novillo_ceba' : 'torete';
+    }
+    return update(t.copyWith(fechaDestete: fecha, categoria: categoria));
+  }
+
+  /// Clasifica de una vez los animales sin categoría con la sugerida.
+  Future<int> clasificarPendientes() async {
+    var n = 0;
+    for (final t in await getAll(soloActivos: true)) {
+      if (t.categoria == null) {
+        await update(t.copyWith(categoria: t.categoriaSugerida));
+        n++;
+      }
+    }
+    return n;
+  }
 
   // Pesadas
   Future<List<PesadaTernero>> getPesadas(String terneroId) async {
@@ -159,7 +202,16 @@ class TerneroRepository {
   }
 
   /// Convierte una ternera en vaca. Devuelve el id de la vaca creada.
-  Future<String> promoverAVaca(Ternero t) async {
+  /// Pasa una novilla a Vacas. Si se indica [prenadaMeses] (o [prenada]),
+  /// queda registrada como preñada con su fecha estimada de parto, igual
+  /// que en una palpación.
+  Future<String> promoverAVaca(
+    Ternero t, {
+    bool prenada = false,
+    int? prenadaMeses,
+    DateTime? fechaChequeo,
+    String? notas,
+  }) async {
     if (t.esMacho) {
       throw StateError('Solo una hembra puede promoverse a Vaca');
     }
@@ -173,6 +225,21 @@ class TerneroRepository {
       raza: t.raza,
       nota: t.nota,
     );
+    // La foto la acompaña.
+    if (t.fotoLocal != null || t.fotoUrl != null) {
+      await _db.update(
+          'vacas', {'foto_local': t.fotoLocal, 'foto_url': t.fotoUrl},
+          where: 'id = ?', whereArgs: [vaca.id]);
+    }
+    if (prenada || prenadaMeses != null) {
+      await ReproduccionRepository().registrarPalpacion(
+        vaca: (await VacaRepository().getById(vaca.id))!,
+        fecha: fechaChequeo ?? DateTime.now(),
+        prenada: true,
+        meses: prenadaMeses,
+        notas: notas,
+      );
+    }
     await delete(t.id);
     return vaca.id;
   }

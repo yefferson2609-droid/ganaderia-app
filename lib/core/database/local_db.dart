@@ -17,7 +17,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -202,6 +202,7 @@ class LocalDb {
     await _createSaludTables(db);
     await _createOperacionTables(db);
     await _createV8(db);
+    await _createV9(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -246,6 +247,15 @@ class LocalDb {
     if (oldVersion < 8) {
       await _createV8(db);
     }
+    if (oldVersion < 9) {
+      await _createV9(db);
+    }
+  }
+
+  /// Categoría ganadera y fecha de destete en "Levante y ceba".
+  Future<void> _createV9(Database db) async {
+    await db.execute('ALTER TABLE terneros ADD COLUMN categoria TEXT');
+    await db.execute('ALTER TABLE terneros ADD COLUMN fecha_destete TEXT');
   }
 
   /// Raza y foto por animal, producción de leche y pesajes de adultos.

@@ -21,7 +21,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
   static const _tipos = {
     'vaca': 'Vacas',
     'toro': 'Toros',
-    'ternero': 'Terneros',
+    'ternero': 'Levante y ceba',
     'caballo': 'Caballos',
   };
 

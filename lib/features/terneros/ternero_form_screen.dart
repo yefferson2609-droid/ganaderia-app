@@ -32,7 +32,9 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
   bool _loading = false;
   bool _loadingData = true;
   String _sexo = 'hembra';
-  String _etapa = 'lactancia';
+  String _categoria = 'ternera';
+  bool _capado = false;
+  DateTime? _fechaDestete;
   DateTime? _fechaNacimiento;
   String? _padreId;
   String? _madreId;
@@ -73,7 +75,9 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
         _razaCtrl.text = t.raza ?? '';
         _notaCtrl.text = t.nota ?? '';
         _sexo = t.sexo;
-        _etapa = t.etapa;
+        _categoria = t.categoriaActual;
+        _capado = t.capado;
+        _fechaDestete = t.fechaDestete;
         _fechaNacimiento = t.fechaNacimiento;
         _padreId = t.padreId;
         _madreId = t.madreId;
@@ -117,7 +121,9 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
       await _repo.update(_original!.copyWith(
         numero: numero,
         sexo: _sexo,
-        etapa: _etapa,
+        categoria: _categoria,
+        capado: _sexo == 'macho' && _capado,
+        fechaDestete: _fechaDestete,
         fechaNacimiento: _fechaNacimiento,
         padreId: _padreId,
         madreId: _madreId,
@@ -130,7 +136,9 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
       await _repo.create(
         numero: numero,
         sexo: _sexo,
-        etapa: _etapa,
+        categoria: _categoria,
+        capado: _sexo == 'macho' && _capado,
+        fechaDestete: _fechaDestete,
         fechaNacimiento: _fechaNacimiento,
         padreId: _padreId,
         madreId: _madreId,
@@ -147,7 +155,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar:
-          AppBar(title: Text(_isEditing ? 'Editar Ternero' : 'Nuevo Ternero')),
+          AppBar(title: Text(_isEditing ? 'Editar animal' : 'Nuevo animal')),
       body: _loadingData
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -178,9 +186,31 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
                             icon: Icon(Icons.male)),
                       ],
                       selected: {_sexo},
-                      onSelectionChanged: (s) =>
-                          setState(() => _sexo = s.first),
+                      onSelectionChanged: (s) => setState(() {
+                        _sexo = s.first;
+                        // La categoría debe corresponder al sexo.
+                        final validas = _sexo == 'macho'
+                            ? kCategoriasMacho
+                            : kCategoriasHembra;
+                        if (!validas.contains(_categoria)) {
+                          _categoria = validas.first;
+                        }
+                      }),
                     ),
+                    if (_sexo == 'macho')
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _capado,
+                        onChanged: (v) => setState(() {
+                          _capado = v!;
+                          if (_capado &&
+                              (_categoria == 'torete' ||
+                                  _categoria == 'torete_venta')) {
+                            _categoria = 'novillo_ceba';
+                          }
+                        }),
+                        title: const Text('Capado'),
+                      ),
                     const SizedBox(height: 16),
                     InkWell(
                       onTap: _pickDate,
@@ -201,15 +231,51 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _etapa,
-                      decoration: InputDecoration(
-                          labelText: _isEditing ? 'Etapa' : 'Etapa inicial',
-                          prefixIcon: const Icon(Icons.timeline)),
-                      items: kEtapasTernero
-                          .map((e) => DropdownMenuItem(
-                              value: e, child: Text(kEtapaLabels[e]!)))
+                      value: _categoria,
+                      decoration: const InputDecoration(
+                          labelText: 'Categoría',
+                          prefixIcon: Icon(Icons.category_outlined)),
+                      items: (_sexo == 'macho'
+                              ? kCategoriasMacho
+                              : kCategoriasHembra)
+                          .where((c) => !(_capado &&
+                              (c == 'torete' || c == 'torete_venta')))
+                          .map((c) => DropdownMenuItem(
+                              value: c, child: Text(kCategoriaLabels[c]!)))
                           .toList(),
-                      onChanged: (v) => setState(() => _etapa = v!),
+                      onChanged: (v) => setState(() => _categoria = v!),
+                    ),
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: () async {
+                        final p = await showDatePicker(
+                          context: context,
+                          initialDate: _fechaDestete ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        );
+                        if (p != null) setState(() => _fechaDestete = p);
+                      },
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Fecha de destete (opcional)',
+                          prefixIcon: const Icon(Icons.event_available),
+                          suffixIcon: _fechaDestete != null
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () =>
+                                      setState(() => _fechaDestete = null))
+                              : null,
+                        ),
+                        child: Text(
+                            _fechaDestete != null
+                                ? DateFormat('dd/MM/yyyy').format(_fechaDestete!)
+                                : 'Sin destetar',
+                            style: TextStyle(
+                                color: _fechaDestete != null
+                                    ? null
+                                    : Colors.grey[600])),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String?>(

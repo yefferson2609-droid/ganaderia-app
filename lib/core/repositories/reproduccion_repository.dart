@@ -303,6 +303,7 @@ class ReproduccionRepository {
       final t = await TerneroRepository().create(
         numero: numeroTernero,
         sexo: sexoTernero,
+        categoria: sexoTernero == 'macho' ? 'ternero' : 'ternera',
         fechaNacimiento: fecha,
         madreId: vaca.id,
         padreId: vaca.toroId,

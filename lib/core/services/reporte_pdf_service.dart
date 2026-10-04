@@ -143,7 +143,7 @@ class ReportePdfService {
     final etiquetas = {
       'vacas': 'Vacas',
       'toros': 'Toros',
-      'terneros': 'Terneros',
+      'terneros': 'Levante y ceba',
       'caballos': 'Caballos',
       'cerdos': 'Cerdos',
       'ovejos': 'Ovejos',

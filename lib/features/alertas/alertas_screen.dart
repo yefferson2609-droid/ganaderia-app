@@ -8,6 +8,8 @@ const _iconos = {
   TipoAlerta.secar: (Icons.water_drop_outlined, AppColors.warning),
   TipoAlerta.vacias: (Icons.hourglass_bottom, AppColors.danger),
   TipoAlerta.vitamina: (Icons.medication_liquid, AppColors.accentPurple),
+  TipoAlerta.destete: (Icons.event_available, AppColors.warning),
+  TipoAlerta.categoria: (Icons.trending_up, AppColors.info),
 };
 
 class AlertasScreen extends StatefulWidget {
@@ -70,7 +72,7 @@ class _AlertasScreenState extends State<AlertasScreen> {
                                     subtitle: Text(a.detalle),
                                     trailing: const Icon(Icons.chevron_right),
                                     onTap: () => context
-                                        .push('/vacas/${a.vacaId}')
+                                        .push(a.ruta)
                                         .then((_) => _load()),
                                   ))
                               .toList(),

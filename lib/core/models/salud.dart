@@ -2,7 +2,7 @@
 const kAnimalTipoLabels = {
   'vaca': 'Vaca',
   'toro': 'Toro',
-  'ternero': 'Ternero',
+  'ternero': 'Levante y ceba',
   'caballo': 'Caballo',
 };
 

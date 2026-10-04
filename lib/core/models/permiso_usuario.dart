@@ -17,7 +17,7 @@ const kModulos = [
 const kModuloLabels = {
   'vacas': 'Vacas',
   'toros': 'Toros',
-  'terneros': 'Terneros',
+  'terneros': 'Levante y ceba',
   'caballos': 'Caballos',
   'lotes': 'Lotes',
   'eventos': 'Eventos',

@@ -15,6 +15,12 @@ const kDiasAvisoParto = 30;
 /// Avisar de vacas que siguen vacías este tiempo después del parto.
 const kDiasVaciaPostParto = 90;
 
+/// Edad (meses) a la que se destetan los terneros.
+const kMesesDestete = 9;
+
+/// Edad (meses) a la que una novilla de levante pasa a novilla de vientre.
+const kMesesNovillaVientre = 24;
+
 /// Gestación bovina promedio.
 const kDiasGestacion = 283;
 

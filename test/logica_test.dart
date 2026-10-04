@@ -232,6 +232,73 @@ void main() {
     expect(final_, isA<Vaca>());
   });
 
+  test('levante y ceba: categoría sugerida, destete, capado y venta', () async {
+    final repo = TerneroRepository();
+    final h = hoy();
+    DateTime haceMeses(int m) => h.subtract(Duration(days: (m * 30.44).ceil() + 1));
+
+    final ternera = await repo.create(numero: '1', sexo: 'hembra', fechaNacimiento: haceMeses(3));
+    expect(ternera.categoriaSugerida, 'ternera');
+    expect(ternera.debeDestetarse, isFalse);
+
+    final grande = await repo.create(numero: '2', sexo: 'hembra', fechaNacimiento: haceMeses(10));
+    expect(grande.debeDestetarse, isTrue); // 9 meses sin destetar
+
+    await repo.registrarDestete(grande, h);
+    final destetada = (await repo.getById(grande.id))!;
+    expect(destetada.categoria, 'novilla_levante');
+    expect(destetada.etapa, 'destete');
+    expect(destetada.debeDestetarse, isFalse);
+
+    final vieja = await repo.create(
+        numero: '3', sexo: 'hembra', fechaNacimiento: haceMeses(26),
+        categoria: 'novilla_levante', fechaDestete: haceMeses(17));
+    expect(vieja.cambioSugerido, 'novilla_vientre');
+
+    final macho = await repo.create(numero: '4', sexo: 'macho', fechaNacimiento: haceMeses(12));
+    expect(macho.categoriaSugerida, 'torete'); // 12 meses: se asume destetado
+    await repo.registrarDestete(macho, h);
+    var m = (await repo.getById(macho.id))!;
+    expect(m.categoria, 'torete');
+    await repo.cambiarCategoria(m, 'torete_venta');
+    m = (await repo.getById(macho.id))!;
+    expect(m.categoriaActual, 'torete_venta');
+    expect(m.cambioSugerido, isNull);
+    await repo.marcarCapado(m);
+    m = (await repo.getById(macho.id))!;
+    expect(m.capado, isTrue);
+    expect(m.categoria, 'novillo_ceba');
+    expect(m.etapa, 'ceba');
+
+    final alertas = await AlertasService().generar();
+    expect(alertas[TipoAlerta.destete]!.length, 0);
+    expect(alertas[TipoAlerta.categoria]!.map((a) => a.titulo),
+        contains('Novilla de levante #3'));
+  });
+
+  test('novilla preñada pasa a Vacas con fecha de parto', () async {
+    final repo = TerneroRepository();
+    final n = await repo.create(
+        numero: 'N7', sexo: 'hembra', raza: 'Gyr',
+        fechaNacimiento: d(2023, 1, 1), categoria: 'novilla_vientre');
+    final vacaId = await repo.promoverAVaca(n,
+        prenadaMeses: 2, fechaChequeo: d(2025, 6, 1));
+    expect(await repo.getById(n.id), isNull); // ya no está en levante
+    final v = (await VacaRepository().getById(vacaId))!;
+    expect(v.numero, 'N7');
+    expect(v.raza, 'Gyr');
+    expect(v.estadoReproductivo, 'prenada');
+    expect(v.fechaEstimadaParto, isNotNull);
+  });
+
+  test('parto crea ternera o ternero ya clasificado', () async {
+    final v = await VacaRepository().create(numero: '20');
+    final id = await ReproduccionRepository().registrarParto(
+        vaca: v, fecha: hoy(), numeroTernero: 'C1', sexoTernero: 'macho');
+    final t = (await TerneroRepository().getById(id!))!;
+    expect(t.categoria, 'ternero');
+  });
+
   // Va al final: cambia la base abierta por LocalDb.
   test('migración real desde la versión 6 (la que tiene el teléfono)', () async {
     final path = '${await getDatabasesPath()}/migracion_test.db';
@@ -241,16 +308,18 @@ void main() {
       await db.execute(
           'CREATE TABLE vacas (id TEXT PRIMARY KEY, numero TEXT, color TEXT)');
       await db.execute('CREATE TABLE toros (id TEXT PRIMARY KEY, color TEXT)');
-      await db.execute('CREATE TABLE terneros (id TEXT PRIMARY KEY, color TEXT)');
+      await db.execute('CREATE TABLE terneros (id TEXT PRIMARY KEY, color TEXT, etapa TEXT)');
       await db.execute(
           'CREATE TABLE caballos (id TEXT PRIMARY KEY, nombre TEXT, color TEXT)');
       await db.insert('vacas', {'id': 'v1', 'numero': '12', 'color': 'Roja'});
     });
     await v6.close();
 
-    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 8
+    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 9
     final db = LocalDb.instance.db;
-    expect(await db.getVersion(), 8);
+    expect(await db.getVersion(), 9);
+    expect(await LocalDb.instance.columnas('terneros'),
+        containsAll(['categoria', 'fecha_destete']));
     expect(await LocalDb.instance.columnas('caballos'),
         containsAll(['fecha_nacimiento', 'raza', 'foto_url', 'foto_local']));
     expect(await LocalDb.instance.columnas('vacas'),

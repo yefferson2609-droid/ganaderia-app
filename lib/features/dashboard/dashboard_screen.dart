@@ -177,6 +177,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         TipoAlerta.secar: ('1 vaca para secar', 'vacas para secar', Icons.water_drop_outlined, AppColors.warning),
         TipoAlerta.vacias: ('1 vaca vacía mucho tiempo', 'vacas vacías mucho tiempo', Icons.hourglass_bottom, AppColors.danger),
         TipoAlerta.vitamina: ('1 vaca con vitamina vencida', 'vacas con vitamina vencida', Icons.medication_liquid, AppColors.accentPurple),
+        TipoAlerta.destete: ('1 ternero por destetar', 'terneros por destetar', Icons.event_available, AppColors.warning),
+        TipoAlerta.categoria: ('1 animal para cambiar de categoría', 'animales para cambiar de categoría', Icons.trending_up, AppColors.info),
       };
       for (final t in TipoAlerta.values) {
         final n = hato[t]?.length ?? 0;
@@ -227,7 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           _MiniCount(label: 'Vacas', count: c['vacas'] ?? 0, color: AppColors.primary),
           _MiniCount(label: 'Toros', count: c['toros'] ?? 0, color: AppColors.info),
-          _MiniCount(label: 'Terneros', count: c['terneros'] ?? 0, color: AppColors.primaryLight),
+          _MiniCount(label: 'Levante', count: c['terneros'] ?? 0, color: AppColors.primaryLight),
           _MiniCount(label: 'Caballos', count: c['caballos'] ?? 0, color: AppColors.secondary),
           _MiniCount(label: 'Cerdos', count: c['cerdos'] ?? 0, color: AppColors.warning),
           _MiniCount(label: 'Ovejos', count: c['ovejos'] ?? 0, color: AppColors.accentPurple),
@@ -377,7 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               count: _totales['toros'] ?? 0, color: AppColors.info,
                               onTap: () => _abrir('/toros')),
                         if (permisos.puedeVer('terneros'))
-                          _AnimalCard(label: 'Terneros', tipo: 'ternero',
+                          _AnimalCard(label: 'Levante y ceba', tipo: 'ternero',
                               count: _totales['terneros'] ?? 0, color: AppColors.primaryLight,
                               onTap: () => _abrir('/terneros')),
                         if (permisos.puedeVer('caballos'))

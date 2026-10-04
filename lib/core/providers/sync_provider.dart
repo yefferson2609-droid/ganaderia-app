@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -43,12 +44,21 @@ const _bucketFotos = {
   'caballos': 'animales',
 };
 
-class SyncProvider extends ChangeNotifier {
+class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   final _supabase = Supabase.instance.client;
   bool _isSyncing = false;
   bool _isOnline = false;
   DateTime? _lastSync;
   String? _lastError;
+  DateTime? _ultimoIntento;
+  int _pendientesTrasSync = 0;
+  Timer? _timer;
+
+  /// Cada cuánto se revisa si hay que sincronizar sola.
+  static const _revision = Duration(minutes: 1);
+
+  /// Cada cuánto se traen los cambios de los demás aunque no haya nada local.
+  static const _refresco = Duration(minutes: 5);
 
   int _pendientes = 0;
 
@@ -69,6 +79,45 @@ class SyncProvider extends ChangeNotifier {
     _supabase.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.signedIn && _isOnline) syncAll();
     });
+    WidgetsBinding.instance.addObserver(this);
+    _timer = Timer.periodic(_revision, (_) => _sincronizarSiHaceFalta());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Al volver a la app (desde otra aplicación o con la pantalla apagada).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _sincronizarSiHaceFalta(alVolver: true);
+    }
+  }
+
+  /// Sincronización automática: envía los cambios pendientes en cuanto
+  /// puede y trae los de los demás cada [_refresco]. Si el último intento
+  /// tuvo errores, espera más para no insistir cada minuto.
+  Future<void> _sincronizarSiHaceFalta({bool alVolver = false}) async {
+    if (_isSyncing || !_isOnline) return;
+    if (_supabase.auth.currentUser == null) return;
+    final ahora = DateTime.now();
+    final desdeIntento = _ultimoIntento == null
+        ? const Duration(days: 1)
+        : ahora.difference(_ultimoIntento!);
+    final pendientes = await contarPendientes();
+    final esperaErrores = _lastError != null ? _refresco : Duration.zero;
+
+    // Solo cuenta lo nuevo: lo que quedó pendiente tras el último intento
+    // (p. ej. una foto que no subió) se reintenta en el refresco normal.
+    final hayNuevos = pendientes > _pendientesTrasSync;
+    final toca = (alVolver && desdeIntento >= const Duration(seconds: 30)) ||
+        (hayNuevos && desdeIntento >= esperaErrores) ||
+        desdeIntento >= _refresco;
+    if (toca) await syncAll();
   }
 
   Future<void> _cargarUltimaSync() async {
@@ -119,6 +168,7 @@ class SyncProvider extends ChangeNotifier {
     if (_isSyncing) return;
     if (_supabase.auth.currentUser == null) return;
     _isSyncing = true;
+    _ultimoIntento = DateTime.now();
     _lastError = null;
     notifyListeners();
 
@@ -155,7 +205,7 @@ class SyncProvider extends ChangeNotifier {
       ].join('\n');
       debugPrint('Errores de sincronización:\n${errores.join('\n')}');
     }
-    await contarPendientes();
+    _pendientesTrasSync = await contarPendientes();
     _isSyncing = false;
     notifyListeners();
   }

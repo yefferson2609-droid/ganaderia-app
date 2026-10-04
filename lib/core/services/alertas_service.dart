@@ -1,19 +1,21 @@
 import 'package:intl/intl.dart';
 import '../config/ajustes.dart';
+import '../models/ternero.dart';
 import '../repositories/reproduccion_repository.dart';
+import '../repositories/ternero_repository.dart';
 import '../repositories/vaca_repository.dart';
 
 final _fmt = DateFormat('dd/MM/yyyy');
 
 class Alerta {
-  final String vacaId;
+  final String ruta; // ficha a la que lleva
   final String titulo; // 'Vaca #12'
   final String detalle;
   final int orden; // menor = más urgente
-  const Alerta(this.vacaId, this.titulo, this.detalle, this.orden);
+  const Alerta(this.ruta, this.titulo, this.detalle, this.orden);
 }
 
-enum TipoAlerta { partos, secar, vacias, vitamina }
+enum TipoAlerta { partos, secar, vacias, vitamina, destete, categoria }
 
 const kTipoAlertaInfo = {
   TipoAlerta.partos: (
@@ -31,6 +33,15 @@ const kTipoAlertaInfo = {
   TipoAlerta.vitamina: (
     'Vitamina vencida',
     'Más de $kDiasVitamina días sin vitamina, o sin registro'
+  ),
+  TipoAlerta.destete: (
+    'Por destetar',
+    'Terneros con $kMesesDestete meses o más que siguen sin destetar'
+  ),
+  TipoAlerta.categoria: (
+    'Cambio de categoría',
+    'Animales de levante que ya cumplen para la siguiente categoría '
+        '(p. ej. novillas de $kMesesNovillaVientre meses → vientre)'
   ),
 };
 
@@ -50,7 +61,7 @@ class AlertasService {
         final faltan = v.fechaEstimadaParto!.difference(dia).inDays;
         if (faltan <= kDiasAvisoParto) {
           res[TipoAlerta.partos]!.add(Alerta(
-            v.id,
+            '/vacas/${v.id}',
             titulo,
             'Parto ${_fmt.format(v.fechaEstimadaParto!)} · '
             '${faltan >= 0 ? 'en $faltan días' : 'atrasado ${-faltan} días'}',
@@ -63,7 +74,7 @@ class AlertasService {
             final enDias = s.fecha.difference(dia).inDays;
             if (enDias <= 7) {
               res[TipoAlerta.secar]!.add(Alerta(
-                v.id,
+                '/vacas/${v.id}',
                 titulo,
                 '${enDias <= 0 ? 'Secar ya' : 'Secar en $enDias días'} '
                 '(${_fmt.format(s.fecha)}) · parto ${_fmt.format(v.fechaEstimadaParto!)}',
@@ -78,21 +89,35 @@ class AlertasService {
         final dias = dia.difference(r.ultimoParto!).inDays;
         if (dias >= kDiasVaciaPostParto) {
           res[TipoAlerta.vacias]!.add(Alerta(
-              v.id, titulo, '$dias días desde el parto (${_fmt.format(r.ultimoParto!)})', -dias));
+              '/vacas/${v.id}', titulo, '$dias días desde el parto (${_fmt.format(r.ultimoParto!)})', -dias));
         }
       }
 
       if (r.ultimaVitamina == null) {
         res[TipoAlerta.vitamina]!
-            .add(Alerta(v.id, titulo, 'Sin vitamina registrada', -100000));
+            .add(Alerta('/vacas/${v.id}', titulo, 'Sin vitamina registrada', -100000));
       } else {
         final dias = dia.difference(r.ultimaVitamina!).inDays;
         if (dias > kDiasVitamina) {
-          res[TipoAlerta.vitamina]!.add(Alerta(v.id, titulo,
+          res[TipoAlerta.vitamina]!.add(Alerta('/vacas/${v.id}', titulo,
               'Última hace $dias días (${_fmt.format(r.ultimaVitamina!)})', -dias));
         }
       }
     }
+    for (final t in await TerneroRepository().getAll(soloActivos: true)) {
+      final ruta = '/terneros/${t.id}';
+      final titulo = '${t.categoriaLabel} #${t.numero}';
+      if (t.debeDestetarse) {
+        res[TipoAlerta.destete]!
+            .add(Alerta(ruta, titulo, '${t.meses} meses sin destetar', -(t.meses ?? 0)));
+      }
+      final cambio = t.cambioSugerido;
+      if (cambio != null && !t.debeDestetarse) {
+        res[TipoAlerta.categoria]!.add(Alerta(ruta, titulo,
+            'Pasar a ${kCategoriaLabels[cambio]} · ${t.edad}', -(t.meses ?? 0)));
+      }
+    }
+
     for (final l in res.values) {
       l.sort((a, b) => a.orden.compareTo(b.orden));
     }

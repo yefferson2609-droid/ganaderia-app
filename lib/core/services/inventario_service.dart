@@ -1,6 +1,5 @@
 import 'package:intl/intl.dart';
 import '../database/local_db.dart';
-import '../models/ternero.dart';
 import '../repositories/caballo_repository.dart';
 import '../repositories/registro_salud_repository.dart';
 import '../repositories/reproduccion_repository.dart';
@@ -168,17 +167,18 @@ class InventarioService {
         id: t.id,
         fotoLocal: t.fotoLocal,
         fotoUrl: t.fotoUrl,
-        titulo: 'Ternero #${t.numero}',
+        titulo: '${t.categoriaLabel} #${t.numero}',
         resumen: [
           t.esMacho ? 'Macho' : 'Hembra',
           if (t.capado) 'Capado',
-          kEtapaLabels[t.etapa] ?? t.etapa,
+          if (t.debeDestetarse) 'por destetar',
           _edad(t.fechaNacimiento),
         ].join(' · '),
         enTratamiento: salud.$1,
         datos: [
           ('Sexo', t.esMacho ? (t.capado ? 'Macho capado' : 'Macho') : 'Hembra'),
-          ('Etapa', kEtapaLabels[t.etapa] ?? t.etapa),
+          ('Categoría', t.categoriaLabel),
+          ('Destete', t.fechaDestete != null ? _fmt.format(t.fechaDestete!) : (t.destetado ? 'Sí' : 'Aún no')),
           if (t.raza != null) ('Raza', t.raza!),
           ('Edad', _edad(t.fechaNacimiento)),
           if (madre != null) ('Madre', 'Vaca #${madre.numero}'),

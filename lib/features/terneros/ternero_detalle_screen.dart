@@ -88,14 +88,92 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
   Future<void> _accion(String v) async {
     final t = _t!;
     switch (v) {
-      case 'etapa':
-        final sig = t.siguienteEtapa;
-        if (sig == null) return;
-        if (await _confirmar('Avanzar etapa',
-            '¿Pasar este ternero a "${kEtapaLabels[sig]}"?')) {
-          await _repo.avanzarEtapa(t, sig);
+      case 'destete':
+        DateTime fecha = DateTime.now();
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setSt) => AlertDialog(
+              title: const Text('Registrar destete'),
+              content: Column(mainAxisSize: MainAxisSize.min, children: [
+                Text('${nombreJoven(t)} se separa de la madre.'),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    final p = await showDatePicker(
+                        context: ctx,
+                        initialDate: fecha,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now());
+                    if (p != null) setSt(() => fecha = p);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Fecha de destete'),
+                    child: Text(_fmt.format(fecha)),
+                  ),
+                ),
+              ]),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Cancelar')),
+                ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Guardar')),
+              ],
+            ),
+          ),
+        );
+        if (ok == true) {
+          await _repo.registrarDestete(t, fecha);
           _load();
         }
+      case 'categoria':
+        final opciones = (t.esMacho ? kCategoriasMacho : kCategoriasHembra)
+            .where((c) => !(t.capado && (c == 'torete' || c == 'torete_venta')))
+            .toList();
+        final elegida = await showDialog<String>(
+          context: context,
+          builder: (ctx) => SimpleDialog(
+            title: const Text('Cambiar categoría'),
+            children: opciones
+                .map((c) => SimpleDialogOption(
+                      onPressed: () => Navigator.pop(ctx, c),
+                      child: Row(children: [
+                        Icon(
+                            c == t.categoriaActual
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_off,
+                            size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(kCategoriaLabels[c]!)),
+                        if (c == t.categoriaSugerida && c != t.categoriaActual)
+                          const Text('sugerida',
+                              style: TextStyle(
+                                  fontSize: 11, color: AppColors.info)),
+                      ]),
+                    ))
+                .toList(),
+          ),
+        );
+        if (elegida != null && elegida != t.categoriaActual) {
+          await _repo.cambiarCategoria(t, elegida);
+          _load();
+        }
+      case 'sugerida':
+        final s = t.cambioSugerido;
+        if (s != null &&
+            await _confirmar('Cambiar categoría',
+                '¿Pasar a ${kCategoriaLabels[s]}?')) {
+          await _repo.cambiarCategoria(t, s);
+          _load();
+        }
+      case 'venta_reproductor':
+        await _repo.cambiarCategoria(
+            t, t.categoriaActual == 'torete_venta' ? 'torete' : 'torete_venta');
+        _load();
+      case 'prenada':
+        await _marcarPrenada(t);
       case 'capado':
         if (await _confirmar(
             'Marcar como capado', '¿Confirmas que este macho fue capado?')) {
@@ -104,7 +182,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
         }
       case 'promover_vaca':
         if (await _confirmar('Promover a Vaca',
-            '¿Convertir el ternero #${t.numero} en vaca? Pasará a la lista de vacas.')) {
+            '¿Convertir a ${nombreJoven(t)} en vaca? Pasará a la lista de vacas.')) {
           try {
             final id = await _repo.promoverAVaca(t);
             if (mounted) context.pushReplacement('/vacas/$id');
@@ -117,14 +195,14 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
       case 'vendido':
         if (mounted &&
             await confirmarVenta(context,
-                descripcion: 'Ternero #${t.numero}',
+                descripcion: nombreJoven(t),
                 ubicacionId: t.ubicacionId)) {
           await _repo.update(t.copyWith(estado: 'vendido'));
           _load();
         }
       case 'fallecido':
         if (mounted &&
-            await confirmarFallecimiento(context, 'el ternero #${t.numero}')) {
+            await confirmarFallecimiento(context, nombreJoven(t))) {
           await _repo.update(t.copyWith(estado: 'fallecido'));
           _load();
         }
@@ -140,6 +218,65 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
     }
   }
 
+  /// Novilla preñada: pasa a Vacas con su fecha estimada de parto.
+  Future<void> _marcarPrenada(Ternero t) async {
+    int meses = 2;
+    DateTime fecha = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => AlertDialog(
+          title: const Text('Novilla preñada'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('${nombreJoven(t)} pasará a la lista de Vacas.'),
+            const SizedBox(height: 12),
+            Row(children: [
+              const Text('Meses de preñez:'),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
+                value: meses,
+                items: List.generate(9,
+                    (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
+                onChanged: (m) => setSt(() => meses = m!),
+              ),
+            ]),
+            InkWell(
+              onTap: () async {
+                final p = await showDatePicker(
+                    context: ctx,
+                    initialDate: fecha,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now());
+                if (p != null) setSt(() => fecha = p);
+              },
+              child: InputDecorator(
+                decoration:
+                    const InputDecoration(labelText: 'Fecha del chequeo'),
+                child: Text(_fmt.format(fecha)),
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Pasar a Vacas')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    try {
+      final id = await _repo.promoverAVaca(t,
+          prenadaMeses: meses, fechaChequeo: fecha);
+      if (mounted) context.pushReplacement('/vacas/$id');
+    } on StateError catch (e) {
+      _error(e.message);
+    }
+  }
+
   Future<void> _promoverAToro(Ternero t) async {
     if (t.capado) {
       _error('Un macho capado no puede promoverse a Toro');
@@ -151,7 +288,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Promover a Toro'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('¿Convertir el ternero #${t.numero} en toro?'),
+          Text('¿Convertir a ${nombreJoven(t)} en toro?'),
           const SizedBox(height: 12),
           TextField(
             controller: nombreCtrl,
@@ -324,7 +461,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
     final t = _t;
     if (t == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Ternero')),
+        appBar: AppBar(title: const Text('Levante y ceba')),
         body: const Center(child: Text('Ternero no encontrado')),
       );
     }
@@ -335,7 +472,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Ternero #${t.numero}'),
+        title: Text(nombreJoven(t)),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
@@ -345,14 +482,33 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
           PopupMenuButton<String>(
             onSelected: _accion,
             itemBuilder: (_) => [
-              if (t.estado == 'activo' && t.siguienteEtapa != null)
+              if (t.estado == 'activo' && !t.destetado)
+                const PopupMenuItem(
+                    value: 'destete', child: Text('Registrar destete')),
+              if (t.estado == 'activo' && t.cambioSugerido != null)
                 PopupMenuItem(
-                    value: 'etapa',
+                    value: 'sugerida',
                     child: Text(
-                        'Avanzar etapa (${kEtapaLabels[t.siguienteEtapa]})')),
+                        'Pasar a ${kCategoriaLabels[t.cambioSugerido]}')),
+              if (t.estado == 'activo')
+                const PopupMenuItem(
+                    value: 'categoria', child: Text('Cambiar categoría')),
               if (t.estado == 'activo' && t.esMacho && !t.capado)
                 const PopupMenuItem(
                     value: 'capado', child: Text('Marcar como capado')),
+              if (t.estado == 'activo' &&
+                  t.esMacho &&
+                  !t.capado &&
+                  t.destetado)
+                PopupMenuItem(
+                    value: 'venta_reproductor',
+                    child: Text(t.categoriaActual == 'torete_venta'
+                        ? 'Quitar de venta como reproductor'
+                        : 'Marcar para venta como reproductor')),
+              if (t.estado == 'activo' && !t.esMacho)
+                const PopupMenuItem(
+                    value: 'prenada',
+                    child: Text('Quedó preñada → pasar a Vacas')),
               if (t.estado == 'activo' && !t.esMacho)
                 const PopupMenuItem(
                     value: 'promover_vaca', child: Text('Promover a Vaca')),
@@ -369,7 +525,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                     value: 'activo', child: Text('Volver a activo')),
               const PopupMenuItem(
                   value: 'eliminar',
-                  child: Text('Eliminar ternero',
+                  child: Text('Eliminar',
                       style: TextStyle(color: AppColors.danger))),
             ],
           ),
@@ -399,16 +555,33 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Ternero #${t.numero}',
+                            Text(nombreJoven(t),
                                 style: Theme.of(context).textTheme.titleLarge),
                             Text(
                                 '${t.esMacho ? 'Macho' : 'Hembra'}'
-                                '${t.capado ? ' · Capado' : ''} · ${t.etapaLabel}'),
+                                '${t.capado ? ' · Capado' : ''}'
+                                '${t.fechaDestete != null ? ' · Destetado ${_fmt.format(t.fechaDestete!)}' : (t.destetado ? '' : ' · Sin destetar')}'),
                           ],
                         ),
                       ),
                     ]),
                     const Divider(height: 24),
+                    _InfoRow('Categoría', t.categoriaLabel,
+                        color: t.categoria == null ? Colors.grey : null),
+                    if (t.cambioSugerido != null)
+                      _InfoRow('Sugerencia',
+                          'Pasar a ${kCategoriaLabels[t.cambioSugerido]} (menú ⋮)',
+                          color: AppColors.info),
+                    _InfoRow(
+                        'Destete',
+                        t.fechaDestete != null
+                            ? _fmt.format(t.fechaDestete!)
+                            : (t.destetado
+                                ? 'Destetado (sin fecha)'
+                                : t.debeDestetarse
+                                    ? 'Pendiente · ya cumplió ${t.meses} meses'
+                                    : 'Aún no'),
+                        color: t.debeDestetarse ? AppColors.warning : null),
                     _InfoRow('Estado',
                         t.estado[0].toUpperCase() + t.estado.substring(1),
                         color: estadoTerneroColor(t.estado)),

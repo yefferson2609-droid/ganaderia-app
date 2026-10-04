@@ -17,8 +17,9 @@ Supabase. Dueño: yefferson2609-droid (GitHub). Repo:
   Instrucciones paso a paso, de a una cosa.
 - **No compilar hasta que diga "compila"**: suele pedir varios cambios juntos.
 - **No pedir que conecte el teléfono por USB.** Se le entrega el APK.
-- Antes de cambios grandes, hacer las preguntas de negocio necesarias
-  (con opciones) y confirmar el plan.
+- **Siempre que pida algo, hacerle primero las preguntas necesarias** (con
+  opciones, usando AskUserQuestion) para hacerlo mejor organizado; él lo
+  pidió explícitamente. Luego confirmar el plan en pocas líneas.
 - Al terminar: resumir qué cambió, dónde está el APK y qué debe probar.
   Decir con honestidad qué no se pudo probar (pantallas, cámara, sync real).
 - Las contraseñas (Supabase, GitHub) las escribe el usuario; Claude nunca.

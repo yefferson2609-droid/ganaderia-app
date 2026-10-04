@@ -56,7 +56,8 @@ flutter build apk --release
 ## Arquitectura
 - `lib/core/database/local_db.dart`: SQLite local, versión **10**. Migraciones en
   `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal;
-  `_createV9` agrega `categoria` y `fecha_destete` a terneros.
+  `_createV9` agrega `categoria` y `fecha_destete` a terneros; `_createV10`
+  agrega `eliminado` a perfiles_usuario.
 - **"Levante y ceba"** (tabla/ruta `terneros`): categorías en
   `lib/core/models/ternero.dart` (ternera, novilla_levante, novilla_vientre,
   ternero, torete, torete_venta, novillo_ceba). `categoria` null = sin

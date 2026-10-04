@@ -5,6 +5,13 @@ Supabase. Dueño: yefferson2609-droid (GitHub). Repo:
 `yefferson2609-droid/ganaderia-app`. Trabajo actual en la rama
 `reconstruccion-desde-apk` (no tocar `main` sin pedirlo).
 
+## Carpetas (no mezclar)
+- `C:\proyecto ganaderoapp` → rama `reconstruccion-desde-apk`: la app de la
+  finca del usuario.
+- `C:\proyecto ganaderoapp-multifinca` (git worktree) → rama `multi-finca`:
+  versión comercial para vender. Cada conversación trabaja solo en su carpeta;
+  antes de hacer commit, verificar la rama con `git status -sb`.
+
 ## Cómo trabajar con el usuario
 - Hablar **en español**, claro y sin tecnicismos; el usuario no es programador.
   Instrucciones paso a paso, de a una cosa.

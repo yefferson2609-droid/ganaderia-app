@@ -30,7 +30,18 @@ const kTablasSync = [
   'movimientos_financieros',
   'actividades',
   'solicitudes',
+  'produccion_leche',
+  'pesajes_animal',
 ];
+
+/// Tablas con foto y el bucket de Supabase Storage donde se guarda.
+const _bucketFotos = {
+  'solicitudes': 'solicitudes',
+  'vacas': 'animales',
+  'toros': 'animales',
+  'terneros': 'animales',
+  'caballos': 'animales',
+};
 
 class SyncProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -234,17 +245,17 @@ class SyncProvider extends ChangeNotifier {
     for (final row in unsynced) {
       final remoto = _toRemoteRow(tabla, row);
       var fotoPendiente = false;
-      if (tabla == 'solicitudes' &&
+      final bucket = _bucketFotos[tabla];
+      final fotoPorSubir = bucket != null &&
           row['foto_local'] != null &&
-          row['foto_url'] == null &&
-          !await File(row['foto_local'] as String).exists()) {
+          row['foto_url'] == null;
+      if (fotoPorSubir && !await File(row['foto_local'] as String).exists()) {
         // La foto ya no está en el teléfono: no hay nada que subir.
         await db.update(tabla, {'foto_local': null},
             where: 'id = ?', whereArgs: [row['id']]);
-      } else if (tabla == 'solicitudes' &&
-          row['foto_local'] != null &&
-          row['foto_url'] == null) {
-        final url = await _subirFoto(row['id'] as String, row['foto_local'] as String);
+      } else if (fotoPorSubir) {
+        final url = await _subirFoto(bucket, tabla, row['id'] as String,
+            row['foto_local'] as String);
         if (url != null) {
           remoto['foto_url'] = url;
           await db.update(tabla, {'foto_url': url},
@@ -328,12 +339,19 @@ class SyncProvider extends ChangeNotifier {
     'tratamientos_salud': 'tratamientos',
     'conceptos_financieros': 'conceptos',
     'movimientos_financieros': 'finanzas',
+    'produccion_leche': 'leche',
+    'pesajes_animal': 'pesajes',
   };
 
   String _nombreTabla(String t) => _nombres[t] ?? t;
 
   /// Mensaje corto y útil de un error de Supabase u otro.
   String _mensaje(Object e) {
+    if (e is PostgrestException &&
+        (e.code == 'PGRST205' || e.code == '42P01')) {
+      return 'Falta actualizar Supabase: esta tabla aún no existe '
+          '(ejecuta el script pendiente).';
+    }
     if (e is PostgrestException) {
       final partes = [
         e.message,
@@ -361,16 +379,19 @@ class SyncProvider extends ChangeNotifier {
 
   /// Sube la foto de una solicitud al bucket "solicitudes" y devuelve su URL
   /// pública, o null si no se pudo (sin bucket, archivo borrado, etc.).
-  Future<String?> _subirFoto(String id, String rutaLocal) async {
+  Future<String?> _subirFoto(
+      String bucket, String tabla, String id, String rutaLocal) async {
     try {
       final archivo = File(rutaLocal);
       if (!await archivo.exists()) return null;
-      final ruta = '$id.jpg';
-      await _supabase.storage.from('solicitudes').upload(ruta, archivo,
+      // Nombre único: si se cambia la foto, la URL cambia y no se ve la vieja.
+      final nombre = '$id-${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ruta = bucket == tabla ? nombre : '$tabla/$nombre';
+      await _supabase.storage.from(bucket).upload(ruta, archivo,
           fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'));
-      return _supabase.storage.from('solicitudes').getPublicUrl(ruta);
+      return _supabase.storage.from(bucket).getPublicUrl(ruta);
     } catch (e) {
-      debugPrint('No se pudo subir la foto de la solicitud $id: $e');
+      debugPrint('No se pudo subir la foto ($tabla $id): $e');
       return null;
     }
   }

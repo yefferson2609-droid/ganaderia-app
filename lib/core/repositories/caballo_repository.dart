@@ -26,6 +26,7 @@ class CaballoRepository {
     DateTime? fechaNacimiento,
     String? ubicacionId,
     String? color,
+    String? raza,
     String? nota,
   }) async {
     final now = DateTime.now();
@@ -36,6 +37,7 @@ class CaballoRepository {
       fechaNacimiento: fechaNacimiento,
       ubicacionId: ubicacionId,
       color: color,
+      raza: raza,
       nota: nota,
       createdAt: now,
       updatedAt: now,

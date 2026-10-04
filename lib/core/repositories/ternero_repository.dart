@@ -57,6 +57,7 @@ class TerneroRepository {
     String? madreId,
     String? ubicacionId,
     String? color,
+    String? raza,
     String? nota,
   }) async {
     final now = DateTime.now();
@@ -70,6 +71,7 @@ class TerneroRepository {
       madreId: madreId,
       ubicacionId: ubicacionId,
       color: color,
+      raza: raza,
       nota: nota,
       createdAt: now,
       updatedAt: now,
@@ -168,6 +170,7 @@ class TerneroRepository {
       madreId: t.madreId,
       ubicacionId: t.ubicacionId,
       color: t.color,
+      raza: t.raza,
       nota: t.nota,
     );
     await delete(t.id);
@@ -190,6 +193,7 @@ class TerneroRepository {
       madreId: t.madreId,
       ubicacionId: t.ubicacionId,
       color: t.color,
+      raza: t.raza,
       nota: t.nota,
     );
     await delete(t.id);

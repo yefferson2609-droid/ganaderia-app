@@ -32,6 +32,7 @@ class ToroRepository {
     String? madreId,
     String? ubicacionId,
     String? color,
+    String? raza,
     String? nota,
   }) async {
     final now = DateTime.now();
@@ -45,6 +46,7 @@ class ToroRepository {
       madreId: madreId,
       ubicacionId: ubicacionId,
       color: color,
+      raza: raza,
       nota: nota,
       createdAt: now,
       updatedAt: now,

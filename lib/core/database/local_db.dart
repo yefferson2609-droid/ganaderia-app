@@ -16,7 +16,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -200,6 +200,7 @@ class LocalDb {
     await _createTernerosTables(db);
     await _createSaludTables(db);
     await _createOperacionTables(db);
+    await _createV8(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -241,6 +242,50 @@ class LocalDb {
     if (oldVersion < 7) {
       await db.execute('ALTER TABLE caballos ADD COLUMN fecha_nacimiento TEXT');
     }
+    if (oldVersion < 8) {
+      await _createV8(db);
+    }
+  }
+
+  /// Raza y foto por animal, producción de leche y pesajes de adultos.
+  Future<void> _createV8(Database db) async {
+    for (final t in ['vacas', 'toros', 'terneros', 'caballos']) {
+      await db.execute('ALTER TABLE $t ADD COLUMN raza TEXT');
+      await db.execute('ALTER TABLE $t ADD COLUMN foto_url TEXT');
+      await db.execute('ALTER TABLE $t ADD COLUMN foto_local TEXT');
+    }
+
+    await db.execute('''
+      CREATE TABLE produccion_leche (
+        id TEXT PRIMARY KEY,
+        fecha TEXT NOT NULL,
+        turno TEXT NOT NULL,
+        litros REAL NOT NULL,
+        vaca_id TEXT,
+        ubicacion_id TEXT,
+        notas TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE pesajes_animal (
+        id TEXT PRIMARY KEY,
+        animal_tipo TEXT NOT NULL,
+        animal_id TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        peso REAL NOT NULL,
+        notas TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
   }
 
   Future<void> _createUsuariosTables(Database db) async {

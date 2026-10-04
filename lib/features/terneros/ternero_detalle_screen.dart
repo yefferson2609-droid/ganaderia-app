@@ -387,10 +387,13 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      AnimalFace(
+                      AnimalFaceEditable(
                           tipo: 'ternero',
-                          size: 56,
-                          estadoColor: estadoTerneroColor(t.estado)),
+                          id: t.id,
+                          fotoLocal: t.fotoLocal,
+                          fotoUrl: t.fotoUrl,
+                          estadoColor: estadoTerneroColor(t.estado),
+                          onCambio: _load),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -419,8 +422,10 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                         _madre != null ? 'Vaca #${_madre!.numero}' : 'No registrada'),
                     _InfoRow('Padre',
                         _padre != null ? 'Toro ${_padre!.displayName}' : 'No registrado'),
-                    if (t.color != null) _InfoRow('Color', t.color!),
-                    if (t.nota != null) _InfoRow('Nota', t.nota!),
+                    _InfoRow('Edad', t.edad),
+                    _InfoRow('Raza', t.raza ?? 'Sin registrar'),
+                    _InfoRow('Color', t.color ?? 'Sin registrar'),
+                    _InfoRow('Notas', t.nota ?? 'Sin notas'),
                     const SizedBox(height: 8),
                     CreadorInfo(
                       createdBy: t.createdBy,

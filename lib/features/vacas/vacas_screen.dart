@@ -130,6 +130,8 @@ class _VacasScreenState extends State<VacasScreen> {
                               child: ListTile(
                                 leading: AnimalFace(
                                     tipo: 'vaca',
+                                    fotoLocal: vaca.fotoLocal,
+                                    fotoUrl: vaca.fotoUrl,
                                     estadoColor: _estadoColor(vaca.estado)),
                                 title: Text('Vaca #${vaca.numero}',
                                     style: const TextStyle(

@@ -9,6 +9,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/widgets/raza_field.dart';
 
 class VacaFormScreen extends StatefulWidget {
   final String? id;
@@ -25,6 +26,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
   final _ubicacionRepo = UbicacionRepository();
   final _numeroCtrl = TextEditingController();
   final _colorCtrl = TextEditingController();
+  final _razaCtrl = TextEditingController();
   final _notaCtrl = TextEditingController();
 
   bool _loading = false;
@@ -55,6 +57,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
   void dispose() {
     _numeroCtrl.dispose();
     _colorCtrl.dispose();
+    _razaCtrl.dispose();
     _notaCtrl.dispose();
     super.dispose();
   }
@@ -71,6 +74,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
       if (_vacaOriginal != null) {
         _numeroCtrl.text = _vacaOriginal!.numero;
         _colorCtrl.text = _vacaOriginal!.color ?? '';
+        _razaCtrl.text = _vacaOriginal!.raza ?? '';
         _notaCtrl.text = _vacaOriginal!.nota ?? '';
         _fechaNacimiento = _vacaOriginal!.fechaNacimiento;
         _estado = _vacaOriginal!.estado == 'muerta'
@@ -150,6 +154,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         ubicacionId: _ubicacionId,
         clearUbicacion: _ubicacionId == null,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       ));
     } else {
@@ -165,6 +170,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         fechaEstimadaParto: fechaParto,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       );
     }
@@ -326,6 +332,8 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _madreId = v),
                     ),
+                    const SizedBox(height: 16),
+                    RazaField(controller: _razaCtrl),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _colorCtrl,

@@ -93,13 +93,18 @@ class _CaballosScreenState extends State<CaballosScreen> {
                               .then((_) => _load()),
                           leading: AnimalFace(
                               tipo: 'caballo',
+                              fotoLocal: c.fotoLocal,
+                              fotoUrl: c.fotoUrl,
                               estadoColor: estadoCaballoColor(c.estado)),
                           title: Text(c.nombre,
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold)),
-                          subtitle: Text(
-                              'Estado: ${c.estado[0].toUpperCase()}${c.estado.substring(1)}'
-                              '${c.color != null ? ' · ${c.color}' : ''}'),
+                          subtitle: Text([
+                            c.estado[0].toUpperCase() + c.estado.substring(1),
+                            if (c.fechaNacimiento != null) c.edad,
+                            if (c.raza != null) c.raza!,
+                            if (c.color != null) c.color!,
+                          ].join(' · ')),
                           trailing: PopupMenuButton<String>(
                             onSelected: (v) {
                               if (v == 'editar') {

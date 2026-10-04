@@ -11,6 +11,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/widgets/raza_field.dart';
 
 class TerneroFormScreen extends StatefulWidget {
   final String? id;
@@ -25,6 +26,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
   final _repo = TerneroRepository();
   final _numeroCtrl = TextEditingController();
   final _colorCtrl = TextEditingController();
+  final _razaCtrl = TextEditingController();
   final _notaCtrl = TextEditingController();
 
   bool _loading = false;
@@ -53,6 +55,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
   void dispose() {
     _numeroCtrl.dispose();
     _colorCtrl.dispose();
+    _razaCtrl.dispose();
     _notaCtrl.dispose();
     super.dispose();
   }
@@ -67,6 +70,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
       if (t != null) {
         _numeroCtrl.text = t.numero;
         _colorCtrl.text = t.color ?? '';
+        _razaCtrl.text = t.raza ?? '';
         _notaCtrl.text = t.nota ?? '';
         _sexo = t.sexo;
         _etapa = t.etapa;
@@ -119,6 +123,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
         madreId: _madreId,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       ));
     } else {
@@ -131,6 +136,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
         madreId: _madreId,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       );
     }
@@ -246,6 +252,8 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _padreId = v),
                     ),
+                    const SizedBox(height: 16),
+                    RazaField(controller: _razaCtrl),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _colorCtrl,

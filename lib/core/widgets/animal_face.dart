@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import '../services/foto_animal_service.dart';
 
 /// Imagen de cada especie, en assets/images.
 const _imagenes = {
@@ -10,22 +13,38 @@ const _imagenes = {
   'ovejo': 'assets/images/ovejo_face.jpg',
 };
 
-/// Cara circular del animal. [estadoColor] dibuja un borde según su estado.
+/// Cara circular del animal: su foto si tiene, o el dibujo de la especie.
+/// [estadoColor] dibuja un borde según su estado.
 class AnimalFace extends StatelessWidget {
   final String tipo;
   final double size;
   final Color? estadoColor;
+  final String? fotoLocal;
+  final String? fotoUrl;
 
   const AnimalFace({
     super.key,
     required this.tipo,
     this.size = 44,
     this.estadoColor,
+    this.fotoLocal,
+    this.fotoUrl,
   });
 
   @override
   Widget build(BuildContext context) {
     final path = _imagenes[tipo];
+    final dibujo = path == null
+        ? Icon(Icons.pets, size: size * 0.6)
+        : Image.asset(path, fit: BoxFit.cover);
+    Widget imagen = dibujo;
+    if (fotoLocal != null && File(fotoLocal!).existsSync()) {
+      imagen = Image.file(File(fotoLocal!),
+          fit: BoxFit.cover, errorBuilder: (_, __, ___) => dibujo);
+    } else if (fotoUrl != null) {
+      imagen = Image.network(fotoUrl!,
+          fit: BoxFit.cover, errorBuilder: (_, __, ___) => dibujo);
+    }
     return Container(
       width: size,
       height: size,
@@ -37,9 +56,59 @@ class AnimalFace extends StatelessWidget {
             : null,
       ),
       clipBehavior: Clip.antiAlias,
-      child: path == null
-          ? Icon(Icons.pets, size: size * 0.6)
-          : Image.asset(path, fit: BoxFit.cover),
+      child: imagen,
+    );
+  }
+}
+
+/// Foto grande de la ficha con un botón de cámara para cambiarla.
+class AnimalFaceEditable extends StatelessWidget {
+  final String tipo;
+  final String id;
+  final String? fotoLocal;
+  final String? fotoUrl;
+  final Color? estadoColor;
+  final VoidCallback onCambio;
+
+  const AnimalFaceEditable({
+    super.key,
+    required this.tipo,
+    required this.id,
+    this.fotoLocal,
+    this.fotoUrl,
+    this.estadoColor,
+    required this.onCambio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Future<void> cambiar() async {
+      final cambio = await FotoAnimalService.elegir(context,
+          tipo: tipo,
+          id: id,
+          tieneFoto: fotoLocal != null || fotoUrl != null);
+      if (cambio) onCambio();
+    }
+
+    return GestureDetector(
+      onTap: cambiar,
+      child: Stack(children: [
+        AnimalFace(
+            tipo: tipo,
+            size: 72,
+            estadoColor: estadoColor,
+            fotoLocal: fotoLocal,
+            fotoUrl: fotoUrl),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: CircleAvatar(
+            radius: 12,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: const Icon(Icons.photo_camera, size: 14, color: Colors.white),
+          ),
+        ),
+      ]),
     );
   }
 }

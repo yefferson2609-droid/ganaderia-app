@@ -34,6 +34,7 @@ class VacaRepository {
     DateTime? fechaEstimadaParto,
     String? ubicacionId,
     String? color,
+    String? raza,
     String? nota,
   }) async {
     final now = DateTime.now();
@@ -50,6 +51,7 @@ class VacaRepository {
       fechaEstimadaParto: fechaEstimadaParto,
       ubicacionId: ubicacionId,
       color: color,
+      raza: raza,
       nota: nota,
       createdAt: now,
       updatedAt: now,

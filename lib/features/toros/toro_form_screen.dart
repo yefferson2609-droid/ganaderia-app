@@ -9,6 +9,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/widgets/raza_field.dart';
 
 class ToroFormScreen extends StatefulWidget {
   final String? id;
@@ -26,6 +27,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
   final _numeroCtrl = TextEditingController();
   final _nombreCtrl = TextEditingController();
   final _colorCtrl = TextEditingController();
+  final _razaCtrl = TextEditingController();
   final _notaCtrl = TextEditingController();
 
   DateTime? _fechaNacimiento;
@@ -55,6 +57,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
     _numeroCtrl.dispose();
     _nombreCtrl.dispose();
     _colorCtrl.dispose();
+    _razaCtrl.dispose();
     _notaCtrl.dispose();
     super.dispose();
   }
@@ -75,6 +78,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
             ? 'fallecido'
             : _toroOriginal!.estado;
         _colorCtrl.text = _toroOriginal!.color ?? '';
+        _razaCtrl.text = _toroOriginal!.raza ?? '';
         _notaCtrl.text = _toroOriginal!.nota ?? '';
         _padreId = _toroOriginal!.padreId;
         _madreId = _toroOriginal!.madreId;
@@ -127,6 +131,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         ubicacionId: _ubicacionId,
         clearUbicacion: _ubicacionId == null,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       ));
     } else {
@@ -139,6 +144,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         madreId: _madreId,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       );
     }
@@ -259,6 +265,8 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _madreId = v),
                     ),
+                    const SizedBox(height: 16),
+                    RazaField(controller: _razaCtrl),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _colorCtrl,

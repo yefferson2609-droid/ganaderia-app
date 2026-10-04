@@ -272,10 +272,13 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      AnimalFace(
+                      AnimalFaceEditable(
                           tipo: 'vaca',
-                          size: 56,
-                          estadoColor: _estadoColor(_vaca!.estado)),
+                          id: _vaca!.id,
+                          fotoLocal: _vaca!.fotoLocal,
+                          fotoUrl: _vaca!.fotoUrl,
+                          estadoColor: _estadoColor(_vaca!.estado),
+                          onCambio: _load),
                       const SizedBox(width: 12),
                       Text('Vaca #${_vaca!.numero}',
                           style: Theme.of(context).textTheme.titleLarge),
@@ -296,6 +299,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                       valueColor: _estadoColor(_vaca!.estado),
                     ),
                     _InfoRow(label: 'Edad', value: _vaca!.edad),
+                    _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
                     _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
                     _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
                     _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),

@@ -167,10 +167,13 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      AnimalFace(
+                      AnimalFaceEditable(
                           tipo: 'toro',
-                          size: 56,
-                          estadoColor: _estadoColor(_toro!.estado)),
+                          id: _toro!.id,
+                          fotoLocal: _toro!.fotoLocal,
+                          fotoUrl: _toro!.fotoUrl,
+                          estadoColor: _estadoColor(_toro!.estado),
+                          onCambio: _load),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(_toro!.displayName,
@@ -197,10 +200,9 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                     _InfoRow(
                         label: 'Ubicación',
                         value: _ubicacion?.nombre ?? 'Sin asignar'),
-                    if (_toro!.color != null)
-                      _InfoRow(label: 'Color', value: _toro!.color!),
-                    if (_toro!.nota != null)
-                      _InfoRow(label: 'Nota', value: _toro!.nota!),
+                    _InfoRow(label: 'Raza', value: _toro!.raza ?? 'Sin registrar'),
+                    _InfoRow(label: 'Color', value: _toro!.color ?? 'Sin registrar'),
+                    _InfoRow(label: 'Notas', value: _toro!.nota ?? 'Sin notas'),
                     const SizedBox(height: 8),
                     CreadorInfo(
                       createdBy: _toro!.createdBy,

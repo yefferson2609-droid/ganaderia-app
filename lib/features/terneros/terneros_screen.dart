@@ -58,7 +58,10 @@ class _TernerosScreenState extends State<TernerosScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               leading: AnimalFace(
-                  tipo: 'ternero', estadoColor: estadoTerneroColor(t.estado)),
+                  tipo: 'ternero',
+                  fotoLocal: t.fotoLocal,
+                  fotoUrl: t.fotoUrl,
+                  estadoColor: estadoTerneroColor(t.estado)),
               title: Text('Ternero #${t.numero}',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text([

@@ -89,7 +89,10 @@ class _TorosScreenState extends State<TorosScreen> {
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
                           leading: AnimalFace(
-                              tipo: 'toro', estadoColor: _estadoColor(t.estado)),
+                              tipo: 'toro',
+                              fotoLocal: t.fotoLocal,
+                              fotoUrl: t.fotoUrl,
+                              estadoColor: _estadoColor(t.estado)),
                           title: Text(t.nombre,
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold)),

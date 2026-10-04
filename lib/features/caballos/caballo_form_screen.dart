@@ -5,6 +5,7 @@ import '../../core/models/ubicacion.dart';
 import '../../core/repositories/caballo_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/widgets/raza_field.dart';
 import '../../core/utils/edad.dart';
 
 class CaballoFormScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
   final _repo = CaballoRepository();
   final _nombreCtrl = TextEditingController();
   final _colorCtrl = TextEditingController();
+  final _razaCtrl = TextEditingController();
   final _notaCtrl = TextEditingController();
   String _estado = 'activo';
   DateTime? _fechaNacimiento;
@@ -40,6 +42,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
   void dispose() {
     _nombreCtrl.dispose();
     _colorCtrl.dispose();
+    _razaCtrl.dispose();
     _notaCtrl.dispose();
     super.dispose();
   }
@@ -51,6 +54,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
       if (c != null) {
         _nombreCtrl.text = c.nombre;
         _colorCtrl.text = c.color ?? '';
+        _razaCtrl.text = c.raza ?? '';
         _notaCtrl.text = c.nota ?? '';
         _estado = c.estado == 'muerto' ? 'fallecido' : c.estado;
         _fechaNacimiento = c.fechaNacimiento;
@@ -75,6 +79,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
           ubicacionId: _ubicacionId,
           clearUbicacion: _ubicacionId == null,
           color: textoONull(_colorCtrl.text),
+          raza: textoONull(_razaCtrl.text),
           nota: textoONull(_notaCtrl.text),
         ));
       }
@@ -85,6 +90,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
         fechaNacimiento: _fechaNacimiento,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
+        raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       );
     }
@@ -179,6 +185,8 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _ubicacionId = v),
                     ),
+                    const SizedBox(height: 16),
+                    RazaField(controller: _razaCtrl),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _colorCtrl,

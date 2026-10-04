@@ -135,10 +135,13 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      AnimalFace(
+                      AnimalFaceEditable(
                           tipo: 'caballo',
-                          size: 56,
-                          estadoColor: estadoCaballoColor(c.estado)),
+                          id: c.id,
+                          fotoLocal: c.fotoLocal,
+                          fotoUrl: c.fotoUrl,
+                          estadoColor: estadoCaballoColor(c.estado),
+                          onCambio: _load),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -162,6 +165,7 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
                         c.fechaNacimiento != null
                             ? DateFormat('dd/MM/yyyy').format(c.fechaNacimiento!)
                             : 'No registrada'),
+                    DatoFila('Raza', c.raza ?? 'Sin registrar'),
                     DatoFila('Color', c.color ?? 'Sin registrar'),
                     DatoFila('Ubicación', _ubicacion ?? 'Sin ubicación'),
                     DatoFila('Notas', c.nota ?? 'Sin notas'),

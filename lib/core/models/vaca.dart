@@ -13,11 +13,16 @@ class Vaca {
   final DateTime? fechaEstimadaParto;
   final String? ubicacionId;
   final String? color;
+  final String? raza;
+  final String? fotoUrl; // foto subida a Supabase Storage
+  final String? fotoLocal; // ruta en el teléfono (solo local)
   final String? nota;
   final String? createdBy;
   final String? updatedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  bool get tieneFoto => fotoUrl != null || fotoLocal != null;
 
   const Vaca({
     required this.id,
@@ -32,6 +37,9 @@ class Vaca {
     this.fechaEstimadaParto,
     this.ubicacionId,
     this.color,
+    this.raza,
+    this.fotoUrl,
+    this.fotoLocal,
     this.nota,
     this.createdBy,
     this.updatedBy,
@@ -82,6 +90,9 @@ class Vaca {
             : null,
         ubicacionId: map['ubicacion_id'] as String?,
         color: map['color'] as String?,
+        raza: map['raza'] as String?,
+        fotoUrl: map['foto_url'] as String?,
+        fotoLocal: map['foto_local'] as String?,
         nota: map['nota'] as String?,
         createdBy: map['created_by'] as String?,
         updatedBy: map['updated_by'] as String?,
@@ -103,6 +114,9 @@ class Vaca {
             fechaEstimadaParto?.toIso8601String().split('T')[0],
         'ubicacion_id': ubicacionId,
         'color': color,
+        'raza': raza,
+        'foto_url': fotoUrl,
+        'foto_local': fotoLocal,
         'nota': nota,
         'created_by': createdBy,
         'updated_by': updatedBy,
@@ -126,6 +140,7 @@ class Vaca {
     String? ubicacionId,
     bool clearUbicacion = false,
     Object? color = sinCambio,
+    Object? raza = sinCambio,
     Object? nota = sinCambio,
   }) =>
       Vaca(
@@ -143,6 +158,9 @@ class Vaca {
             : (fechaEstimadaParto ?? this.fechaEstimadaParto),
         ubicacionId: clearUbicacion ? null : (ubicacionId ?? this.ubicacionId),
         color: valorOAnterior<String>(color, this.color),
+        raza: valorOAnterior<String>(raza, this.raza),
+        fotoUrl: fotoUrl,
+        fotoLocal: fotoLocal,
         nota: valorOAnterior<String>(nota, this.nota),
         createdBy: createdBy,
         updatedBy: updatedBy,

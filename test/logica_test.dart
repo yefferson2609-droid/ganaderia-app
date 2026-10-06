@@ -44,6 +44,33 @@ void main() {
 
   setUp(borrarTodo);
 
+  test('gestación: meses y días, y fecha posible de parto', () {
+    final hoy = DateTime.now();
+    final d = DateTime(hoy.year, hoy.month, hoy.day);
+    Vaca vaca({DateTime? monta, DateTime? parto, String rep = 'prenada'}) =>
+        Vaca(
+            id: 'x',
+            numero: '1',
+            estado: 'activa',
+            estadoReproductivo: rep,
+            fechaMonta: monta,
+            fechaEstimadaParto: parto,
+            createdAt: hoy,
+            updatedAt: hoy);
+
+    final conMonta = vaca(monta: d.subtract(const Duration(days: 130)));
+    expect(conMonta.gestacionTexto, '4 meses y 10 días');
+    expect(conMonta.fechaPartoProbable, d.add(const Duration(days: 153)));
+    expect(conMonta.diasParaParto, 153);
+
+    // Solo con fecha de parto (p. ej. desde la ficha): cuenta hacia atrás.
+    final soloParto = vaca(parto: d.add(const Duration(days: 100)));
+    expect(soloParto.diasGestacion, 183);
+    expect(soloParto.diasParaParto, 100);
+
+    expect(vaca(rep: 'vacia', monta: d).gestacionTexto, isNull);
+  });
+
   test('la base nueva tiene todas las columnas y tablas', () async {
     final db = LocalDb.instance;
     expect(await db.columnas('caballos'),

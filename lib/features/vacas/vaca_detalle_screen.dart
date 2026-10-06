@@ -6,6 +6,7 @@ import '../../core/models/tipo_evento.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/evento_vaca_repository.dart';
+import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
@@ -36,6 +37,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
   Toro? _padre;
   Vaca? _madre;
   String? _ubicacion;
+  ResumenReproductivo? _resumen;
   List<EventoVaca> _eventos = [];
   List<TipoEvento> _tipos = [];
   bool _loading = true;
@@ -57,6 +59,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
       _ubicacion = _vaca!.ubicacionId != null
           ? (await UbicacionRepository().getById(_vaca!.ubicacionId!))?.nombre
           : null;
+      _resumen = await ReproduccionRepository().resumen(widget.id);
     }
     _tipos = await _tipoRepo.getAll(soloActivos: true);
     setState(() => _loading = false);
@@ -217,7 +220,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_loading && _vaca == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_vaca == null) {
@@ -260,154 +263,235 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Evento'),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+      body: DefaultTabController(
+        length: 5,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, _) => [
+            SliverToBoxAdapter(child: _resumenCard()),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _PestanasDelegate(
+                TabBar(
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  labelColor: AppColors.primary,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: AppColors.primary,
+                  tabs: [
+                    const Tab(text: 'Datos'),
+                    Tab(text: 'Partos (${_resumen?.partos.length ?? 0})'),
+                    const Tab(text: 'Salud'),
+                    const Tab(text: 'Pesos'),
+                    Tab(text: 'Historial (${_eventos.length})'),
+                  ],
+                ),
+                Theme.of(context).scaffoldBackgroundColor,
+              ),
+            ),
+          ],
+          body: TabBarView(children: [
+            _pestana([
+              _Plegable(
+                titulo: 'Información',
+                icono: Icons.info_outline,
+                abierto: true,
+                children: [
+                  _InfoRow(label: 'Número', value: _vaca!.numero),
+                  _InfoRow(
+                    label: 'Fecha de nacimiento',
+                    value: _vaca!.fechaNacimiento != null
+                        ? DateFormat('dd/MM/yyyy').format(_vaca!.fechaNacimiento!)
+                        : 'No registrada',
+                  ),
+                  _InfoRow(
+                    label: 'Estado',
+                    value: _vaca!.estado[0].toUpperCase() +
+                        _vaca!.estado.substring(1),
+                    valueColor: _estadoColor(_vaca!.estado),
+                  ),
+                  _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
+                  _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
+                  _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
+                  _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
+                  const SizedBox(height: 8),
+                  CreadorInfo(
+                    createdBy: _vaca!.createdBy,
+                    updatedBy: _vaca!.updatedBy,
+                    createdAt: _vaca!.createdAt,
+                    updatedAt: _vaca!.updatedAt,
+                  ),
+                ],
+              ),
+              _Plegable(
+                titulo: 'Descendencia',
+                icono: Icons.account_tree_outlined,
+                children: [
+                  _InfoRow(
+                      label: 'Padre',
+                      value: _padre != null
+                          ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
+                          : 'No registrado'),
+                  _InfoRow(
+                      label: 'Madre',
+                      value: _madre != null
+                          ? 'Vaca #${_madre!.numero}'
+                          : 'No registrada'),
+                ],
+              ),
+            ]),
+            _pestana([
+              ReproduccionSection(
+                key: ValueKey('repro$_version'),
+                vaca: _vaca!,
+                onCambio: () {
+                  _version++;
+                  _load();
+                },
+              ),
+            ]),
+            _pestana([
+              SaludSection(
+                  animalTipo: 'vaca', animalId: widget.id, femenino: true),
+            ]),
+            _pestana([
+              PesajesSection(animalTipo: 'vaca', animalId: widget.id),
+            ]),
+            _pestana([
+              if (_eventos.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: Text('Sin eventos registrados')),
+                  ),
+                )
+              else
+                ..._eventos.map((e) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: AppColors.primaryContainer,
+                          child: Icon(Icons.event_note, color: AppColors.primary),
+                        ),
+                        title: Text(e.tipoEventoNombre ?? 'Evento'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(DateFormat('dd/MM/yyyy').format(e.fecha)),
+                            if (e.notas != null && e.notas!.isNotEmpty)
+                              Text(e.notas!,
+                                  style: const TextStyle(
+                                      fontStyle: FontStyle.italic)),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              color: AppColors.danger, size: 20),
+                          onPressed: () => _eliminarEvento(e.id),
+                        ),
+                        isThreeLine: e.notas != null && e.notas!.isNotEmpty,
+                      ),
+                    )),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  /// Contenido de una pestaña, con espacio abajo para el botón "Evento".
+  Widget _pestana(List<Widget> children) => ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+        children: children,
+      );
+
+  /// Resumen de arriba: foto, edad, partos, ordeño y preñez.
+  Widget _resumenCard() {
+    final v = _vaca!;
+    final r = _resumen;
+    final fmt = DateFormat('dd/MM/yyyy');
+    final estadoProd = r?.estado;
+    final chips = <Widget>[
+      if (v.estado != 'activa')
+        _Chip(v.estado[0].toUpperCase() + v.estado.substring(1),
+            _estadoColor(v.estado))
+      else if (estadoProd != null)
+        _Chip(
+            kEstadoProduccionLabels[estadoProd]! +
+                (r!.diasEnLeche != null ? ' · ${r.diasEnLeche} días' : ''),
+            estadoProduccionColor(estadoProd)),
+    ];
+
+    // Preñez o días vacía.
+    Widget? prenez;
+    if (v.estado == 'activa' && v.prenada) {
+      final parto = v.fechaPartoProbable;
+      final faltan = v.diasParaParto;
+      prenez = _Destacado(
+        color: AppColors.success,
+        icono: Icons.pregnant_woman,
+        lineas: [
+          'Preñada${v.gestacionTexto != null ? ' · ${v.gestacionTexto}' : ''}',
+          if (parto != null)
+            'Parto posible: ${fmt.format(parto)}'
+                '${faltan == null ? '' : faltan > 0 ? ' (faltan $faltan días)' : faltan == 0 ? ' (hoy)' : ' (pasó hace ${-faltan} días)'}'
+          else
+            'Sin fecha de monta ni de parto registrada',
+        ],
+      );
+    } else if (v.estado == 'activa') {
+      final ultimo = r?.ultimoParto;
+      prenez = _Destacado(
+        color: AppColors.warning,
+        icono: Icons.event_busy,
+        lineas: [
+          ultimo != null
+              ? 'Vacía · ${DateTime.now().difference(ultimo).inDays} días desde el parto'
+              : 'Vacía',
+        ],
+      );
+    }
+
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Info básica
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+            Row(children: [
+              AnimalFaceEditable(
+                  tipo: 'vaca',
+                  id: v.id,
+                  fotoLocal: v.fotoLocal,
+                  fotoUrl: v.fotoUrl,
+                  estadoColor: _estadoColor(v.estado),
+                  onCambio: _load),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      AnimalFaceEditable(
-                          tipo: 'vaca',
-                          id: _vaca!.id,
-                          fotoLocal: _vaca!.fotoLocal,
-                          fotoUrl: _vaca!.fotoUrl,
-                          estadoColor: _estadoColor(_vaca!.estado),
-                          onCambio: _load),
-                      const SizedBox(width: 12),
-                      Text('Vaca #${_vaca!.numero}',
-                          style: Theme.of(context).textTheme.titleLarge),
-                    ]),
-                    const Divider(height: 24),
-                    _InfoRow(label: 'Número', value: _vaca!.numero),
-                    _InfoRow(
-                      label: 'Fecha de nacimiento',
-                      value: _vaca!.fechaNacimiento != null
-                          ? DateFormat('dd/MM/yyyy')
-                              .format(_vaca!.fechaNacimiento!)
-                          : 'No registrada',
+                    Text('Vaca #${v.numero}',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      [
+                        v.fechaNacimiento != null ? v.edad : 'Edad sin registrar',
+                        '${r?.partos.length ?? 0} parto${(r?.partos.length ?? 0) == 1 ? '' : 's'}',
+                      ].join(' · '),
+                      style: const TextStyle(color: Colors.grey),
                     ),
-                    _InfoRow(
-                      label: 'Estado',
-                      value: _vaca!.estado[0].toUpperCase() +
-                          _vaca!.estado.substring(1),
-                      valueColor: _estadoColor(_vaca!.estado),
-                    ),
-                    _InfoRow(label: 'Edad', value: _vaca!.edad),
-                    _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
-                    _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
-                    _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
-                    _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
-                    const SizedBox(height: 8),
-                    CreadorInfo(
-                      createdBy: _vaca!.createdBy,
-                      updatedBy: _vaca!.updatedBy,
-                      createdAt: _vaca!.createdAt,
-                      updatedAt: _vaca!.updatedAt,
-                    ),
+                    if (chips.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Wrap(spacing: 6, runSpacing: 4, children: chips),
+                    ],
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            // Descendencia
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Descendencia',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                        label: 'Padre',
-                        value: _padre != null
-                            ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
-                            : 'No registrado'),
-                    _InfoRow(
-                        label: 'Madre',
-                        value: _madre != null
-                            ? 'Vaca #${_madre!.numero}'
-                            : 'No registrada'),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ReproduccionSection(
-              key: ValueKey('repro$_version'),
-              vaca: _vaca!,
-              onCambio: () {
-                _version++;
-                _load();
-              },
-            ),
-            const SizedBox(height: 12),
-            SaludSection(
-                animalTipo: 'vaca', animalId: widget.id, femenino: true),
-            const SizedBox(height: 12),
-            PesajesSection(animalTipo: 'vaca', animalId: widget.id),
-            const SizedBox(height: 12),
-            // Historial
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Historial de eventos',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                Text('${_eventos.length} registros',
-                    style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (_eventos.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: Text('Sin eventos registrados')),
-                ),
-              )
-            else
-              ..._eventos.map((e) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: AppColors.primaryContainer,
-                        child: Icon(Icons.event_note, color: AppColors.primary),
-                      ),
-                      title: Text(e.tipoEventoNombre ?? 'Evento'),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(DateFormat('dd/MM/yyyy').format(e.fecha)),
-                          if (e.notas != null && e.notas!.isNotEmpty)
-                            Text(e.notas!,
-                                style: const TextStyle(
-                                    fontStyle: FontStyle.italic)),
-                        ],
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline,
-                            color: AppColors.danger, size: 20),
-                        onPressed: () => _eliminarEvento(e.id),
-                      ),
-                      isThreeLine: e.notas != null && e.notas!.isNotEmpty,
-                    ),
-                  )),
+            ]),
+            if (prenez != null) ...[
+              const SizedBox(height: 12),
+              prenez,
+            ],
           ],
         ),
       ),
@@ -461,4 +545,108 @@ class _InfoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Cuadro que se abre o cierra tocando su título.
+class _Plegable extends StatelessWidget {
+  final String titulo;
+  final IconData icono;
+  final bool abierto;
+  final List<Widget> children;
+  const _Plegable(
+      {required this.titulo,
+      required this.icono,
+      this.abierto = false,
+      required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: abierto,
+        shape: const Border(),
+        leading: Icon(icono, color: AppColors.primary),
+        title: Text(titulo,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final String texto;
+  final Color color;
+  const _Chip(this.texto, this.color);
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(texto,
+            style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+      );
+}
+
+/// Recuadro de color con la preñez o los días vacía.
+class _Destacado extends StatelessWidget {
+  final Color color;
+  final IconData icono;
+  final List<String> lineas;
+  const _Destacado(
+      {required this.color, required this.icono, required this.lineas});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(children: [
+          Icon(icono, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < lineas.length; i++)
+                  Text(lineas[i],
+                      style: TextStyle(
+                          fontWeight:
+                              i == 0 ? FontWeight.bold : FontWeight.normal,
+                          fontSize: i == 0 ? 15 : 13)),
+              ],
+            ),
+          ),
+        ]),
+      );
+}
+
+/// Mantiene las pestañas visibles arriba al desplazarse.
+class _PestanasDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar tabBar;
+  final Color fondo;
+  _PestanasDelegate(this.tabBar, this.fondo);
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      Material(color: fondo, child: tabBar);
+
+  @override
+  bool shouldRebuild(_PestanasDelegate old) =>
+      old.tabBar != tabBar || old.fondo != fondo;
 }

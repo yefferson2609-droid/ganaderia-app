@@ -1,3 +1,4 @@
+import '../config/ajustes.dart';
 import '../utils/auditoria.dart';
 
 class Vaca {
@@ -58,17 +59,45 @@ class Vaca {
     return '${diff.inDays} días';
   }
 
-  // Días de gestación transcurridos
+  bool get prenada => estadoReproductivo == 'prenada';
+
+  /// Fecha posible de parto: la registrada o, si no hay, monta + 283 días.
+  DateTime? get fechaPartoProbable =>
+      fechaEstimadaParto ??
+      fechaMonta?.add(const Duration(days: kDiasGestacion));
+
+  // Días de gestación transcurridos (desde la monta o, si no se conoce,
+  // contando hacia atrás desde la fecha de parto).
   int? get diasGestacion {
-    if (fechaMonta == null) return null;
-    return DateTime.now().difference(fechaMonta!).inDays;
+    if (!prenada) return null;
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    if (fechaMonta != null) return hoy.difference(fechaMonta!).inDays;
+    if (fechaEstimadaParto != null) {
+      return kDiasGestacion - fechaEstimadaParto!.difference(hoy).inDays;
+    }
+    return null;
   }
 
-  // Porcentaje de gestación (283 días promedio bovino)
-  double? get porcentajeGestacion {
-    final dias = diasGestacion;
-    if (dias == null) return null;
-    return (dias / 283 * 100).clamp(0, 100);
+  /// "4 meses y 10 días" de gestación.
+  String? get gestacionTexto {
+    final d = diasGestacion;
+    if (d == null || d < 0) return null;
+    final m = d ~/ 30;
+    final r = d % 30;
+    final partes = [
+      if (m > 0) '$m mes${m == 1 ? '' : 'es'}',
+      if (r > 0 || m == 0) '$r día${r == 1 ? '' : 's'}',
+    ];
+    return partes.join(' y ');
+  }
+
+  /// Días que faltan para el parto (negativo si ya pasó la fecha).
+  int? get diasParaParto {
+    final f = fechaPartoProbable;
+    if (!prenada || f == null) return null;
+    final hoy = DateTime.now();
+    return f.difference(DateTime(hoy.year, hoy.month, hoy.day)).inDays;
   }
 
   factory Vaca.fromMap(Map<String, dynamic> map) => Vaca(

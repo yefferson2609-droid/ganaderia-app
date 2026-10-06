@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
@@ -87,6 +88,16 @@ class _VacasScreenState extends State<VacasScreen> {
         return matchEstado && matchSearch;
       }).toList();
     });
+  }
+
+  /// "Preñada 4 m · Parto 12/02/2027".
+  String _prenez(Vaca v) {
+    final d = v.diasGestacion;
+    final parto = v.fechaPartoProbable;
+    return [
+      'Preñada${d != null && d >= 0 ? ' ${d ~/ 30} m' : ''}',
+      if (parto != null) 'Parto ${DateFormat('dd/MM/yyyy').format(parto)}',
+    ].join(' · ');
   }
 
   Color _estadoColor(String estado) {
@@ -178,7 +189,7 @@ class _VacasScreenState extends State<VacasScreen> {
                                         fontWeight: FontWeight.bold)),
                                 subtitle: Text(
                                     '${vaca.estado == 'activa' && _produccion[vaca.id] != null ? kEstadoProduccionLabels[_produccion[vaca.id]]! : vaca.estado[0].toUpperCase() + vaca.estado.substring(1)}'
-                                    '${vaca.estadoReproductivo == 'prenada' ? ' · Preñada' : ''}'
+                                    '${vaca.prenada ? ' · ${_prenez(vaca)}' : ''}'
                                     '${vaca.fechaNacimiento != null ? ' · ${vaca.edad}' : ''}'
                                     '${vaca.color != null ? ' · ${vaca.color}' : ''}'),
                                 trailing: const Icon(Icons.chevron_right),

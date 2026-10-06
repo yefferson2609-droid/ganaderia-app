@@ -24,8 +24,14 @@ class ReproduccionSection extends StatefulWidget {
   final Vaca vaca;
   final VoidCallback onCambio;
 
+  /// false = sin tarjeta ni título (dentro de un cuadro plegable).
+  final bool marco;
+
   const ReproduccionSection(
-      {super.key, required this.vaca, required this.onCambio});
+      {super.key,
+      required this.vaca,
+      required this.onCambio,
+      this.marco = true});
 
   @override
   State<ReproduccionSection> createState() => _ReproduccionSectionState();
@@ -222,13 +228,10 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
         ?.copyWith(fontWeight: FontWeight.bold);
     final activa = widget.vaca.estado == 'activa';
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return _marco(Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
+            if (widget.marco) Row(children: [
               Expanded(child: Text('Partos y ordeño', style: titulo)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -321,10 +324,12 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
               ]),
             ],
           ],
-        ),
-      ),
-    );
+        ));
   }
+
+  Widget _marco(Widget w) => widget.marco
+      ? Card(child: Padding(padding: const EdgeInsets.all(16), child: w))
+      : w;
 
   Widget _fila(String label, String valor) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),

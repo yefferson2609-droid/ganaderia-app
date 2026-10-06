@@ -263,146 +263,120 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Evento'),
       ),
-      body: DefaultTabController(
-        length: 5,
-        child: NestedScrollView(
-          headerSliverBuilder: (context, _) => [
-            SliverToBoxAdapter(child: _resumenCard()),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _PestanasDelegate(
-                TabBar(
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  labelColor: AppColors.primary,
-                  unselectedLabelColor: Colors.grey,
-                  indicatorColor: AppColors.primary,
-                  tabs: [
-                    const Tab(text: 'Datos'),
-                    Tab(text: 'Partos (${_resumen?.partos.length ?? 0})'),
-                    const Tab(text: 'Salud'),
-                    const Tab(text: 'Pesos'),
-                    Tab(text: 'Historial (${_eventos.length})'),
-                  ],
-                ),
-                Theme.of(context).scaffoldBackgroundColor,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+        children: [
+          _resumenCard(),
+          _Plegable(
+            titulo: 'Datos',
+            icono: Icons.info_outline,
+            abierto: true,
+            children: [
+              _InfoRow(
+                label: 'Fecha de nacimiento',
+                value: _vaca!.fechaNacimiento != null
+                    ? DateFormat('dd/MM/yyyy').format(_vaca!.fechaNacimiento!)
+                    : 'No registrada',
               ),
-            ),
-          ],
-          body: TabBarView(children: [
-            _pestana([
-              _Plegable(
-                titulo: 'Información',
-                icono: Icons.info_outline,
-                abierto: true,
-                children: [
-                  _InfoRow(label: 'Número', value: _vaca!.numero),
-                  _InfoRow(
-                    label: 'Fecha de nacimiento',
-                    value: _vaca!.fechaNacimiento != null
-                        ? DateFormat('dd/MM/yyyy').format(_vaca!.fechaNacimiento!)
-                        : 'No registrada',
-                  ),
-                  _InfoRow(
-                    label: 'Estado',
-                    value: _vaca!.estado[0].toUpperCase() +
-                        _vaca!.estado.substring(1),
-                    valueColor: _estadoColor(_vaca!.estado),
-                  ),
-                  _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
-                  _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
-                  _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
-                  _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
-                  const SizedBox(height: 8),
-                  CreadorInfo(
-                    createdBy: _vaca!.createdBy,
-                    updatedBy: _vaca!.updatedBy,
-                    createdAt: _vaca!.createdAt,
-                    updatedAt: _vaca!.updatedAt,
-                  ),
-                ],
+              _InfoRow(
+                label: 'Estado',
+                value: _vaca!.estado[0].toUpperCase() +
+                    _vaca!.estado.substring(1),
+                valueColor: _estadoColor(_vaca!.estado),
               ),
-              _Plegable(
-                titulo: 'Descendencia',
-                icono: Icons.account_tree_outlined,
-                children: [
-                  _InfoRow(
-                      label: 'Padre',
-                      value: _padre != null
-                          ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
-                          : 'No registrado'),
-                  _InfoRow(
-                      label: 'Madre',
-                      value: _madre != null
-                          ? 'Vaca #${_madre!.numero}'
-                          : 'No registrada'),
-                ],
+              _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
+              _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
+              _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
+              _InfoRow(
+                  label: 'Padre',
+                  value: _padre != null
+                      ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
+                      : 'No registrado'),
+              _InfoRow(
+                  label: 'Madre',
+                  value: _madre != null
+                      ? 'Vaca #${_madre!.numero}'
+                      : 'No registrada'),
+              _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
+              const SizedBox(height: 8),
+              CreadorInfo(
+                createdBy: _vaca!.createdBy,
+                updatedBy: _vaca!.updatedBy,
+                createdAt: _vaca!.createdAt,
+                updatedAt: _vaca!.updatedAt,
               ),
-            ]),
-            _pestana([
+            ],
+          ),
+          _Plegable(
+            titulo: 'Partos y ordeño (${_resumen?.partos.length ?? 0})',
+            icono: Icons.child_friendly,
+            abierto: true,
+            children: [
               ReproduccionSection(
                 key: ValueKey('repro$_version'),
                 vaca: _vaca!,
+                marco: false,
                 onCambio: () {
                   _version++;
                   _load();
                 },
               ),
-            ]),
-            _pestana([
+            ],
+          ),
+          _Plegable(
+            titulo: 'Salud',
+            icono: Icons.healing,
+            children: [
               SaludSection(
-                  animalTipo: 'vaca', animalId: widget.id, femenino: true),
-            ]),
-            _pestana([
-              PesajesSection(animalTipo: 'vaca', animalId: widget.id),
-            ]),
-            _pestana([
+                  animalTipo: 'vaca',
+                  animalId: widget.id,
+                  femenino: true,
+                  marco: false),
+            ],
+          ),
+          _Plegable(
+            titulo: 'Pesos',
+            icono: Icons.monitor_weight_outlined,
+            children: [
+              PesajesSection(
+                  animalTipo: 'vaca', animalId: widget.id, marco: false),
+            ],
+          ),
+          _Plegable(
+            titulo: 'Historial (${_eventos.length})',
+            icono: Icons.event_note,
+            children: [
               if (_eventos.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: Text('Sin eventos registrados')),
-                  ),
+                const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text('Sin eventos registrados',
+                      style: TextStyle(color: Colors.grey)),
                 )
               else
-                ..._eventos.map((e) => Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: AppColors.primaryContainer,
-                          child: Icon(Icons.event_note, color: AppColors.primary),
-                        ),
-                        title: Text(e.tipoEventoNombre ?? 'Evento'),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(DateFormat('dd/MM/yyyy').format(e.fecha)),
-                            if (e.notas != null && e.notas!.isNotEmpty)
-                              Text(e.notas!,
-                                  style: const TextStyle(
-                                      fontStyle: FontStyle.italic)),
-                          ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: AppColors.danger, size: 20),
-                          onPressed: () => _eliminarEvento(e.id),
-                        ),
-                        isThreeLine: e.notas != null && e.notas!.isNotEmpty,
-                      ),
-                    )),
-            ]),
-          ]),
-        ),
+                for (final e in _eventos)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    leading: const Icon(Icons.event_note,
+                        color: AppColors.primary),
+                    title: Text(e.tipoEventoNombre ?? 'Evento',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text([
+                      DateFormat('dd/MM/yyyy').format(e.fecha),
+                      if (e.notas != null && e.notas!.isNotEmpty) e.notas!,
+                    ].join(' · ')),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: AppColors.danger, size: 20),
+                      onPressed: () => _eliminarEvento(e.id),
+                    ),
+                  ),
+            ],
+          ),
+        ],
       ),
     );
   }
-
-  /// Contenido de una pestaña, con espacio abajo para el botón "Evento".
-  Widget _pestana(List<Widget> children) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-        children: children,
-      );
 
   /// Resumen de arriba: foto, edad, partos, ordeño y preñez.
   Widget _resumenCard() {
@@ -452,7 +426,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
     }
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      margin: const EdgeInsets.only(top: 16, bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -629,24 +603,4 @@ class _Destacado extends StatelessWidget {
           ),
         ]),
       );
-}
-
-/// Mantiene las pestañas visibles arriba al desplazarse.
-class _PestanasDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  final Color fondo;
-  _PestanasDelegate(this.tabBar, this.fondo);
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      Material(color: fondo, child: tabBar);
-
-  @override
-  bool shouldRebuild(_PestanasDelegate old) =>
-      old.tabBar != tabBar || old.fondo != fondo;
 }

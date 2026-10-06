@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/ternero_repository.dart';
+import '../../core/repositories/toro_repository.dart';
 import '../../core/theme/app_theme.dart';
 
 final _fmt = DateFormat('dd/MM/yyyy');
@@ -79,6 +80,12 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
     bool conTernero = true;
     String sexo = 'hembra';
     String? error;
+    // Padre: el toro de la monta, si está anotado.
+    final toros = await ToroRepository().getAll(soloActivos: true);
+    String? padreId = toros.any((t) => t.id == widget.vaca.toroId)
+        ? widget.vaca.toroId
+        : null;
+    if (!mounted) return;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -129,6 +136,20 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
                     selected: {sexo},
                     onSelectionChanged: (s) => setSt(() => sexo = s.first),
                   ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String?>(
+                    initialValue: padreId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Padre'),
+                    items: [
+                      const DropdownMenuItem(
+                          value: null, child: Text('No se sabe')),
+                      for (final t in toros)
+                        DropdownMenuItem(
+                            value: t.id, child: Text('Toro ${t.displayName}')),
+                    ],
+                    onChanged: (v) => setSt(() => padreId = v),
+                  ),
                 ],
               ],
             ),
@@ -166,6 +187,7 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
       notas: notasCtrl.text.trim().isEmpty ? null : notasCtrl.text.trim(),
       numeroTernero: conTernero ? numeroCtrl.text.trim() : null,
       sexoTernero: conTernero ? sexo : null,
+      padreId: padreId,
     );
     widget.onCambio();
     if (!mounted) return;

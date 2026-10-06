@@ -18,6 +18,8 @@ const _esParto = "lower(t.nombre) LIKE 'parto%'";
 const _esSecado = "lower(t.nombre) LIKE 'secad%'";
 const _esVitamina = "lower(t.nombre) LIKE '%vitamin%'";
 
+const _toroDeLaMonta = Object();
+
 enum EstadoProduccion { enOrdeno, seca, sinPartos }
 
 const kEstadoProduccionLabels = {
@@ -290,6 +292,8 @@ class ReproduccionRepository {
     String? notas,
     String? numeroTernero,
     String? sexoTernero,
+    /// Padre del ternero; si no se indica, el toro de la monta.
+    Object? padreId = _toroDeLaMonta,
   }) async {
     await EventoVacaRepository().create(
       vacaId: vaca.id,
@@ -306,7 +310,9 @@ class ReproduccionRepository {
         categoria: sexoTernero == 'macho' ? 'ternero' : 'ternera',
         fechaNacimiento: fecha,
         madreId: vaca.id,
-        padreId: vaca.toroId,
+        padreId: identical(padreId, _toroDeLaMonta)
+            ? vaca.toroId
+            : padreId as String?,
         ubicacionId: vaca.ubicacionId,
       );
       terneroId = t.id;

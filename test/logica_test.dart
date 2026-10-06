@@ -14,6 +14,8 @@ import 'package:ganaderia/core/repositories/ternero_repository.dart';
 import 'package:ganaderia/core/repositories/tipo_evento_repository.dart';
 import 'package:ganaderia/core/repositories/evento_vaca_repository.dart';
 import 'package:ganaderia/core/repositories/vaca_repository.dart';
+import 'package:ganaderia/core/repositories/toro_repository.dart';
+import 'package:ganaderia/core/widgets/descendencia_section.dart';
 import 'package:ganaderia/core/services/alertas_service.dart';
 import 'package:ganaderia/core/services/inventario_service.dart';
 
@@ -27,7 +29,7 @@ Future<void> borrarTodo() async {
   final db = LocalDb.instance.db;
   for (final t in [
     'vacas', 'eventos_vaca', 'tipos_evento', 'terneros', 'produccion_leche',
-    'pesajes_animal', 'ubicaciones'
+    'pesajes_animal', 'ubicaciones', 'toros'
   ]) {
     await db.delete(t);
   }
@@ -83,6 +85,35 @@ void main() {
         containsAll(['fecha', 'turno', 'litros', 'vaca_id']));
     expect(await db.columnas('pesajes_animal'),
         containsAll(['animal_tipo', 'animal_id', 'peso']));
+  });
+
+  test('descendencia: crías de la madre y del toro, padre en el parto', () async {
+    final toro = await ToroRepository().create(numero: '12', nombre: 'Rey');
+    final otro = await ToroRepository().create(numero: '13', nombre: 'Lucero');
+    final madre = await VacaRepository().create(numero: '7201');
+    final hija = await VacaRepository()
+        .create(numero: '6120', madreId: madre.id, padreId: toro.id);
+    final conMonta = madre.copyWith(toroId: toro.id);
+
+    // Sin indicar padre: el toro de la monta.
+    final t1 = await ReproduccionRepository().registrarParto(
+        vaca: conMonta, fecha: d(2026, 2, 5), numeroTernero: '7655', sexoTernero: 'hembra');
+    // Padre cambiado al registrar el parto.
+    final t2 = await ReproduccionRepository().registrarParto(
+        vaca: madre, fecha: d(2027, 2, 5), numeroTernero: '7700',
+        sexoTernero: 'macho', padreId: otro.id);
+
+    expect((await TerneroRepository().getById(t1!))!.padreId, toro.id);
+    expect((await TerneroRepository().getById(t2!))!.padreId, otro.id);
+
+    final repo = DescendenciaRepository();
+    final deMadre = await repo.hijosDe(madre.id);
+    expect(deMadre.map((h) => h.ruta), [
+      '/terneros/$t2', '/terneros/$t1', '/vacas/${hija.id}'
+    ]);
+    expect(deMadre.where((h) => h.macho).length, 1);
+    expect((await repo.hijosDe(toro.id)).length, 2); // hija + t1
+    expect((await repo.buscar(toro.id))!.nombre, 'Toro #12 Rey');
   });
 
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {

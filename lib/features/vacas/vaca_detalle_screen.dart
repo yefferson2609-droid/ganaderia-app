@@ -3,17 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/evento_vaca.dart';
 import '../../core/models/tipo_evento.dart';
-import '../../core/models/toro.dart';
 import '../../core/models/vaca.dart';
 import '../../core/repositories/evento_vaca_repository.dart';
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
-import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/creador_info.dart';
+import '../../core/widgets/descendencia_section.dart';
 import '../../core/widgets/pesajes_section.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
@@ -29,13 +28,11 @@ class VacaDetalleScreen extends StatefulWidget {
 
 class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
   final _vacaRepo = VacaRepository();
-  final _toroRepo = ToroRepository();
   final _eventoRepo = EventoVacaRepository();
   final _tipoRepo = TipoEventoRepository();
 
   Vaca? _vaca;
-  Toro? _padre;
-  Vaca? _madre;
+  int? _crias;
   String? _ubicacion;
   ResumenReproductivo? _resumen;
   List<EventoVaca> _eventos = [];
@@ -53,8 +50,6 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
     setState(() => _loading = true);
     _vaca = await _vacaRepo.getById(widget.id);
     if (_vaca != null) {
-      if (_vaca!.padreId != null) _padre = await _toroRepo.getById(_vaca!.padreId!);
-      if (_vaca!.madreId != null) _madre = await _vacaRepo.getById(_vaca!.madreId!);
       _eventos = await _eventoRepo.getByVaca(widget.id);
       _ubicacion = _vaca!.ubicacionId != null
           ? (await UbicacionRepository().getById(_vaca!.ubicacionId!))?.nombre
@@ -287,16 +282,6 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
               _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
               _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
               _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
-              _InfoRow(
-                  label: 'Padre',
-                  value: _padre != null
-                      ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
-                      : 'No registrado'),
-              _InfoRow(
-                  label: 'Madre',
-                  value: _madre != null
-                      ? 'Vaca #${_madre!.numero}'
-                      : 'No registrada'),
               _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
               const SizedBox(height: 8),
               CreadorInfo(
@@ -319,6 +304,23 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                 onCambio: () {
                   _version++;
                   _load();
+                },
+              ),
+            ],
+          ),
+          _Plegable(
+            titulo: 'Descendencia${_crias != null ? ' ($_crias)' : ''}',
+            icono: Icons.account_tree_outlined,
+            children: [
+              DescendenciaSection(
+                key: ValueKey(
+                    'desc$_version${_vaca!.madreId}${_vaca!.padreId}'),
+                animalId: widget.id,
+                madreId: _vaca!.madreId,
+                padreId: _vaca!.padreId,
+                marco: false,
+                onTotal: (n) {
+                  if (n != _crias) setState(() => _crias = n);
                 },
               ),
             ],

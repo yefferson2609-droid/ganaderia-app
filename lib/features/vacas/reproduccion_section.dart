@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/ternero.dart';
 import '../../core/models/vaca.dart';
 import '../../core/widgets/descendencia_section.dart';
+import '../../core/widgets/grupos_ubicacion.dart' show compararNumero;
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/ternero_repository.dart';
 import '../../core/repositories/toro_repository.dart';
@@ -123,10 +124,18 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
 
   Future<void> _agregarCria() async {
     final toros = await ToroRepository().getAll(soloActivos: true);
-    final sinMadre = (await TerneroRepository().getAll(soloActivos: true))
-        .where((t) => t.madreId == null)
+    // Todo Levante y ceba, menos las que ya son crías de esta vaca.
+    final sinMadre = (await TerneroRepository().getAll())
+        .where((t) => t.madreId != widget.vaca.id)
         .toList()
-      ..sort((a, b) => a.numero.compareTo(b.numero));
+      ..sort((a, b) => compararNumero(a.numero, b.numero));
+    final madres = <String, String>{};
+    for (final t in sinMadre) {
+      final m = t.madreId;
+      if (m != null && !madres.containsKey(m)) {
+        madres[m] = (await DescendenciaRepository().buscar(m))?.nombre ?? '';
+      }
+    }
     if (!mounted) return;
 
     bool nueva = sinMadre.isEmpty;
@@ -174,27 +183,44 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  if (!nueva)
-                    DropdownButtonFormField<Ternero>(
-                      initialValue: existente,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                          labelText: 'Cría en Levante y ceba (sin madre)',
-                          errorText: error),
-                      items: [
-                        for (final t in sinMadre)
-                          DropdownMenuItem(
+                  if (!nueva) ...[
+                    LayoutBuilder(
+                      builder: (ctx, c) => DropdownMenu<Ternero>(
+                        width: c.maxWidth,
+                        menuHeight: 300,
+                        enableFilter: true,
+                        requestFocusOnTap: true,
+                        label: const Text('Buscar por número o nombre'),
+                        errorText: error,
+                        dropdownMenuEntries: [
+                          for (final t in sinMadre)
+                            DropdownMenuEntry(
                               value: t,
-                              child: Text(
-                                  '${t.esMacho ? '♂' : '♀'} ${t.categoriaLabel} #${t.numero}'
-                                  '${t.fechaNacimiento != null ? ' · ${t.edad}' : ''}')),
-                      ],
-                      onChanged: (t) => setSt(() {
-                        existente = t;
-                        error = null;
-                        padreId ??= t?.padreId;
-                      }),
-                    )
+                              label: '${t.esMacho ? '♂' : '♀'} '
+                                  '${t.categoriaLabel} #${t.numero}'
+                                  '${t.fechaNacimiento != null ? ' · ${t.edad}' : ''}'
+                                  '${t.estado != 'activo' ? ' · ${t.estado}' : ''}',
+                            ),
+                        ],
+                        onSelected: (t) => setSt(() {
+                          existente = t;
+                          error = null;
+                          padreId ??= t?.padreId;
+                        }),
+                      ),
+                    ),
+                    if (existente?.madreId != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Ahora figura como cría de '
+                          '${madres[existente!.madreId] ?? 'otra vaca'}. '
+                          'Al guardar pasa a ser cría de esta vaca.',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.warning),
+                        ),
+                      ),
+                  ]
                   else ...[
                     TextField(
                       controller: numeroCtrl,

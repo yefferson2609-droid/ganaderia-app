@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 
-/// Compara números de animales de forma natural: "2" < "10" < "A3".
+final _numeroInicial = RegExp(r'^\s*(\d+)');
+
+/// Compara números de animales de forma natural: "2" < "10" < "7655 bigote"
+/// < "A3" (los que empiezan con número van por ese número).
 int compararNumero(String a, String b) {
-  final na = int.tryParse(a.trim());
-  final nb = int.tryParse(b.trim());
-  if (na != null && nb != null) return na.compareTo(nb);
+  final na = int.tryParse(_numeroInicial.firstMatch(a)?.group(1) ?? '');
+  final nb = int.tryParse(_numeroInicial.firstMatch(b)?.group(1) ?? '');
+  if (na != null && nb != null) {
+    final c = na.compareTo(nb);
+    return c != 0 ? c : a.toLowerCase().compareTo(b.toLowerCase());
+  }
   if (na != null) return -1;
   if (nb != null) return 1;
   return a.toLowerCase().compareTo(b.toLowerCase());

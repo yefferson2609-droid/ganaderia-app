@@ -35,7 +35,7 @@ flutter build apk --release
 - Ejecutar con `dangerouslyDisableSandbox` (Gradle necesita red/loopback).
 - Con `GANADERIA_PRUEBA=1` el paquete es `com.agroyeff.ganaderia.prueba` y el
   nombre "Ganadería (nueva)". Sin la variable: `com.agroyeff.ganaderia`, "ganaderia".
-- Subir `version:` en pubspec.yaml en cada entrega (va en 1.0.17+17).
+- Subir `version:` en pubspec.yaml en cada entrega (va en 1.0.18+18).
 - Copiar el APK a `%USERPROFILE%\Desktop\APK Ganaderia\ganaderia-NUEVA-prueba-vX.Y.Z.apk`.
 - Firma fija: `android/key.properties` + `android/app/ganaderia-release.jks`
   (fuera de git; si se pierden no se puede actualizar encima). NDK 28.2.13676358

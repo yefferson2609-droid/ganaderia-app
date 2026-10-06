@@ -123,7 +123,7 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
       );
 
   Future<void> _agregarCria() async {
-    final toros = await ToroRepository().getAll(soloActivos: true);
+    final toros = await ToroRepository().getAll(); // también vendidos: pueden tener crías
     // Todo Levante y ceba, menos las que ya son crías de esta vaca.
     final sinMadre = (await TerneroRepository().getAll())
         .where((t) => t.madreId != widget.vaca.id)
@@ -292,7 +292,9 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
                           value: null, child: Text('No se sabe')),
                       for (final t in toros)
                         DropdownMenuItem(
-                            value: t.id, child: Text('Toro ${t.displayName}')),
+                            value: t.id,
+                            child: Text('Toro ${t.displayName}'
+                                '${t.estado != 'activo' ? ' (${t.estado})' : ''}')),
                     ],
                     onChanged: (v) => setSt(() => padreId = v),
                   ),
@@ -363,7 +365,7 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
     String sexo = 'hembra';
     String? error;
     // Padre: el toro de la monta, si está anotado.
-    final toros = await ToroRepository().getAll(soloActivos: true);
+    final toros = await ToroRepository().getAll(); // también vendidos: pueden tener crías
     String? padreId = toros.any((t) => t.id == widget.vaca.toroId)
         ? widget.vaca.toroId
         : null;
@@ -428,7 +430,9 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
                           value: null, child: Text('No se sabe')),
                       for (final t in toros)
                         DropdownMenuItem(
-                            value: t.id, child: Text('Toro ${t.displayName}')),
+                            value: t.id,
+                            child: Text('Toro ${t.displayName}'
+                                '${t.estado != 'activo' ? ' (${t.estado})' : ''}')),
                     ],
                     onChanged: (v) => setSt(() => padreId = v),
                   ),

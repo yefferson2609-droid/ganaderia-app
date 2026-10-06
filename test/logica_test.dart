@@ -116,6 +116,31 @@ void main() {
     expect((await repo.buscar(toro.id))!.nombre, 'Toro #12 Rey');
   });
 
+  test('agregar cría: nueva o existente, y registra el parto si falta', () async {
+    final capo = await ToroRepository().create(numero: '5', nombre: 'Capo');
+    final vaca = await VacaRepository().create(numero: '009');
+    final repro = ReproduccionRepository();
+
+    // Bigote, 7 meses: no hay parto → se registra.
+    final (bigote, parto1) = await repro.agregarCria(
+        vaca: vaca, numero: '7655 bigote', sexo: 'macho',
+        fechaNacimiento: d(2026, 3, 1), padreId: capo.id);
+    expect(parto1, isTrue);
+    final b = (await TerneroRepository().getById(bigote))!;
+    expect(b.madreId, vaca.id);
+    expect(b.padreId, capo.id);
+    expect(b.categoria, isNotNull);
+    expect((await repro.resumen(vaca.id)).partos, [d(2026, 3, 1)]);
+
+    // Gemela ya registrada, nacida 3 días después: usa el mismo parto.
+    final gemela = await TerneroRepository().create(
+        numero: '7656', sexo: 'hembra', fechaNacimiento: d(2026, 3, 4));
+    final (_, parto2) = await repro.agregarCria(vaca: vaca, existente: gemela);
+    expect(parto2, isFalse);
+    expect((await TerneroRepository().getById(gemela.id))!.madreId, vaca.id);
+    expect((await repro.resumen(vaca.id)).partos.length, 1);
+  });
+
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {
     final vacas = VacaRepository();
     final repro = ReproduccionRepository();

@@ -1,5 +1,6 @@
 import '../config/ajustes.dart';
 import '../database/local_db.dart';
+import '../models/ternero.dart';
 import '../models/vaca.dart';
 import 'evento_vaca_repository.dart';
 import 'ternero_repository.dart';
@@ -325,6 +326,59 @@ class ReproduccionRepository {
       clearFechaParto: true,
     ));
     return terneroId;
+  }
+
+  /// Liga a la vaca una cría que ya nació: una existente en Levante y ceba
+  /// ([existente]) o una nueva ([numero] y [sexo]). Si no hay un parto
+  /// registrado a menos de 30 días de [fechaNacimiento], registra el parto.
+  /// Devuelve el id de la cría y si se registró el parto.
+  Future<(String, bool)> agregarCria({
+    required Vaca vaca,
+    Ternero? existente,
+    String? numero,
+    String? sexo,
+    DateTime? fechaNacimiento,
+    String? padreId,
+  }) async {
+    final terneros = TerneroRepository();
+    final nacimiento = fechaNacimiento ?? existente?.fechaNacimiento;
+    String id;
+    if (existente != null) {
+      id = existente.id;
+      await terneros.update(existente.copyWith(
+        madreId: vaca.id,
+        padreId: padreId ?? existente.padreId,
+        fechaNacimiento: nacimiento,
+      ));
+    } else {
+      final t = await terneros.create(
+        numero: numero!,
+        sexo: sexo!,
+        fechaNacimiento: nacimiento,
+        madreId: vaca.id,
+        padreId: padreId,
+        ubicacionId: vaca.ubicacionId,
+      );
+      await terneros.cambiarCategoria(t, t.categoriaSugerida);
+      id = t.id;
+    }
+
+    var partoNuevo = false;
+    if (nacimiento != null) {
+      final partos = (await resumen(vaca.id)).partos;
+      final cerca =
+          partos.any((p) => p.difference(nacimiento).inDays.abs() <= 30);
+      if (!cerca) {
+        await EventoVacaRepository().create(
+          vacaId: vaca.id,
+          tipoEventoId: await _tipoId(kTipoParto),
+          fecha: nacimiento,
+          notas: 'Registrado al agregar la cría',
+        );
+        partoNuevo = true;
+      }
+    }
+    return (id, partoNuevo);
   }
 
   /// Resultado de la palpación del veterinario. Si está preñada, se estima

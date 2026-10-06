@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/ternero.dart';
 import '../../core/models/vaca.dart';
+import '../../core/widgets/descendencia_section.dart';
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/ternero_repository.dart';
 import '../../core/repositories/toro_repository.dart';
@@ -42,6 +44,8 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
   final _repo = ReproduccionRepository();
   ResumenReproductivo? _r;
   SugerenciaSecado? _secado;
+  List<Pariente> _crias = [];
+  Map<String, String> _padres = {}; // id del toro → "#12 - Rey"
 
   @override
   void initState() {
@@ -58,12 +62,264 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
   Future<void> _load() async {
     final r = await _repo.resumen(widget.vaca.id);
     final s = await _repo.sugerenciaSecado(widget.vaca);
+    final desc = DescendenciaRepository();
+    final crias = await desc.hijosDe(widget.vaca.id);
+    final padres = <String, String>{};
+    for (final c in crias) {
+      final p = c.padreId;
+      if (p != null && !padres.containsKey(p)) {
+        final x = await desc.buscar(p);
+        if (x != null) padres[p] = x.nombre.replaceFirst('Toro ', '');
+      }
+    }
     if (mounted) {
       setState(() {
         _r = r;
         _secado = s;
+        _crias = crias;
+        _padres = padres;
       });
     }
+  }
+
+  /// Crías nacidas a menos de 30 días de ese parto.
+  List<Pariente> _criasDe(DateTime parto) => _crias
+      .where((c) =>
+          c.nacimiento != null &&
+          c.nacimiento!.difference(parto).inDays.abs() <= 30)
+      .toList();
+
+  String _edad(DateTime n) {
+    final dias = DateTime.now().difference(n).inDays;
+    final meses = (dias / 30.44).floor();
+    if (meses >= 24) return '${meses ~/ 12} años';
+    if (meses >= 1) return '$meses ${meses == 1 ? 'mes' : 'meses'}';
+    return '$dias días';
+  }
+
+  Widget _filaCria(Pariente c) => InkWell(
+        onTap: () => context.push(c.ruta).then((_) => widget.onCambio()),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 0, 2),
+          child: Row(children: [
+            Icon(c.macho ? Icons.male : Icons.female,
+                size: 18, color: c.macho ? AppColors.info : Colors.pink),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                [
+                  c.nombre,
+                  if (c.nacimiento != null) _edad(c.nacimiento!),
+                  if (c.padreId != null && _padres[c.padreId] != null)
+                    'Padre: ${_padres[c.padreId]}',
+                  if (c.estado != null) c.estado!,
+                ].join(' · '),
+                style: const TextStyle(fontSize: 13, color: AppColors.primary),
+              ),
+            ),
+          ]),
+        ),
+      );
+
+  Future<void> _agregarCria() async {
+    final toros = await ToroRepository().getAll(soloActivos: true);
+    final sinMadre = (await TerneroRepository().getAll(soloActivos: true))
+        .where((t) => t.madreId == null)
+        .toList()
+      ..sort((a, b) => a.numero.compareTo(b.numero));
+    if (!mounted) return;
+
+    bool nueva = sinMadre.isEmpty;
+    Ternero? existente;
+    final numeroCtrl = TextEditingController();
+    final mesesCtrl = TextEditingController();
+    String sexo = 'macho';
+    bool porMeses = true;
+    DateTime? fecha;
+    String? padreId;
+    String? error;
+
+    DateTime? nacimiento() {
+      if (!porMeses) return fecha;
+      final m = int.tryParse(mesesCtrl.text.trim());
+      if (m == null) return null;
+      final hoy = DateTime.now();
+      final f = hoy.subtract(Duration(days: (m * 30.44).round()));
+      return DateTime(f.year, f.month, f.day);
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          final n = nacimiento();
+          return AlertDialog(
+            title: Text('Agregar cría de Vaca #${widget.vaca.numero}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (sinMadre.isNotEmpty) ...[
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(value: false, label: Text('Ya registrada')),
+                        ButtonSegment(value: true, label: Text('Nueva')),
+                      ],
+                      selected: {nueva},
+                      onSelectionChanged: (s) => setSt(() {
+                        nueva = s.first;
+                        error = null;
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (!nueva)
+                    DropdownButtonFormField<Ternero>(
+                      initialValue: existente,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                          labelText: 'Cría en Levante y ceba (sin madre)',
+                          errorText: error),
+                      items: [
+                        for (final t in sinMadre)
+                          DropdownMenuItem(
+                              value: t,
+                              child: Text(
+                                  '${t.esMacho ? '♂' : '♀'} ${t.categoriaLabel} #${t.numero}'
+                                  '${t.fechaNacimiento != null ? ' · ${t.edad}' : ''}')),
+                      ],
+                      onChanged: (t) => setSt(() {
+                        existente = t;
+                        error = null;
+                        padreId ??= t?.padreId;
+                      }),
+                    )
+                  else ...[
+                    TextField(
+                      controller: numeroCtrl,
+                      decoration: InputDecoration(
+                          labelText: 'Número y nombre *',
+                          hintText: 'Ej: 7655 bigote',
+                          errorText: error),
+                    ),
+                    const SizedBox(height: 12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'macho', label: Text('Macho')),
+                        ButtonSegment(value: 'hembra', label: Text('Hembra')),
+                      ],
+                      selected: {sexo},
+                      onSelectionChanged: (s) => setSt(() => sexo = s.first),
+                    ),
+                  ],
+                  if (nueva || existente?.fechaNacimiento == null) ...[
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      const Text('Edad: '),
+                      ChoiceChip(
+                        label: const Text('En meses'),
+                        selected: porMeses,
+                        onSelected: (_) => setSt(() => porMeses = true),
+                      ),
+                      const SizedBox(width: 6),
+                      ChoiceChip(
+                        label: const Text('Fecha'),
+                        selected: !porMeses,
+                        onSelected: (_) => setSt(() => porMeses = false),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
+                    if (porMeses)
+                      TextField(
+                        controller: mesesCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Meses de edad',
+                          helperText: n != null
+                              ? 'Nació aprox. el ${_fmt.format(n)}'
+                              : null,
+                        ),
+                        onChanged: (_) => setSt(() {}),
+                      )
+                    else
+                      InkWell(
+                        onTap: () async {
+                          final p = await _fecha(ctx, fecha ?? DateTime.now());
+                          if (p != null) setSt(() => fecha = p);
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                              labelText: 'Fecha de nacimiento'),
+                          child: Text(
+                              fecha != null ? _fmt.format(fecha!) : 'Elegir'),
+                        ),
+                      ),
+                  ],
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String?>(
+                    initialValue: padreId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Padre'),
+                    items: [
+                      const DropdownMenuItem(
+                          value: null, child: Text('No se sabe')),
+                      for (final t in toros)
+                        DropdownMenuItem(
+                            value: t.id, child: Text('Toro ${t.displayName}')),
+                    ],
+                    onChanged: (v) => setSt(() => padreId = v),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (!nueva) {
+                    if (existente == null) {
+                      setSt(() => error = 'Elige la cría');
+                      return;
+                    }
+                  } else {
+                    final num = numeroCtrl.text.trim();
+                    if (num.isEmpty) {
+                      setSt(() => error = 'Campo requerido');
+                      return;
+                    }
+                    if (await TerneroRepository().existeNumero(num)) {
+                      setSt(() => error = 'Ya existe un animal con ese número');
+                      return;
+                    }
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx, true);
+                },
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (ok != true) return;
+
+    final (_, partoNuevo) = await _repo.agregarCria(
+      vaca: widget.vaca,
+      existente: nueva ? null : existente,
+      numero: nueva ? numeroCtrl.text.trim() : null,
+      sexo: nueva ? sexo : null,
+      fechaNacimiento: nacimiento(),
+      padreId: padreId,
+    );
+    widget.onCambio();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(partoNuevo
+            ? 'Cría agregada. También se registró el parto de la vaca.'
+            : 'Cría agregada a la vaca.')));
   }
 
   Future<DateTime?> _fecha(BuildContext ctx, DateTime inicial) => showDatePicker(
@@ -315,22 +571,44 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
                     ? '${_fmt.format(r.ultimaVitamina!)} (${r.ultimaVitaminaNombre})'
                         ' · hace ${DateTime.now().difference(r.ultimaVitamina!).inDays} días'
                     : 'Sin registro'),
-            if (r.partos.length > 1) ...[
+            if (r.partos.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Text('Intervalos entre partos',
-                  style: Theme.of(context).textTheme.labelLarge),
-              for (var i = r.partos.length - 1; i >= 1; i--)
+              Text('Partos y crías', style: Theme.of(context).textTheme.labelLarge),
+              for (var i = r.partos.length - 1; i >= 0; i--) ...[
                 Padding(
-                  padding: const EdgeInsets.only(top: 2),
+                  padding: const EdgeInsets.only(top: 6),
                   child: Text(
-                    '${_fmt.format(r.partos[i - 1])} → ${_fmt.format(r.partos[i])}: '
-                    '${r.intervalos[i - 1]} días',
-                    style: const TextStyle(fontSize: 13),
+                    'Parto ${_fmt.format(r.partos[i])}'
+                    '${i > 0 ? ' · ${r.intervalos[i - 1]} días desde el anterior' : ''}',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
+                ..._criasDe(r.partos[i]).map(_filaCria),
+              ],
             ],
+            // Crías sin un parto registrado cerca de su nacimiento.
+            if (_crias.any((c) => !r.partos.any((p) =>
+                c.nacimiento != null &&
+                c.nacimiento!.difference(p).inDays.abs() <= 30))) ...[
+              const SizedBox(height: 8),
+              Text('Otras crías', style: Theme.of(context).textTheme.labelLarge),
+              ..._crias
+                  .where((c) => !r.partos.any((p) =>
+                      c.nacimiento != null &&
+                      c.nacimiento!.difference(p).inDays.abs() <= 30))
+                  .map(_filaCria),
+            ],
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              OutlinedButton.icon(
+                onPressed: _agregarCria,
+                icon: const Icon(Icons.add),
+                label: const Text('Agregar cría'),
+              ),
+            ]),
             if (activa) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Wrap(spacing: 8, runSpacing: 8, children: [
                 ElevatedButton.icon(
                   onPressed: _registrarParto,

@@ -141,6 +141,34 @@ void main() {
     expect((await repro.resumen(vaca.id)).partos.length, 1);
   });
 
+  test('partos faltantes: detecta crías sin parto y avisa del ordeño', () async {
+    final repro = ReproduccionRepository();
+    final josefa = await VacaRepository().create(numero: '010 josefa');
+    final seca = await VacaRepository().create(numero: '5969 Lucero');
+    await repro.registrarParto(vaca: seca, fecha: d(2025, 1, 1));
+    await repro.secar(vacaId: seca.id, fecha: d(2025, 9, 1));
+
+    // Rosmery: ligada a su madre editando la cría (sin parto).
+    await TerneroRepository().create(
+        numero: '049 Rosmery', sexo: 'hembra',
+        fechaNacimiento: d(2025, 3, 14), madreId: josefa.id);
+    await TerneroRepository().create(
+        numero: 'pinto', sexo: 'macho',
+        fechaNacimiento: d(2026, 5, 7), madreId: seca.id);
+    // Sin fecha: no se puede saber el parto.
+    await TerneroRepository().create(
+        numero: '25juaquina', sexo: 'hembra', madreId: seca.id);
+
+    final f = await repro.partosFaltantes();
+    expect(f.map((x) => x.cria), ['049 Rosmery', 'pinto']);
+    expect(f.every((x) => x.quedariaEnOrdeno), isTrue);
+
+    expect(await repro.partoSiFalta(josefa.id, d(2025, 3, 14)), isTrue);
+    expect(await repro.partoSiFalta(josefa.id, d(2025, 3, 20)), isFalse);
+    expect((await repro.resumen(josefa.id)).partos, [d(2025, 3, 14)]);
+    expect((await repro.partosFaltantes()).map((x) => x.cria), ['pinto']);
+  });
+
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {
     final vacas = VacaRepository();
     final repro = ReproduccionRepository();

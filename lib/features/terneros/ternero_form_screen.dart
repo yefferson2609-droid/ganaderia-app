@@ -5,6 +5,7 @@ import '../../core/models/ternero.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/models/vaca.dart';
+import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/ternero_repository.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
@@ -148,7 +149,24 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
         nota: textoONull(_notaCtrl.text),
       );
     }
-    if (mounted) context.pop();
+    // Si se puso o cambió la madre (o la fecha), anotar su parto si falta.
+    var parto = false;
+    if (_madreId != null &&
+        (_original?.madreId != _madreId ||
+            _original?.fechaNacimiento != _fechaNacimiento)) {
+      parto = await ReproduccionRepository().partoSiFalta(
+          _madreId!, _fechaNacimiento,
+          notas: 'Registrado al poner la madre de $numero');
+    }
+    if (!mounted) return;
+    if (parto) {
+      final madre = _vacas.where((v) => v.id == _madreId).firstOrNull;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              'También se registró el parto de Vaca #${madre?.numero ?? ''}. '
+              'Si ya está seca, márcala con "Secar vaca".')));
+    }
+    context.pop();
   }
 
   @override

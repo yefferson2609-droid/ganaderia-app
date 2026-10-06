@@ -124,9 +124,8 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
 
   Future<void> _agregarCria() async {
     final toros = await ToroRepository().getAll(); // también vendidos: pueden tener crías
-    // Todo Levante y ceba, menos las que ya son crías de esta vaca.
+    // Todo Levante y ceba; las que ya son crías de esta vaca salen en gris.
     final sinMadre = (await TerneroRepository().getAll())
-        .where((t) => t.madreId != widget.vaca.id)
         .toList()
       ..sort((a, b) => compararNumero(a.numero, b.numero));
     final madres = <String, String>{};
@@ -199,7 +198,9 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
                               label: '${t.esMacho ? '♂' : '♀'} '
                                   '${t.categoriaLabel} #${t.numero}'
                                   '${t.fechaNacimiento != null ? ' · ${t.edad}' : ''}'
-                                  '${t.estado != 'activo' ? ' · ${t.estado}' : ''}',
+                                  '${t.estado != 'activo' ? ' · ${t.estado}' : ''}'
+                                  '${t.madreId == widget.vaca.id ? ' · ya es su cría' : ''}',
+                              enabled: t.madreId != widget.vaca.id,
                             ),
                         ],
                         onSelected: (t) => setSt(() {

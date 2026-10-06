@@ -8,6 +8,7 @@ import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import 'partos_faltantes.dart';
 
 const _filtroLabels = {
   'todos': 'Todas',
@@ -34,6 +35,7 @@ class _VacasScreenState extends State<VacasScreen> {
   List<Vaca> _filtradas = [];
   Map<String, EstadoProduccion> _produccion = {};
   Map<String, String> _ubicaciones = {};
+  List<PartoFaltante> _faltantes = [];
   bool _loading = true;
   String _filtroEstado = 'todos';
   final _searchCtrl = TextEditingController();
@@ -56,6 +58,7 @@ class _VacasScreenState extends State<VacasScreen> {
     setState(() => _loading = true);
     _vacas = await _repo.getAll();
     _produccion = await ReproduccionRepository().estadosProduccion();
+    _faltantes = await ReproduccionRepository().partosFaltantes();
     _ubicaciones = {
       for (final u in await UbicacionRepository().getAll()) u.id: u.nombre
     };
@@ -164,6 +167,26 @@ class _VacasScreenState extends State<VacasScreen> {
               ),
             ),
           ),
+          if (_faltantes.isNotEmpty)
+            Card(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              color: AppColors.warning.withValues(alpha: 0.1),
+              child: ListTile(
+                dense: true,
+                leading: const Icon(Icons.child_friendly,
+                    color: AppColors.warning),
+                title: Text(
+                    '${_faltantes.length} cría${_faltantes.length == 1 ? '' : 's'} '
+                    'sin parto registrado en su madre'),
+                subtitle: const Text('Toca para revisar antes de registrar'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  if (await revisarPartosFaltantes(context, _faltantes)) {
+                    _load();
+                  }
+                },
+              ),
+            ),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())

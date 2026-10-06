@@ -14,6 +14,7 @@ import '../../core/repositories/registro_salud_repository.dart';
 import '../../core/models/nomina.dart';
 import '../../core/repositories/leche_repository.dart';
 import '../../core/repositories/nomina_repository.dart';
+import '../../core/repositories/perfil_usuario_repository.dart';
 import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/services/alertas_service.dart';
@@ -60,6 +61,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<_Aviso> _avisos = [];
   double _utilidadMes = 0;
   bool _loading = true;
+  String? _nombreUsuario;
   DateTime? _ultimaSyncVista;
   final _ubicacionRepo = UbicacionRepository();
   final _movimientoRepo = MovimientoFinancieroRepository();
@@ -68,6 +70,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadConteos();
+    _cargarNombre();
+  }
+
+  Future<void> _cargarNombre() async {
+    final id = usuarioActualId();
+    if (id == null) return;
+    final p = await PerfilUsuarioRepository().getById(id);
+    if (mounted && p != null) setState(() => _nombreUsuario = p.nombre);
   }
 
   Future<void> _loadConteos() async {
@@ -275,24 +285,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
       });
     }
 
-    final menu = <(String, String, String?)>[
-      ('/inventario', 'Inventario', null),
-      ('/leche', 'Producción de leche', 'vacas'),
-      ('/alertas', 'Alertas del hato', 'vacas'),
-      ('/palpacion', 'Palpación (veterinario)', 'vacas'),
-      ('/evento-masivo', 'Evento masivo', 'eventos'),
-      ('/salud', 'Salud', 'salud'),
-      ('/actividades', 'Actividades', 'actividades'),
-      ('/solicitudes', 'Solicitudes', 'solicitudes'),
-      ('/reportes', 'Reportes', 'reportes'),
-      ('/tipos-evento', 'Tipos de evento', 'eventos'),
-      ('/ubicaciones', 'Ubicaciones', 'ubicaciones'),
-      ('/finanzas', 'Finanzas', 'finanzas'),
-      ('/nomina', 'Nómina', 'finanzas'),
-      ('/usuarios', 'Usuarios', 'usuarios'),
+    // Botones del panel principal para lo que se usa todos los días.
+    final accesos = [
+      for (final o in [
+        _kMenu[0].opciones[1], // Producción de leche
+        _kMenu[1].opciones[0], // Actividades
+        _kMenu[1].opciones[1], // Solicitudes
+        _kMenu[0].opciones[2], // Alertas del hato
+      ])
+        if (o.modulo == null || permisos.puedeVer(o.modulo!)) o
     ];
 
     return Scaffold(
+      drawer: _MenuLateral(
+        nombre: _nombreUsuario,
+        puedeVer: permisos.puedeVer,
+        onAbrir: (ruta) {
+          Navigator.pop(context);
+          _abrir(ruta);
+        },
+        onSalir: () async {
+          Navigator.pop(context);
+          await context.read<AuthProvider>().signOut();
+          if (context.mounted) context.go('/login');
+        },
+      ),
       appBar: AppBar(
         titleSpacing: 8,
         title: const Row(children: [
@@ -337,22 +354,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     }
                   : null,
             ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'logout') {
-                await context.read<AuthProvider>().signOut();
-                if (context.mounted) context.go('/login');
-              } else {
-                _abrir(v);
-              }
-            },
-            itemBuilder: (_) => [
-              for (final (ruta, label, modulo) in menu)
-                if (modulo == null || permisos.puedeVer(modulo))
-                  PopupMenuItem(value: ruta, child: Text(label)),
-              const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
-            ],
-          ),
         ],
       ),
       body: _loading
@@ -384,6 +385,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               onTap: () => _abrirAviso(a),
                             ),
                           )),
+                    ],
+
+                    if (accesos.isNotEmpty) ...[
+                      _seccion('Accesos rápidos'),
+                      Row(children: [
+                        for (final o in accesos)
+                          Expanded(
+                            child: _AccesoRapido(
+                                opcion: o, onTap: () => _abrir(o.ruta)),
+                          ),
+                      ]),
                     ],
 
                     _seccion('Total general'),
@@ -741,6 +753,163 @@ class _MiniCount extends StatelessWidget {
                 fontSize: 18, fontWeight: FontWeight.bold, color: color)),
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
+    );
+  }
+}
+
+class _Opcion {
+  final String ruta;
+  final String texto;
+  final String? corto; // nombre en los accesos rápidos
+  final IconData icono;
+  final String? modulo; // permiso necesario (null = todos)
+  const _Opcion(this.ruta, this.texto, this.icono, this.modulo, {this.corto});
+}
+
+class _Grupo {
+  final String titulo;
+  final List<_Opcion> opciones;
+  const _Grupo(this.titulo, this.opciones);
+}
+
+/// Opciones del menú lateral, agrupadas por tema.
+const _kMenu = [
+  _Grupo('Hato', [
+    _Opcion('/inventario', 'Inventario', Icons.list_alt, null),
+    _Opcion('/leche', 'Producción de leche', Icons.water_drop, 'vacas',
+        corto: 'Leche'),
+    _Opcion('/alertas', 'Alertas del hato', Icons.notifications_active, 'vacas',
+        corto: 'Alertas'),
+    _Opcion('/palpacion', 'Palpación (veterinario)', Icons.medical_services,
+        'vacas'),
+    _Opcion('/salud', 'Salud', Icons.vaccines, 'salud'),
+    _Opcion('/evento-masivo', 'Evento masivo', Icons.playlist_add_check,
+        'eventos'),
+  ]),
+  _Grupo('Trabajo', [
+    _Opcion('/actividades', 'Actividades', Icons.task_alt, 'actividades'),
+    _Opcion('/solicitudes', 'Solicitudes', Icons.mark_email_unread_outlined,
+        'solicitudes'),
+  ]),
+  _Grupo('Dinero', [
+    _Opcion('/finanzas', 'Finanzas', Icons.account_balance_wallet, 'finanzas'),
+    _Opcion('/nomina', 'Nómina', Icons.badge_outlined, 'finanzas'),
+  ]),
+  _Grupo('Informes y ajustes', [
+    _Opcion('/reportes', 'Reportes', Icons.picture_as_pdf_outlined, 'reportes'),
+    _Opcion('/ubicaciones', 'Ubicaciones', Icons.location_on_outlined,
+        'ubicaciones'),
+    _Opcion('/tipos-evento', 'Tipos de evento', Icons.category_outlined,
+        'eventos'),
+    _Opcion('/usuarios', 'Usuarios', Icons.manage_accounts_outlined, 'usuarios'),
+  ]),
+];
+
+/// Menú lateral (botón ☰) con las opciones agrupadas.
+class _MenuLateral extends StatelessWidget {
+  final String? nombre;
+  final bool Function(String modulo) puedeVer;
+  final void Function(String ruta) onAbrir;
+  final VoidCallback onSalir;
+  const _MenuLateral(
+      {required this.nombre,
+      required this.puedeVer,
+      required this.onAbrir,
+      required this.onSalir});
+
+  @override
+  Widget build(BuildContext context) {
+    final hijos = <Widget>[];
+    for (final g in _kMenu) {
+      final visibles = g.opciones
+          .where((o) => o.modulo == null || puedeVer(o.modulo!))
+          .toList();
+      if (visibles.isEmpty) continue;
+      hijos.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text(g.titulo.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                letterSpacing: 0.8)),
+      ));
+      for (final o in visibles) {
+        hijos.add(ListTile(
+          dense: true,
+          leading: Icon(o.icono, color: AppColors.primary),
+          title: Text(o.texto, style: const TextStyle(fontSize: 15)),
+          onTap: () => onAbrir(o.ruta),
+        ));
+      }
+    }
+
+    return Drawer(
+      child: Column(children: [
+        Container(
+          width: double.infinity,
+          color: AppColors.primary,
+          padding: EdgeInsets.fromLTRB(
+              16, MediaQuery.of(context).padding.top + 16, 16, 16),
+          child: Row(children: [
+            const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(nombre ?? 'Ganadería',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        ),
+        Expanded(
+          child: ListView(padding: EdgeInsets.zero, children: hijos),
+        ),
+        const Divider(height: 1),
+        SafeArea(
+          top: false,
+          child: ListTile(
+            leading: const Icon(Icons.logout, color: AppColors.danger),
+            title: const Text('Cerrar sesión',
+                style: TextStyle(color: AppColors.danger)),
+            onTap: onSalir,
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Botón cuadrado de acceso rápido en el panel principal.
+class _AccesoRapido extends StatelessWidget {
+  final _Opcion opcion;
+  final VoidCallback onTap;
+  const _AccesoRapido({required this.opcion, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 3),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          child: Column(children: [
+            Icon(opcion.icono, color: AppColors.primary, size: 28),
+            const SizedBox(height: 6),
+            Text(opcion.corto ?? opcion.texto,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ),
     );
   }
 }

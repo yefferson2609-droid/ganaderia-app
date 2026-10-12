@@ -209,7 +209,10 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
     final pendientes = _miembros.where((m) => m.estado == 'pendiente').toList();
     final activos = _miembros.where((m) => m.estado == 'aprobado').toList();
     final otros = _miembros
-        .where((m) => m.estado == 'inactivo' || m.estado == 'rechazado')
+        .where((m) =>
+            m.estado == 'inactivo' ||
+            m.estado == 'rechazado' ||
+            m.estado == 'eliminado')
         .toList();
 
     return Scaffold(

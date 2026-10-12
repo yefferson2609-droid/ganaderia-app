@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/models/vaca.dart';
+import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
@@ -175,6 +176,17 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
       );
     }
 
+    // Si se puso o cambió la madre (o la fecha), anotar su parto si falta.
+    if (_madreId != null &&
+        (_vacaOriginal?.madreId != _madreId ||
+            _vacaOriginal?.fechaNacimiento != _fechaNacimiento) &&
+        await ReproduccionRepository().partoSiFalta(_madreId!, _fechaNacimiento,
+            notas: 'Registrado al poner la madre de $numero') &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('También se registró el parto de la madre. '
+              'Si ya está seca, márcala con "Secar vaca".')));
+    }
     if (mounted) context.pop();
   }
 

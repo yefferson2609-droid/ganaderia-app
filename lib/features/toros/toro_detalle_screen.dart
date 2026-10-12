@@ -3,13 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/ubicacion.dart';
-import '../../core/models/vaca.dart';
 import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
-import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/creador_info.dart';
+import '../../core/widgets/descendencia_section.dart';
 import '../../core/widgets/pesajes_section.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
@@ -24,12 +23,9 @@ class ToroDetalleScreen extends StatefulWidget {
 
 class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
   final _toroRepo = ToroRepository();
-  final _vacaRepo = VacaRepository();
   final _ubicacionRepo = UbicacionRepository();
 
   Toro? _toro;
-  Toro? _padre;
-  Vaca? _madre;
   Ubicacion? _ubicacion;
   bool _loading = true;
 
@@ -43,12 +39,6 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
     setState(() => _loading = true);
     _toro = await _toroRepo.getById(widget.id);
     if (_toro != null) {
-      if (_toro!.padreId != null) {
-        _padre = await _toroRepo.getById(_toro!.padreId!);
-      }
-      if (_toro!.madreId != null) {
-        _madre = await _vacaRepo.getById(_toro!.madreId!);
-      }
       if (_toro!.ubicacionId != null) {
         _ubicacion = await _ubicacionRepo.getById(_toro!.ubicacionId!);
       }
@@ -216,31 +206,11 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Descendencia',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    _InfoRow(
-                        label: 'Padre',
-                        value: _padre != null
-                            ? 'Toro #${_padre!.numero} - ${_padre!.nombre}'
-                            : 'No registrado'),
-                    _InfoRow(
-                        label: 'Madre',
-                        value: _madre != null
-                            ? 'Vaca #${_madre!.numero}'
-                            : 'No registrada'),
-                  ],
-                ),
-              ),
+            DescendenciaSection(
+              key: ValueKey('desc${_toro!.madreId}${_toro!.padreId}'),
+              animalId: widget.id,
+              madreId: _toro!.madreId,
+              padreId: _toro!.padreId,
             ),
             const SizedBox(height: 12),
             SaludSection(animalTipo: 'toro', animalId: widget.id),

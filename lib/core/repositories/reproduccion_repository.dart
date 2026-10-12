@@ -1,5 +1,6 @@
 import '../config/ajustes.dart';
 import '../database/local_db.dart';
+import '../models/ternero.dart';
 import '../models/vaca.dart';
 import 'evento_vaca_repository.dart';
 import 'ternero_repository.dart';
@@ -17,6 +18,8 @@ const kTipoPalpacion = 'Palpación';
 const _esParto = "lower(t.nombre) LIKE 'parto%'";
 const _esSecado = "lower(t.nombre) LIKE 'secad%'";
 const _esVitamina = "lower(t.nombre) LIKE '%vitamin%'";
+
+const _toroDeLaMonta = Object();
 
 enum EstadoProduccion { enOrdeno, seca, sinPartos }
 
@@ -95,6 +98,16 @@ class _Acumulado {
         casosSeco: secos.length,
         casosIntervalo: intervalos.length,
       );
+}
+
+class PartoFaltante {
+  final String vacaId;
+  final String vaca; // número de la madre
+  final String cria; // número de la cría
+  final DateTime fecha; // nacimiento de la cría
+  final bool quedariaEnOrdeno;
+  const PartoFaltante(
+      this.vacaId, this.vaca, this.cria, this.fecha, this.quedariaEnOrdeno);
 }
 
 class SugerenciaSecado {
@@ -290,6 +303,8 @@ class ReproduccionRepository {
     String? notas,
     String? numeroTernero,
     String? sexoTernero,
+    /// Padre del ternero; si no se indica, el toro de la monta.
+    Object? padreId = _toroDeLaMonta,
   }) async {
     await EventoVacaRepository().create(
       vacaId: vaca.id,
@@ -306,7 +321,9 @@ class ReproduccionRepository {
         categoria: sexoTernero == 'macho' ? 'ternero' : 'ternera',
         fechaNacimiento: fecha,
         madreId: vaca.id,
-        padreId: vaca.toroId,
+        padreId: identical(padreId, _toroDeLaMonta)
+            ? vaca.toroId
+            : padreId as String?,
         ubicacionId: vaca.ubicacionId,
       );
       terneroId = t.id;
@@ -319,6 +336,112 @@ class ReproduccionRepository {
       clearFechaParto: true,
     ));
     return terneroId;
+  }
+
+  /// Liga a la vaca una cría que ya nació: una existente en Levante y ceba
+  /// ([existente]) o una nueva ([numero] y [sexo]). Si no hay un parto
+  /// registrado a menos de 30 días de [fechaNacimiento], registra el parto.
+  /// Devuelve el id de la cría y si se registró el parto.
+  Future<(String, bool)> agregarCria({
+    required Vaca vaca,
+    Ternero? existente,
+    String? numero,
+    String? sexo,
+    DateTime? fechaNacimiento,
+    String? padreId,
+  }) async {
+    final terneros = TerneroRepository();
+    final nacimiento = fechaNacimiento ?? existente?.fechaNacimiento;
+    String id;
+    if (existente != null) {
+      id = existente.id;
+      await terneros.update(existente.copyWith(
+        madreId: vaca.id,
+        padreId: padreId ?? existente.padreId,
+        fechaNacimiento: nacimiento,
+      ));
+    } else {
+      final t = await terneros.create(
+        numero: numero!,
+        sexo: sexo!,
+        fechaNacimiento: nacimiento,
+        madreId: vaca.id,
+        padreId: padreId,
+        ubicacionId: vaca.ubicacionId,
+      );
+      await terneros.cambiarCategoria(t, t.categoriaSugerida);
+      id = t.id;
+    }
+
+    final partoNuevo = await partoSiFalta(vaca.id, nacimiento);
+    return (id, partoNuevo);
+  }
+
+  /// Registra el parto de la vaca en la fecha de nacimiento de una cría,
+  /// si no hay ya un parto a menos de 30 días. Devuelve si lo registró.
+  Future<bool> partoSiFalta(String vacaId, DateTime? nacimiento,
+      {String notas = 'Registrado al agregar la cría'}) async {
+    if (nacimiento == null) return false;
+    final vaca = await _db.query('vacas',
+        where: 'id = ? AND deleted = 0', whereArgs: [vacaId]);
+    if (vaca.isEmpty) return false; // la madre no es una vaca registrada
+    final partos = (await resumen(vacaId)).partos;
+    if (partos.any((p) => p.difference(nacimiento).inDays.abs() <= 30)) {
+      return false;
+    }
+    await EventoVacaRepository().create(
+      vacaId: vacaId,
+      tipoEventoId: await _tipoId(kTipoParto),
+      fecha: nacimiento,
+      notas: notas,
+    );
+    return true;
+  }
+
+  /// Crías con madre y fecha de nacimiento cuyo parto no está registrado
+  /// en la madre. Indica si la madre pasaría a "En ordeño" al registrarlo.
+  Future<List<PartoFaltante>> partosFaltantes() async {
+    final crias = <Map<String, Object?>>[
+      for (final t in ['terneros', 'vacas', 'toros'])
+        ...await _db.rawQuery('''
+          SELECT c.numero AS cria, c.fecha_nacimiento AS f, v.id AS vaca_id,
+                 v.numero AS vaca
+          FROM $t c JOIN vacas v ON v.id = c.madre_id AND v.deleted = 0
+          WHERE c.deleted = 0 AND c.fecha_nacimiento IS NOT NULL
+        '''),
+    ];
+    final cache = <String, ResumenReproductivo>{};
+    final faltan = <PartoFaltante>[];
+    for (final c in crias) {
+      final vacaId = c['vaca_id'] as String;
+      final f = _fecha(c['f'])!;
+      final r = cache[vacaId] ??= await resumen(vacaId);
+      if (r.partos.any((p) => p.difference(f).inDays.abs() <= 30)) continue;
+      // Si ya se agregó otra cría de ese mismo parto (gemelos), no repetir.
+      if (faltan.any((x) =>
+          x.vacaId == vacaId && x.fecha.difference(f).inDays.abs() <= 30)) {
+        continue;
+      }
+      faltan.add(PartoFaltante(
+          vacaId, c['vaca'] as String, c['cria'] as String, f, false));
+    }
+    // ¿Quedaría en ordeño? Solo si este sería su parto más reciente y no hay
+    // un secado después.
+    return [
+      for (final x in faltan)
+        () {
+          final r = cache[x.vacaId]!;
+          final otros = faltan
+              .where((y) => y.vacaId == x.vacaId)
+              .map((y) => y.fecha);
+          final ultimo = [...r.partos, ...otros]
+              .reduce((a, b) => a.isAfter(b) ? a : b);
+          final ordeno = ultimo == x.fecha &&
+              estadoProduccion(x.fecha, r.ultimoSecado) ==
+                  EstadoProduccion.enOrdeno;
+          return PartoFaltante(x.vacaId, x.vaca, x.cria, x.fecha, ordeno);
+        }(),
+    ]..sort((a, b) => a.vaca.compareTo(b.vaca));
   }
 
   /// Resultado de la palpación del veterinario. Si está preñada, se estima

@@ -1,5 +1,5 @@
 import 'package:uuid/uuid.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/auditoria.dart';
 import '../database/local_db.dart';
 import '../models/movimiento_financiero.dart';
 
@@ -84,7 +84,7 @@ class MovimientoFinancieroRepository {
       monto: monto,
       fecha: fecha,
       ubicacionId: ubicacionId,
-      createdBy: Supabase.instance.client.auth.currentUser?.id,
+      createdBy: usuarioActualId(),
       createdAt: now,
       updatedAt: now,
     );

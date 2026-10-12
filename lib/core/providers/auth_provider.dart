@@ -15,14 +15,20 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  static const _desactivada =
+      'Tu cuenta ha sido desactivada. Contacta al administrador.';
+
   Future<String?> signIn(String email, String password) async {
     try {
+      // En multi-finca el acceso se revisa por finca (Mis fincas): si un
+      // administrador lo quitó de una finca, esa finca deja de abrirse.
       await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
       return null;
     } on AuthException catch (e) {
+      if (e.message.toLowerCase().contains('banned')) return _desactivada;
       return _traducir(e);
     } catch (e) {
       return 'Error inesperado. Intenta de nuevo.';

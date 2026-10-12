@@ -12,12 +12,15 @@ class SaludSection extends StatefulWidget {
   final String animalTipo; // 'vaca' | 'toro' | 'ternero' | 'caballo'
   final String animalId;
   final bool femenino; // para "Marcar como recuperada"
+  /// false = sin tarjeta ni título (dentro de un cuadro plegable).
+  final bool marco;
 
   const SaludSection({
     super.key,
     required this.animalTipo,
     required this.animalId,
     this.femenino = false,
+    this.marco = true,
   });
 
   @override
@@ -227,19 +230,18 @@ class _SaludSectionState extends State<SaludSection> {
         .titleMedium
         ?.copyWith(fontWeight: FontWeight.bold);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return _marco(Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.healing,
-                  color: _activo != null ? AppColors.danger : AppColors.success),
-              const SizedBox(width: 8),
-              Text('Salud', style: titulo),
-            ]),
-            const SizedBox(height: 8),
+            if (widget.marco) ...[
+              Row(children: [
+                Icon(Icons.healing,
+                    color: _activo != null ? AppColors.danger : AppColors.success),
+                const SizedBox(width: 8),
+                Text('Salud', style: titulo),
+              ]),
+              const SizedBox(height: 8),
+            ],
             if (_activo == null) ...[
               const Text('Sin problemas de salud activos'),
               const SizedBox(height: 8),
@@ -328,8 +330,10 @@ class _SaludSectionState extends State<SaludSection> {
                   )),
             ],
           ],
-        ),
-      ),
-    );
+        ));
   }
+
+  Widget _marco(Widget w) => widget.marco
+      ? Card(child: Padding(padding: const EdgeInsets.all(16), child: w))
+      : w;
 }

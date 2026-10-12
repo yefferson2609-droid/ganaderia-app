@@ -9,8 +9,13 @@ final _fmt = DateFormat('dd/MM/yyyy');
 class PesajesSection extends StatefulWidget {
   final String animalTipo;
   final String animalId;
+  /// false = sin tarjeta ni título (dentro de un cuadro plegable).
+  final bool marco;
   const PesajesSection(
-      {super.key, required this.animalTipo, required this.animalId});
+      {super.key,
+      required this.animalTipo,
+      required this.animalId,
+      this.marco = true});
 
   @override
   State<PesajesSection> createState() => _PesajesSectionState();
@@ -98,15 +103,12 @@ class _PesajesSectionState extends State<PesajesSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+    return _marco(Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
               Expanded(
-                child: Text(
+                child: !widget.marco ? const SizedBox() : Text(
                   _pesajes.isEmpty
                       ? 'Peso'
                       : 'Peso: ${_pesajes.first.peso.toStringAsFixed(1)} kg',
@@ -148,8 +150,10 @@ class _PesajesSectionState extends State<PesajesSection> {
                 );
               }),
           ],
-        ),
-      ),
-    );
+        ));
   }
+
+  Widget _marco(Widget w) => widget.marco
+      ? Card(child: Padding(padding: const EdgeInsets.all(16), child: w))
+      : w;
 }

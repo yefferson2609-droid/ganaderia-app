@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/ternero.dart';
 import '../../core/repositories/ternero_repository.dart';
+import '../../core/repositories/ubicacion_repository.dart';
+import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 
@@ -33,6 +35,7 @@ class TernerosScreen extends StatefulWidget {
 class _TernerosScreenState extends State<TernerosScreen> {
   final _repo = TerneroRepository();
   List<Ternero> _terneros = [];
+  Map<String, String> _ubicaciones = {};
   bool _loading = true;
   bool _soloActivos = true;
   String _buscar = '';
@@ -46,6 +49,9 @@ class _TernerosScreenState extends State<TernerosScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     _terneros = await _repo.getAll(soloActivos: _soloActivos);
+    _ubicaciones = {
+      for (final u in await UbicacionRepository().getAll()) u.id: u.nombre
+    };
     setState(() => _loading = false);
   }
 
@@ -68,17 +74,16 @@ class _TernerosScreenState extends State<TernerosScreen> {
               t.numero.toLowerCase().contains(_buscar.toLowerCase())))
       .toList();
 
-  Widget _lista(List<Ternero> lista) {
-    if (lista.isEmpty) {
-      return const Center(child: Text('No hay animales en esta categoría'));
-    }
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-        itemCount: lista.length,
-        itemBuilder: (_, i) {
-          final t = lista[i];
+  Widget _lista(List<Ternero> lista, String clave) {
+    return GruposUbicacion<Ternero>(
+        clave: 'levante_$clave',
+        items: lista,
+        ubicacionDe: (t) => t.ubicacionId,
+        numeroDe: (t) => t.numero,
+        nombresUbicacion: _ubicaciones,
+        onRefresh: _load,
+        textoVacio: 'No hay animales en esta categoría',
+        itemBuilder: (t) {
           final avisos = <Widget>[
             if (t.debeDestetarse) _Etiqueta('Por destetar', AppColors.warning),
             if (t.cambioSugerido != null)
@@ -119,9 +124,7 @@ class _TernerosScreenState extends State<TernerosScreen> {
                   context.push('/terneros/${t.id}').then((_) => _load()),
             ),
           );
-        },
-      ),
-    );
+        });
   }
 
   @override
@@ -189,7 +192,9 @@ class _TernerosScreenState extends State<TernerosScreen> {
                   ),
                 Expanded(
                   child: TabBarView(
-                    children: pestanas.map((c) => _lista(_filtrar(c))).toList(),
+                    children: pestanas
+                        .map((c) => _lista(_filtrar(c), c ?? 'todos'))
+                        .toList(),
                   ),
                 ),
               ]),

@@ -28,6 +28,9 @@ import '../../features/inventario/inventario_screen.dart';
 import '../../features/leche/leche_screen.dart';
 import '../../features/alertas/alertas_screen.dart';
 import '../../features/palpacion/palpacion_screen.dart';
+import '../../features/nomina/nomina_screen.dart';
+import '../../features/nomina/nomina_semana_screen.dart';
+import '../../features/nomina/trabajadores_screen.dart';
 import '../../features/lotes/lotes_screen.dart';
 import '../../features/lotes/lote_form_screen.dart';
 import '../../features/lotes/lote_detalle_screen.dart';
@@ -43,14 +46,29 @@ import '../../features/usuarios/usuarios_screen.dart';
 import '../../features/usuarios/usuario_form_screen.dart';
 import '../../features/usuarios/usuario_permisos_screen.dart';
 
+class _CambioSesion extends ChangeNotifier {
+  _CambioSesion(Stream<AuthState> cambios) {
+    cambios.listen((e) {
+      if (e.event == AuthChangeEvent.signedIn ||
+          e.event == AuthChangeEvent.signedOut) {
+        notifyListeners();
+      }
+    });
+  }
+}
+
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/dashboard',
-    // Si se cierra la finca (p. ej. la suspendieron), vuelve a "Mis fincas".
-    refreshListenable: LocalDb.instance.fincaAbierta,
+    // Vuelve a evaluar la redirección al iniciar o cerrar sesión, y al
+    // cerrarse la finca (p. ej. la suspendieron o quitaron al usuario).
+    refreshListenable: Listenable.merge([
+      _CambioSesion(Supabase.instance.client.auth.onAuthStateChange),
+      LocalDb.instance.fincaAbierta,
+    ]),
     redirect: (context, state) {
       final user = Supabase.instance.client.auth.currentUser;
       final ruta = state.matchedLocation;
@@ -172,6 +190,20 @@ class AppRouter {
       GoRoute(path: '/leche', builder: (_, __) => const LecheScreen()),
       GoRoute(path: '/alertas', builder: (_, __) => const AlertasScreen()),
       GoRoute(path: '/palpacion', builder: (_, __) => const PalpacionScreen()),
+      GoRoute(
+        path: '/nomina',
+        builder: (_, __) => const NominaScreen(),
+        routes: [
+          GoRoute(
+              path: 'trabajadores',
+              builder: (_, __) => const TrabajadoresScreen()),
+          GoRoute(
+            path: 'semana/:id',
+            builder: (_, state) =>
+                NominaSemanaScreen(id: state.pathParameters['id']!),
+          ),
+        ],
+      ),
 
       // Lotes
       GoRoute(

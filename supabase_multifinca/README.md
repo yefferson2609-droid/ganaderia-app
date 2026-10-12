@@ -9,6 +9,8 @@ Solo para el proyecto NUEVO `ganaderia-comercial` (`oaukzxwcohocqafttfki`).
 | `prueba_seguridad.sql` | Prueba (se deshace sola). Pasó 23/23 el 2026-10-12 (repetida tras la 002: OK) |
 | `002_super_admin.sql` | Ejecutado 2026-10-12 |
 | `prueba_super_admin.sql` | Prueba (se deshace sola). Pasó 16/16 el 2026-10-12 |
+| `003_nomina_y_eliminar_usuario.sql` | Ejecutado 2026-10-12 (equivale a 009 + 010 de la finca, por finca; reloj `nomina-domingo` activo) |
+| `prueba_nomina_eliminar.sql` | Prueba (se deshace sola). Pasó 13/13 el 2026-10-12 |
 
 Súper administrador (vendedor): `yefferson2609@gmail.com`. Se nombra desde el
 SQL Editor **después** de que esa cuenta exista y se compruebe que es la suya

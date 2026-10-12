@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/models/toro.dart';
 import '../../core/repositories/toro_repository.dart';
+import '../../core/repositories/ubicacion_repository.dart';
+import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 
@@ -15,6 +17,7 @@ class TorosScreen extends StatefulWidget {
 class _TorosScreenState extends State<TorosScreen> {
   final _repo = ToroRepository();
   List<Toro> _toros = [];
+  Map<String, String> _ubicaciones = {};
   bool _loading = true;
 
   @override
@@ -26,6 +29,9 @@ class _TorosScreenState extends State<TorosScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     _toros = await _repo.getAll();
+    _ubicaciones = {
+      for (final u in await UbicacionRepository().getAll()) u.id: u.nombre
+    };
     setState(() => _loading = false);
   }
 
@@ -76,15 +82,15 @@ class _TorosScreenState extends State<TorosScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _toros.isEmpty
-              ? const Center(child: Text('No hay toros registrados'))
-              : RefreshIndicator(
+          : GruposUbicacion<Toro>(
+                  clave: 'toros',
+                  items: _toros,
+                  ubicacionDe: (t) => t.ubicacionId,
+                  numeroDe: (t) => t.numero,
+                  nombresUbicacion: _ubicaciones,
                   onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _toros.length,
-                    itemBuilder: (_, i) {
-                      final t = _toros[i];
+                  textoVacio: 'No hay toros registrados',
+                  itemBuilder: (t) {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
@@ -122,8 +128,7 @@ class _TorosScreenState extends State<TorosScreen> {
                               .then((_) => _load()),
                         ),
                       );
-                    },
-                  ),
+                  },
                 ),
     );
   }

@@ -33,6 +33,12 @@ const kTablasSync = [
   'solicitudes',
   'produccion_leche',
   'pesajes_animal',
+  'trabajadores',
+  'prestamos_trabajador',
+  'nomina_novedades',
+  'nomina_semanas',
+  'nomina_detalle',
+  'prestamo_cuotas',
 ];
 
 /// Tablas con foto y el bucket de Supabase Storage donde se guarda.
@@ -221,6 +227,25 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
+    // Si un administrador le quitó el acceso a ESTA finca, se cierra la
+    // finca (el router lo lleva a "Mis fincas"); la sesión sigue abierta
+    // porque puede tener otras fincas. (El súper administrador en modo
+    // soporte no es miembro: no tiene fila y no se cierra.)
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid != null) {
+      try {
+        final yo = await db.query('perfiles_usuario',
+            columns: ['activo', 'eliminado'], where: 'id = ?', whereArgs: [uid]);
+        if (yo.isNotEmpty &&
+            (yo.first['activo'] == 0 || yo.first['eliminado'] == 1)) {
+          _isSyncing = false;
+          notifyListeners();
+          if (LocalDb.instance.fincaId == fincaId) await LocalDb.instance.cerrar();
+          return;
+        }
+      } catch (_) {}
+    }
+
     // Se registra la hora aunque haya errores: lo que no falló sí quedó
     // sincronizado, y los errores se muestran aparte.
     _lastSync = DateTime.now();
@@ -282,6 +307,10 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
           'nombre': m['nombre'],
           'correo': m['correo'] ?? '',
           'activo': m['estado'] == 'aprobado',
+          // Eliminados y rechazados no salen en las listas, pero su nombre
+          // se conserva en el historial ("creado por").
+          'eliminado':
+              m['estado'] == 'eliminado' || m['estado'] == 'rechazado',
           'created_at': m['created_at'],
           'updated_at': m['updated_at'],
         }
@@ -392,7 +421,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       var enviado = false;
       for (var intento = 0; intento < 6 && !enviado; intento++) {
         try {
-          await _supabase.from(tabla).upsert(remoto);
+          await _upsertOActualizar(tabla, remoto);
           enviado = true;
         } on PostgrestException catch (e) {
           final col = e.code == 'PGRST204'
@@ -443,6 +472,23 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Envía una fila con "insertar o actualizar". Si la seguridad del servidor
+  /// no permite insertar en esa tabla (p. ej. perfiles de usuario), pero la
+  /// fila ya existe, la actualiza directamente.
+  Future<void> _upsertOActualizar(String tabla, Map<String, dynamic> fila) async {
+    try {
+      await _supabase.from(tabla).upsert(fila);
+    } on PostgrestException catch (e) {
+      if (e.code != '42501') rethrow; // 42501 = no permitido por seguridad
+      final actualizadas = await _supabase
+          .from(tabla)
+          .update(Map.of(fila)..remove('id'))
+          .eq('id', fila['id'] as String)
+          .select('id');
+      if (actualizadas.isEmpty) rethrow;
+    }
+  }
+
   // Por tabla, columnas locales que el servidor aún no tiene.
   final Map<String, Set<String>> _columnasFaltantes = {};
 
@@ -462,6 +508,12 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     'movimientos_financieros': 'finanzas',
     'produccion_leche': 'leche',
     'pesajes_animal': 'pesajes',
+    'trabajadores': 'trabajadores',
+    'prestamos_trabajador': 'préstamos',
+    'nomina_novedades': 'bonos y anticipos',
+    'nomina_semanas': 'nómina',
+    'nomina_detalle': 'detalle de nómina',
+    'prestamo_cuotas': 'cuotas de préstamos',
   };
 
   String _nombreTabla(String t) => _nombres[t] ?? t;
@@ -492,6 +544,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   final Set<String> _columnasBool = {
     'activa',
     'activo',
+    'eliminado',
+    'automatica',
     'puede_ver',
     'puede_crear',
     'puede_editar',

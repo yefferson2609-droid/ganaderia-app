@@ -84,6 +84,17 @@ pertenece.
   antes): un trabajador recibe por sync los datos de la finca aunque no vea
   el módulo. Evaluar reforzarlo en el servidor más adelante.
 
+## Al día con la app de la finca hasta la 1.0.21 (2026-10-12)
+- Merge de `reconstruccion-desde-apk` (1.0.14–1.0.21): nómina, eliminar
+  usuarios, listas por ubicación, menú lateral, ficha de vaca, descendencia,
+  agregar cría, partos faltantes.
+- Adaptaciones multi-finca: "Eliminar usuario" lo quita **de esa finca**
+  (estado de miembro `eliminado`, sin bloquear la cuenta; puede volver con el
+  código). Si a alguien le quitan el acceso, se cierra esa finca, no la
+  sesión. `pagar_nomina(p_finca, p_semana)`; el reloj del domingo paga todas
+  las fincas activas (`pagar_nominas_automaticas`). En el menú lateral:
+  "Cambiar de finca" y "Panel del vendedor".
+
 ## Súper administrador / panel del vendedor (2026-10-12)
 - Decisión: el vendedor ve y maneja TODO (acceso completo a cualquier finca,
   aunque esté pendiente o suspendida). Cuenta: `yefferson2609@gmail.com`.

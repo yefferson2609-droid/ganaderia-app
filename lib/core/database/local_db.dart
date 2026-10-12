@@ -48,7 +48,7 @@ class LocalDb {
     _columnas.clear();
     _db = await openDatabase(
       path,
-      version: 9,
+      version: 11,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -236,6 +236,8 @@ class LocalDb {
     await _createOperacionTables(db);
     await _createV8(db);
     await _createV9(db);
+    await _createV10(db);
+    await _createV11(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -283,6 +285,116 @@ class LocalDb {
     if (oldVersion < 9) {
       await _createV9(db);
     }
+    if (oldVersion < 10) {
+      await _createV10(db);
+    }
+    if (oldVersion < 11) {
+      await _createV11(db);
+    }
+  }
+
+  /// Nómina semanal. nomina_semanas, nomina_detalle y prestamo_cuotas las
+  /// escribe el servidor (función pagar_nomina); la app solo las lee.
+  Future<void> _createV11(Database db) async {
+    const comunes = '''
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0''';
+    await db.execute('''
+      CREATE TABLE trabajadores (
+        id TEXT PRIMARY KEY,
+        nombre TEXT NOT NULL,
+        cedula TEXT,
+        cargo TEXT,
+        telefono TEXT,
+        salario_semanal REAL NOT NULL DEFAULT 0,
+        fecha_ingreso TEXT,
+        activo INTEGER NOT NULL DEFAULT 1,
+        ubicacion_id TEXT,
+        notas TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        $comunes
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE nomina_novedades (
+        id TEXT PRIMARY KEY,
+        trabajador_id TEXT NOT NULL,
+        semana_fin TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        monto REAL NOT NULL,
+        descripcion TEXT,
+        movimiento_id TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        $comunes
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE prestamos_trabajador (
+        id TEXT PRIMARY KEY,
+        trabajador_id TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        monto_total REAL NOT NULL,
+        cuota_semanal REAL NOT NULL,
+        descripcion TEXT,
+        estado TEXT NOT NULL DEFAULT 'activo',
+        movimiento_id TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        $comunes
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE nomina_semanas (
+        id TEXT PRIMARY KEY,
+        semana_fin TEXT NOT NULL,
+        estado TEXT NOT NULL DEFAULT 'pendiente',
+        total REAL NOT NULL DEFAULT 0,
+        trabajadores INTEGER NOT NULL DEFAULT 0,
+        movimiento_id TEXT,
+        automatica INTEGER NOT NULL DEFAULT 0,
+        pagada_por TEXT,
+        pagada_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        $comunes
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE nomina_detalle (
+        id TEXT PRIMARY KEY,
+        nomina_id TEXT NOT NULL,
+        trabajador_id TEXT NOT NULL,
+        trabajador_nombre TEXT NOT NULL,
+        salario REAL NOT NULL DEFAULT 0,
+        bonos REAL NOT NULL DEFAULT 0,
+        anticipos REAL NOT NULL DEFAULT 0,
+        cuotas REAL NOT NULL DEFAULT 0,
+        neto REAL NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        $comunes
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE prestamo_cuotas (
+        id TEXT PRIMARY KEY,
+        prestamo_id TEXT NOT NULL,
+        nomina_id TEXT NOT NULL,
+        monto REAL NOT NULL,
+        created_at TEXT NOT NULL,
+        $comunes
+      )
+    ''');
+  }
+
+  /// Usuarios eliminados (se conservan para el historial "creado por").
+  Future<void> _createV10(Database db) async {
+    await db.execute(
+        'ALTER TABLE perfiles_usuario ADD COLUMN eliminado INTEGER NOT NULL DEFAULT 0');
   }
 
   /// Categoría ganadera y fecha de destete en "Levante y ceba".

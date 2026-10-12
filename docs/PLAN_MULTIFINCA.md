@@ -79,6 +79,13 @@ pertenece.
 - Fotos: `<finca_id>/<tabla>/<archivo>`.
 - Pruebas: `test/multifinca_test.dart` (bases separadas por finca, estados).
 
+## Entregas
+- 2026-10-12: primer APK multi-finca `ganaderia-MULTI-prueba-v1.0.21.apk`
+  (paquete `com.agroyeff.ganaderia.multifinca`, "Ganadería (multi)", firmado
+  con la misma llave que la app de la finca; la llave se copió a esta carpeta,
+  fuera de git). Pendiente: que el usuario la pruebe y nombrar súper admin a
+  `yefferson2609@gmail.com` cuando cree su cuenta.
+
 ## Pendiente / ideas
 - Los permisos por módulo se aplican en la app, no en el servidor (igual que
   antes): un trabajador recibe por sync los datos de la finca aunque no vea

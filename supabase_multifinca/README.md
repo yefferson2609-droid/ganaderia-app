@@ -21,6 +21,11 @@ select id, 'Vendedor' from auth.users where email = 'yefferson2609@gmail.com'
 on conflict do nothing;
 ```
 
+Función `crear-usuario` (código en `supabase/functions/crear-usuario/index.ts`):
+desplegada 2026-10-12 desde el editor del dashboard, con "Verify JWT"
+**desactivado**. Comprobado: sin sesión responde 401. Falta probar la
+creación completa desde la app con un dueño real.
+
 Desde la app, el súper administrador activa fincas en "Panel del vendedor".
 
 Activar una finca (como vendedor), en el SQL Editor:

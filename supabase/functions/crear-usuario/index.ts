@@ -11,6 +11,23 @@ const cors = {
     'authorization, x-client-info, apikey, content-type',
 };
 
+// Clave del proyecto: las antiguas (SUPABASE_ANON_KEY / SERVICE_ROLE_KEY) o
+// las nuevas (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS, en JSON).
+function clave(antigua: string, nuevas: string): string {
+  const v = Deno.env.get(antigua);
+  if (v) return v;
+  const json = Deno.env.get(nuevas);
+  if (json) {
+    try {
+      const obj = JSON.parse(json) as Record<string, string>;
+      return obj['default'] ?? Object.values(obj)[0];
+    } catch {
+      return json;
+    }
+  }
+  throw new Error('Falta la clave ' + antigua);
+}
+
 function respuesta(cuerpo: unknown, status = 200) {
   return new Response(JSON.stringify(cuerpo), {
     status,
@@ -26,8 +43,11 @@ Deno.serve(async (req) => {
     if (!authHeader) return respuesta({ error: 'No autorizado' }, 401);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = clave('SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEYS');
+    const serviceRoleKey = clave(
+      'SUPABASE_SERVICE_ROLE_KEY',
+      'SUPABASE_SECRET_KEYS',
+    );
 
     // Cliente con la sesión de quien llama: identidad y permisos vía RLS.
     const callerClient = createClient(supabaseUrl, anonKey, {

@@ -17,6 +17,53 @@ pertenece.
 - Forma de cobro y medio de pago: **sin definir** (no bloquea la Fase 1).
 - Nombre comercial: **sin definir** (por ahora "Ganadería").
 
+## Decisiones de la Fase 1 (2026-10-12)
+- Alta de finca: el ganadero se registra y crea su finca, pero queda
+  **pendiente hasta que el vendedor (el usuario) la active**. Más adelante
+  cambiará a prueba gratis automática, así que dejar el estado flexible
+  (`pendiente` / `prueba` / `activa` / `suspendida`).
+- Trabajadores: entran con el **código de la finca** (6 letras que el dueño
+  comparte); quedan pendientes hasta que el dueño o un admin los apruebe.
+- Una persona puede pertenecer a **varias fincas**: selector al entrar y en el
+  menú; los datos de cada finca no se mezclan.
+- Permisos por módulo **igual que hoy, pero por finca** (dueño y admin ven
+  todo y marcan qué módulos ve cada trabajador).
+
+## Proyecto Supabase nuevo (creado 2026-10-12)
+- Nombre `ganaderia-comercial`, región East US (us-east-1), organización
+  "Proyectos" (plan gratis), misma cuenta que el proyecto de la finca.
+- URL: `https://oaukzxwcohocqafttfki.supabase.co`
+- Clave pública (publishable, "default"):
+  `sb_publishable_T5it3WU9nc1f95IXtbCQ9w_3W5aG7HV`
+  (supabase_flutter 2.15 la acepta como anonKey). La secreta nunca va al código.
+- Esquema ejecutado (2026-10-12): `supabase_multifinca/001_esquema_multifinca.sql`.
+  Prueba de seguridad 23/23 OK (`supabase_multifinca/prueba_seguridad.sql`).
+  Sin datos todavía.
+
+## Diseño del servidor (hecho)
+- `fincas` (codigo único de 6, estado pendiente/prueba/activa/suspendida,
+  prueba_hasta), `miembros_finca` (rol dueno/admin/empleado, estado
+  pendiente/aprobado/rechazado/inactivo; guarda nombre y correo — reemplaza a
+  `perfiles_usuario`, que NO existe en el proyecto nuevo), `permisos_usuario`
+  con `finca_id`.
+- Las 21 tablas de datos tienen `finca_id`; RLS `puede_usar_finca(finca_id)`
+  (miembro aprobado + finca activa o prueba vigente). Sin llaves foráneas
+  entre tablas de datos (solo a fincas) para no frenar la sincronización.
+- `terneros.capado` es boolean en el servidor (la app debe agregarlo a
+  `_columnasBool`).
+- Fincas y miembros solo se modifican con funciones: `crear_finca(nombre_finca,
+  nombre_usuario)`, `unirse_con_codigo(codigo, nombre)`,
+  `gestionar_miembro(miembro_id, estado, rol)`, `cambiar_mi_nombre(finca, nombre)`.
+- Fotos: ruta `<finca_id>/<tabla>/<archivo>.jpg` en buckets `animales` y
+  `solicitudes`.
+
+## Pendiente en la app (paso 2)
+- Apuntar a la URL/clave nueva; registro con correo; pantallas crear finca /
+  unirse con código / "en revisión"; selector de finca; aprobar trabajadores.
+- Base local separada por finca (archivo SQLite por finca) y sync filtrando
+  `finca_id`, llenando `finca_id` al subir; ruta de fotos con finca.
+- Usuarios/permisos: leer `miembros_finca` en vez de `perfiles_usuario`.
+
 ## Fase 1 — Multi-finca segura (siguiente paso)
 1. Tablas `fincas` (nombre, logo, dueño, estado/suscripción) y
    `miembros_finca` (usuario, finca, rol: dueño / admin / empleado).

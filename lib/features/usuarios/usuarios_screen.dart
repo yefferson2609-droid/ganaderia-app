@@ -217,6 +217,17 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
         title: const Text('Usuarios'),
         leading: BackButton(onPressed: () => context.go('/dashboard')),
       ),
+      // También se puede crear la cuenta del trabajador directamente.
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'Crear usuario',
+        onPressed: () async {
+          final sync = context.read<SyncProvider>();
+          await context.push('/usuarios/nuevo');
+          await _load();
+          sync.syncAll();
+        },
+        child: const Icon(Icons.person_add),
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(

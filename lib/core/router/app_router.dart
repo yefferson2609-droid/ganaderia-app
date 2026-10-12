@@ -39,6 +39,7 @@ import '../../features/finanzas/movimiento_form_screen.dart';
 import '../../features/finanzas/conceptos_financieros_screen.dart';
 import '../../features/finanzas/concepto_financiero_form_screen.dart';
 import '../../features/usuarios/usuarios_screen.dart';
+import '../../features/usuarios/usuario_form_screen.dart';
 import '../../features/usuarios/usuario_permisos_screen.dart';
 
 class AppRouter {
@@ -257,6 +258,7 @@ class AppRouter {
         path: '/usuarios',
         builder: (_, __) => const UsuariosScreen(),
         routes: [
+          GoRoute(path: 'nuevo', builder: (_, __) => const UsuarioFormScreen()),
           GoRoute(
             path: ':id/permisos',
             builder: (_, state) =>

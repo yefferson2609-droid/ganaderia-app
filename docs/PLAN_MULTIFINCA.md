@@ -71,14 +71,15 @@ pertenece.
   Usuarios (código para copiar, aprobar como trabajador/admin, rechazar,
   quitar/devolver acceso, cambiar rol). Menú: "Cambiar de finca".
 - `perfiles_usuario` local se llena desde `miembros_finca` (no se sube).
-- Se quitó "crear usuario" (función `crear-usuario`): ahora cada quien crea
-  su cuenta y entra con el código.
+- Dos formas de sumar trabajadores (decisión 2026-10-12): código de la finca
+  y "Crear usuario" como antes; la función `supabase/functions/crear-usuario`
+  ahora recibe `finca_id`, exige `es_admin_finca` y deja al trabajador
+  aprobado en esa finca. Se despliega con "Verify JWT" desactivado.
+- Supabase nuevo: **confirmación de correo desactivada** (2026-10-12).
 - Fotos: `<finca_id>/<tabla>/<archivo>`.
 - Pruebas: `test/multifinca_test.dart` (bases separadas por finca, estados).
 
 ## Pendiente / ideas
-- Decidir si Supabase pide **confirmar el correo** al registrarse (hoy sí:
-  el enlace abre una página que puede fallar, pero la cuenta queda confirmada).
 - Los permisos por módulo se aplican en la app, no en el servidor (igual que
   antes): un trabajador recibe por sync los datos de la finca aunque no vea
   el módulo. Evaluar reforzarlo en el servidor más adelante.

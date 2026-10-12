@@ -280,6 +280,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 overflow: TextOverflow.ellipsis),
           ),
         ]),
+        // Aviso visible cuando el vendedor está dentro de la finca de un cliente.
+        bottom: finca?.soporte == true
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(28),
+                child: Container(
+                  width: double.infinity,
+                  color: AppColors.accentPurple,
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: const Text(
+                    'MODO SOPORTE · los cambios afectan al cliente',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              )
+            : null,
         actions: [
           if (sync.isSyncing)
             const Padding(
@@ -322,6 +338,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (v == 'logout') {
                 await context.read<AuthProvider>().signOut();
                 if (context.mounted) context.go('/login');
+              } else if (v == 'vendedor') {
+                final fp = context.read<FincaProvider>();
+                context.go('/vendedor');
+                await fp.salirDeFinca();
               } else if (v == 'fincas') {
                 // Primero a la lista (sin que abra sola la finca) y luego
                 // se cierra la finca actual.
@@ -336,6 +356,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               for (final (ruta, label, modulo) in menu)
                 if (modulo == null || permisos.puedeVer(modulo))
                   PopupMenuItem(value: ruta, child: Text(label)),
+              if (context.read<FincaProvider>().esSuperAdmin)
+                const PopupMenuItem(
+                    value: 'vendedor', child: Text('Panel del vendedor')),
               const PopupMenuItem(
                   value: 'fincas', child: Text('Cambiar de finca')),
               const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),

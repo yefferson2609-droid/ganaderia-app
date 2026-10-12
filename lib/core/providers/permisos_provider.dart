@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../database/local_db.dart';
 import '../models/permiso_usuario.dart';
 import '../repositories/permiso_usuario_repository.dart';
+import 'finca_provider.dart';
 
 class PermisosProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -15,7 +16,11 @@ class PermisosProvider extends ChangeNotifier {
     });
     // Los permisos son de cada finca.
     LocalDb.instance.fincaAbierta.addListener(cargar);
+    FincaProvider.modoSoporte.addListener(notifyListeners);
   }
+
+  /// El súper administrador en modo soporte puede todo.
+  bool get _soporte => FincaProvider.modoSoporte.value;
 
   Future<void> cargar() async {
     final uid = _supabase.auth.currentUser?.id;
@@ -47,11 +52,13 @@ class PermisosProvider extends ChangeNotifier {
   }
 
   bool puedeVer(String modulo) =>
-      _permisos[modulo]?.puedeVer ?? _sinFila(modulo, accionBasica: true);
+      _soporte ||
+      (_permisos[modulo]?.puedeVer ?? _sinFila(modulo, accionBasica: true));
   bool puedeCrear(String modulo) =>
-      _permisos[modulo]?.puedeCrear ?? _sinFila(modulo, accionBasica: true);
+      _soporte ||
+      (_permisos[modulo]?.puedeCrear ?? _sinFila(modulo, accionBasica: true));
   bool puedeEditar(String modulo) =>
-      _permisos[modulo]?.puedeEditar ?? _sinFila(modulo);
+      _soporte || (_permisos[modulo]?.puedeEditar ?? _sinFila(modulo));
   bool puedeEliminar(String modulo) =>
-      _permisos[modulo]?.puedeEliminar ?? _sinFila(modulo);
+      _soporte || (_permisos[modulo]?.puedeEliminar ?? _sinFila(modulo));
 }

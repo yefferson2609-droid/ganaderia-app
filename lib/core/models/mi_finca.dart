@@ -16,6 +16,9 @@ class MiFinca {
   /// pendiente | aprobado | rechazado | inactivo
   final String estadoMiembro;
 
+  /// Abierta por el súper administrador para dar soporte (no es miembro).
+  final bool soporte;
+
   const MiFinca({
     required this.miembroId,
     required this.fincaId,
@@ -25,7 +28,26 @@ class MiFinca {
     required this.pruebaHasta,
     required this.rol,
     required this.estadoMiembro,
+    this.soporte = false,
   });
+
+  /// Finca abierta en modo soporte (desde el panel del vendedor).
+  factory MiFinca.soporte(
+          {required String fincaId,
+          required String nombre,
+          required String codigo,
+          required String estadoFinca}) =>
+      MiFinca(
+        miembroId: '',
+        fincaId: fincaId,
+        nombre: nombre,
+        codigo: codigo,
+        estadoFinca: estadoFinca,
+        pruebaHasta: null,
+        rol: 'soporte',
+        estadoMiembro: 'aprobado',
+        soporte: true,
+      );
 
   bool get pruebaVencida {
     if (estadoFinca != 'prueba' || pruebaHasta == null) return false;
@@ -37,11 +59,14 @@ class MiFinca {
       estadoFinca == 'activa' || (estadoFinca == 'prueba' && !pruebaVencida);
 
   /// Se puede abrir: miembro aprobado y finca activa o en prueba vigente.
-  bool get usable => estadoMiembro == 'aprobado' && fincaHabilitada;
+  /// En soporte se abre siempre (aunque esté pendiente o suspendida).
+  bool get usable =>
+      soporte || (estadoMiembro == 'aprobado' && fincaHabilitada);
 
-  bool get esAdmin => rol == 'dueno' || rol == 'admin';
+  bool get esAdmin => soporte || rol == 'dueno' || rol == 'admin';
 
   String get rolTexto => switch (rol) {
+        'soporte' => 'Soporte',
         'dueno' => 'Dueño',
         'admin' => 'Administrador',
         _ => 'Trabajador',
@@ -49,6 +74,7 @@ class MiFinca {
 
   /// Por qué no se puede abrir (null si se puede).
   String? get motivoBloqueo {
+    if (soporte) return null;
     if (estadoMiembro == 'pendiente') {
       return 'Esperando que el dueño de la finca te apruebe';
     }
@@ -74,6 +100,7 @@ class MiFinca {
       pruebaHasta: hasta == null ? null : DateTime.tryParse(hasta),
       rol: m['rol'] as String,
       estadoMiembro: m['estado'] as String,
+      soporte: m['soporte'] == true,
     );
   }
 
@@ -82,6 +109,7 @@ class MiFinca {
         'id': miembroId,
         'rol': rol,
         'estado': estadoMiembro,
+        if (soporte) 'soporte': true,
         'fincas': {
           'id': fincaId,
           'nombre': nombre,

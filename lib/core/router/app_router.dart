@@ -6,6 +6,7 @@ import '../database/local_db.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/registro_screen.dart';
 import '../../features/fincas/fincas_screen.dart';
+import '../../features/vendedor/panel_vendedor_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/vacas/vacas_screen.dart';
 import '../../features/vacas/vaca_form_screen.dart';
@@ -56,8 +57,11 @@ class AppRouter {
       final sinSesion = ruta == '/login' || ruta == '/registro';
       if (user == null) return sinSesion ? null : '/login';
       if (sinSesion) return '/fincas';
-      // Sin finca abierta solo se puede estar en "Mis fincas".
-      if (!LocalDb.instance.abierta && ruta != '/fincas') return '/fincas';
+      // Sin finca abierta solo se puede estar en "Mis fincas" (o en el
+      // panel del vendedor, que revisa por su cuenta si es súper admin).
+      if (!LocalDb.instance.abierta && ruta != '/fincas' && ruta != '/vendedor') {
+        return '/fincas';
+      }
       return null;
     },
     routes: [
@@ -68,6 +72,8 @@ class AppRouter {
         builder: (_, state) =>
             FincasScreen(elegir: state.uri.queryParameters['elegir'] == '1'),
       ),
+      GoRoute(
+          path: '/vendedor', builder: (_, __) => const PanelVendedorScreen()),
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
 
       // Vacas

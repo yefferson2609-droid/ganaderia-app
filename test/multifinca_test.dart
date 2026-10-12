@@ -77,6 +77,18 @@ void main() {
     expect(finca().esAdmin, isFalse);
   });
 
+  test('modo soporte abre cualquier finca, incluso suspendida', () {
+    final s = MiFinca.soporte(
+        fincaId: 'f9', nombre: 'Cliente', codigo: 'ABCDEF', estadoFinca: 'suspendida');
+    expect(s.usable, isTrue);
+    expect(s.esAdmin, isTrue);
+    expect(s.motivoBloqueo, isNull);
+    final copia = MiFinca.fromServidor(s.toJson());
+    expect(copia.soporte, isTrue);
+    expect(copia.usable, isTrue);
+    expect(finca().soporte, isFalse);
+  });
+
   test('la finca guardada en el teléfono se lee igual', () {
     final original = finca(estadoFinca: 'prueba', pruebaHasta: '2030-01-31');
     final copia = MiFinca.fromServidor(original.toJson());

@@ -83,8 +83,18 @@ pertenece.
 - Los permisos por módulo se aplican en la app, no en el servidor (igual que
   antes): un trabajador recibe por sync los datos de la finca aunque no vea
   el módulo. Evaluar reforzarlo en el servidor más adelante.
-- Panel del vendedor para activar fincas (hoy por SQL, ver
-  `supabase_multifinca/README.md`).
+
+## Súper administrador / panel del vendedor (2026-10-12)
+- Decisión: el vendedor ve y maneja TODO (acceso completo a cualquier finca,
+  aunque esté pendiente o suspendida). Cuenta: `yefferson2609@gmail.com`.
+- Servidor: tabla `super_admins` (sin acceso desde la app),
+  `es_super_admin()`, `panel_fincas()`, `cambiar_estado_finca()`;
+  `puede_usar_finca`/`es_admin_finca` dan paso al súper admin.
+- App: botón "Panel del vendedor" en Mis fincas y en el menú (solo súper
+  admin): lista de fincas con dueño, correo, usuarios, animales, último uso,
+  cuántas fincas tiene cada dueño, filtros por estado y búsqueda; activar,
+  prueba por días, suspender, copiar código/correo y **abrir finca en modo
+  soporte** (franja morada "MODO SOPORTE"; permisos completos).
 
 ## Fase 1 — Multi-finca segura (siguiente paso)
 1. Tablas `fincas` (nombre, logo, dueño, estado/suscripción) y

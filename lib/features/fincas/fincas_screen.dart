@@ -33,7 +33,8 @@ class _FincasScreenState extends State<FincasScreen> {
     if (!mounted || widget.elegir || _autoAbierta) return;
     final fp = context.read<FincaProvider>();
     final usables = fp.fincas.where((f) => f.usable).toList();
-    if (usables.length == 1 && fp.fincas.length == 1) {
+    // El vendedor siempre ve la lista (para llegar a su panel).
+    if (usables.length == 1 && fp.fincas.length == 1 && !fp.esSuperAdmin) {
       _autoAbierta = true;
       _abrir(usables.first);
     }
@@ -219,6 +220,16 @@ class _FincasScreenState extends State<FincasScreen> {
               ),
             for (final f in fp.fincas) _FincaCard(finca: f, onTap: () => _abrir(f)),
             const SizedBox(height: 24),
+            if (fp.esSuperAdmin) ...[
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accentPurple),
+                onPressed: () => context.go('/vendedor'),
+                icon: const Icon(Icons.admin_panel_settings),
+                label: const Text('Panel del vendedor (todas las fincas)'),
+              ),
+              const SizedBox(height: 12),
+            ],
             ElevatedButton.icon(
               onPressed: () => _formulario(crear: true),
               icon: const Icon(Icons.add_home_work_outlined),

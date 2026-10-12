@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../database/local_db.dart';
 import '../models/permiso_usuario.dart';
 import '../repositories/permiso_usuario_repository.dart';
 
 class PermisosProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
-  final _repo = PermisoUsuarioRepository();
   Map<String, PermisoUsuario> _permisos = {};
 
   PermisosProvider() {
@@ -13,16 +13,18 @@ class PermisosProvider extends ChangeNotifier {
     _supabase.auth.onAuthStateChange.listen((data) {
       cargar();
     });
+    // Los permisos son de cada finca.
+    LocalDb.instance.fincaAbierta.addListener(cargar);
   }
 
   Future<void> cargar() async {
     final uid = _supabase.auth.currentUser?.id;
-    if (uid == null) {
+    if (uid == null || !LocalDb.instance.abierta) {
       _permisos = {};
       notifyListeners();
       return;
     }
-    final lista = await _repo.getByUsuario(uid);
+    final lista = await PermisoUsuarioRepository().getByUsuario(uid);
     _permisos = {for (final p in lista) p.modulo: p};
     notifyListeners();
   }

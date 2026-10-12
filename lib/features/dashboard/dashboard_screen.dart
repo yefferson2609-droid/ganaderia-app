@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/finca_provider.dart';
 import '../../core/providers/permisos_provider.dart';
 import '../../core/providers/sync_provider.dart';
 import '../../core/repositories/actividad_repository.dart';
@@ -240,6 +241,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final sync = context.watch<SyncProvider>();
     final permisos = context.watch<PermisosProvider>();
+    final finca = context.watch<FincaProvider>().actual;
 
     // Al terminar una sincronización, recargar los números.
     if (!sync.isSyncing &&
@@ -270,10 +272,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
-        title: const Row(children: [
-          HierroLogo(size: 34),
-          SizedBox(width: 10),
-          Text('Ganadería'),
+        title: Row(children: [
+          const HierroLogo(size: 34),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(finca?.nombre ?? 'Ganadería',
+                overflow: TextOverflow.ellipsis),
+          ),
         ]),
         actions: [
           if (sync.isSyncing)
@@ -317,6 +322,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (v == 'logout') {
                 await context.read<AuthProvider>().signOut();
                 if (context.mounted) context.go('/login');
+              } else if (v == 'fincas') {
+                // Primero a la lista (sin que abra sola la finca) y luego
+                // se cierra la finca actual.
+                final fp = context.read<FincaProvider>();
+                context.go('/fincas?elegir=1');
+                await fp.salirDeFinca();
               } else {
                 _abrir(v);
               }
@@ -325,6 +336,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               for (final (ruta, label, modulo) in menu)
                 if (modulo == null || permisos.puedeVer(modulo))
                   PopupMenuItem(value: ruta, child: Text(label)),
+              const PopupMenuItem(
+                  value: 'fincas', child: Text('Cambiar de finca')),
               const PopupMenuItem(value: 'logout', child: Text('Cerrar sesión')),
             ],
           ),

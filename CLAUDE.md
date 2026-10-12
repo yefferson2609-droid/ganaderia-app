@@ -5,6 +5,16 @@ Supabase. Dueño: yefferson2609-droid (GitHub). Repo:
 `yefferson2609-droid/ganaderia-app`. Trabajo actual en la rama
 `reconstruccion-desde-apk` (no tocar `main` sin pedirlo).
 
+> **Esta carpeta (`C:\proyecto ganaderoapp-multifinca`, rama `multi-finca`)
+> es la versión comercial multi-finca.** Usa el Supabase NUEVO
+> `oaukzxwcohocqafttfki` (guiones en `supabase_multifinca/`). La app de la
+> finca sigue en `C:\proyecto ganaderoapp` y su Supabase
+> `punqawvuwxlrdipapnja`: **no tocarlos desde aquí**. Compilar desde esta
+> carpeta; con `GANADERIA_PRUEBA=1` el paquete es
+> `com.agroyeff.ganaderia.multifinca`, nombre "Ganadería (multi)" (se instala
+> aparte, sin reemplazar "Ganadería (nueva)"). APK:
+> `ganaderia-MULTI-prueba-vX.Y.Z.apk`. Estado y diseño: `docs/PLAN_MULTIFINCA.md`.
+
 ## Cómo trabajar con el usuario
 - Hablar **en español**, claro y sin tecnicismos; el usuario no es programador.
   Instrucciones paso a paso, de a una cosa.

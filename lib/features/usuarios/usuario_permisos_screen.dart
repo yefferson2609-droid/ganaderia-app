@@ -34,12 +34,6 @@ class _UsuarioPermisosScreenState extends State<UsuarioPermisosScreen> {
     setState(() => _loading = false);
   }
 
-  Future<void> _toggleActivo(bool value) async {
-    if (_perfil == null) return;
-    await _perfilRepo.update(_perfil!.copyWith(activo: value));
-    setState(() => _perfil = _perfil!.copyWith(activo: value));
-  }
-
   Future<void> _togglePermiso(String modulo, String campo, bool value) async {
     final actual = _permisos[modulo];
     if (actual == null) return;
@@ -70,14 +64,7 @@ class _UsuarioPermisosScreenState extends State<UsuarioPermisosScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: SwitchListTile(
-              title: const Text('Usuario activo'),
-              subtitle: Text(_perfil!.correo),
-              value: _perfil!.activo,
-              onChanged: _toggleActivo,
-            ),
-          ),
+          Text(_perfil!.correo, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(height: 16),
           Text('Permisos por módulo',
               style: Theme.of(context)

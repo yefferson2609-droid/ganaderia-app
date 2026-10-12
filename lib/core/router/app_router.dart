@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../database/local_db.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/registro_screen.dart';
+import '../../features/fincas/fincas_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/vacas/vacas_screen.dart';
 import '../../features/vacas/vaca_form_screen.dart';
@@ -36,7 +39,6 @@ import '../../features/finanzas/movimiento_form_screen.dart';
 import '../../features/finanzas/conceptos_financieros_screen.dart';
 import '../../features/finanzas/concepto_financiero_form_screen.dart';
 import '../../features/usuarios/usuarios_screen.dart';
-import '../../features/usuarios/usuario_form_screen.dart';
 import '../../features/usuarios/usuario_permisos_screen.dart';
 
 class AppRouter {
@@ -45,15 +47,26 @@ class AppRouter {
   static final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/dashboard',
+    // Si se cierra la finca (p. ej. la suspendieron), vuelve a "Mis fincas".
+    refreshListenable: LocalDb.instance.fincaAbierta,
     redirect: (context, state) {
       final user = Supabase.instance.client.auth.currentUser;
-      final isLoginRoute = state.matchedLocation == '/login';
-      if (user == null && !isLoginRoute) return '/login';
-      if (user != null && isLoginRoute) return '/dashboard';
+      final ruta = state.matchedLocation;
+      final sinSesion = ruta == '/login' || ruta == '/registro';
+      if (user == null) return sinSesion ? null : '/login';
+      if (sinSesion) return '/fincas';
+      // Sin finca abierta solo se puede estar en "Mis fincas".
+      if (!LocalDb.instance.abierta && ruta != '/fincas') return '/fincas';
       return null;
     },
     routes: [
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/registro', builder: (_, __) => const RegistroScreen()),
+      GoRoute(
+        path: '/fincas',
+        builder: (_, state) =>
+            FincasScreen(elegir: state.uri.queryParameters['elegir'] == '1'),
+      ),
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
 
       // Vacas
@@ -244,7 +257,6 @@ class AppRouter {
         path: '/usuarios',
         builder: (_, __) => const UsuariosScreen(),
         routes: [
-          GoRoute(path: 'nuevo', builder: (_, __) => const UsuarioFormScreen()),
           GoRoute(
             path: ':id/permisos',
             builder: (_, state) =>

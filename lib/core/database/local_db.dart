@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -7,14 +8,44 @@ class LocalDb {
 
   Database? _db;
 
+  /// Finca cuyos datos están abiertos (cada finca tiene su propio archivo,
+  /// así los datos de una finca nunca se mezclan con los de otra).
+  /// Cambia al abrir o cerrar una finca; el router y los proveedores lo
+  /// escuchan.
+  final fincaAbierta = ValueNotifier<String?>(null);
+
+  String? get fincaId => fincaAbierta.value;
+
   // Columnas de cada tabla local, para filtrar lo que llega de Supabase.
   final Map<String, Set<String>> _columnas = {};
 
-  /// [path] solo se usa en pruebas; la app usa la ruta por defecto.
+  /// [path] solo se usa en pruebas; la app usa [abrirFinca].
   Future<void> init({String? path}) async {
     path ??= join(await getDatabasesPath(), 'ganaderia_v2.db');
-    _columnas.clear();
+    await cerrar();
+    await _abrir(path);
+  }
 
+  /// Abre (o crea) la base local de la finca [fincaId].
+  Future<void> abrirFinca(String fincaId) async {
+    if (_db != null && fincaId == this.fincaId) return;
+    await cerrar();
+    await _abrir(join(await getDatabasesPath(), 'finca_$fincaId.db'));
+    fincaAbierta.value = fincaId;
+  }
+
+  /// Cierra la finca abierta (al cerrar sesión o si ya no tiene acceso).
+  /// Los datos quedan guardados en el teléfono.
+  Future<void> cerrar() async {
+    final anterior = _db;
+    _db = null;
+    _columnas.clear();
+    fincaAbierta.value = null;
+    await anterior?.close();
+  }
+
+  Future<void> _abrir(String path) async {
+    _columnas.clear();
     _db = await openDatabase(
       path,
       version: 9,
@@ -22,6 +53,8 @@ class LocalDb {
       onUpgrade: _onUpgrade,
     );
   }
+
+  bool get abierta => _db != null;
 
   Database get db {
     if (_db == null) throw StateError('LocalDb no inicializada');

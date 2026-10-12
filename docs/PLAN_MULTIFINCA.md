@@ -57,12 +57,33 @@ pertenece.
 - Fotos: ruta `<finca_id>/<tabla>/<archivo>.jpg` en buckets `animales` y
   `solicitudes`.
 
-## Pendiente en la app (paso 2)
-- Apuntar a la URL/clave nueva; registro con correo; pantallas crear finca /
-  unirse con código / "en revisión"; selector de finca; aprobar trabajadores.
-- Base local separada por finca (archivo SQLite por finca) y sync filtrando
-  `finca_id`, llenando `finca_id` al subir; ruta de fotos con finca.
-- Usuarios/permisos: leer `miembros_finca` en vez de `perfiles_usuario`.
+## App (paso 2, hecho en código 2026-10-12, sin compilar)
+- `main.dart` apunta al proyecto nuevo (publishableKey).
+- Base local **un archivo por finca** (`finca_<id>.db`, `LocalDb.abrirFinca`,
+  `LocalDb.fincaAbierta`); las tablas locales no llevan `finca_id`: la sync
+  lo agrega al subir y filtra por él al bajar. `syncAll` fija finca y base
+  al empezar (cambiar de finca a mitad no cruza datos).
+- `FincaProvider`: lista de fincas (guardada en el teléfono para entrar sin
+  internet), abrir/cambiar, `crear_finca`, `unirse_con_codigo`. Si la finca
+  abierta deja de estar disponible, se cierra y el router vuelve a /fincas.
+- Pantallas: `/registro` (crear cuenta), `/fincas` (Mis fincas: registrar,
+  unirse con código, estados "en revisión"/"esperando aprobación"),
+  Usuarios (código para copiar, aprobar como trabajador/admin, rechazar,
+  quitar/devolver acceso, cambiar rol). Menú: "Cambiar de finca".
+- `perfiles_usuario` local se llena desde `miembros_finca` (no se sube).
+- Se quitó "crear usuario" (función `crear-usuario`): ahora cada quien crea
+  su cuenta y entra con el código.
+- Fotos: `<finca_id>/<tabla>/<archivo>`.
+- Pruebas: `test/multifinca_test.dart` (bases separadas por finca, estados).
+
+## Pendiente / ideas
+- Decidir si Supabase pide **confirmar el correo** al registrarse (hoy sí:
+  el enlace abre una página que puede fallar, pero la cuenta queda confirmada).
+- Los permisos por módulo se aplican en la app, no en el servidor (igual que
+  antes): un trabajador recibe por sync los datos de la finca aunque no vea
+  el módulo. Evaluar reforzarlo en el servidor más adelante.
+- Panel del vendedor para activar fincas (hoy por SQL, ver
+  `supabase_multifinca/README.md`).
 
 ## Fase 1 — Multi-finca segura (siguiente paso)
 1. Tablas `fincas` (nombre, logo, dueño, estado/suscripción) y

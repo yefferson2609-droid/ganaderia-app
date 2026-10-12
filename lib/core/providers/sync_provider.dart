@@ -72,8 +72,12 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   static const _kUltimaSync = 'ultima_sincronizacion';
 
+  /// La hora de la última sincronización se guarda por finca.
+  static String _kUltimaSyncDe(String fincaId) => '$_kUltimaSync:$fincaId';
+
   SyncProvider() {
     _cargarUltimaSync();
+    LocalDb.instance.fincaAbierta.addListener(_alCambiarFinca);
     _initConnectivity();
     Connectivity().onConnectivityChanged.listen(_onConnectivityChanged);
     _supabase.auth.onAuthStateChange.listen((data) {
@@ -83,8 +87,24 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     _timer = Timer.periodic(_revision, (_) => _sincronizarSiHaceFalta());
   }
 
+  /// Al abrir otra finca: su propia hora de sincronización y sus pendientes,
+  /// y se sincroniza enseguida.
+  void _alCambiarFinca() {
+    _lastSync = null;
+    _lastError = null;
+    _ultimoIntento = null;
+    _pendientesTrasSync = 0;
+    _columnasFaltantes.clear();
+    _pendientes = 0;
+    notifyListeners();
+    if (!LocalDb.instance.abierta) return;
+    _cargarUltimaSync();
+    if (_isOnline) syncAll();
+  }
+
   @override
   void dispose() {
+    LocalDb.instance.fincaAbierta.removeListener(_alCambiarFinca);
     _timer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -103,7 +123,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// tuvo errores, espera más para no insistir cada minuto.
   Future<void> _sincronizarSiHaceFalta({bool alVolver = false}) async {
     if (_isSyncing || !_isOnline) return;
-    if (_supabase.auth.currentUser == null) return;
+    if (_supabase.auth.currentUser == null || !LocalDb.instance.abierta) return;
     final ahora = DateTime.now();
     final desdeIntento = _ultimoIntento == null
         ? const Duration(days: 1)
@@ -121,16 +141,21 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _cargarUltimaSync() async {
+    final fincaId = LocalDb.instance.fincaId;
+    if (fincaId == null) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final s = prefs.getString(_kUltimaSync);
-      if (s != null && _lastSync == null) _lastSync = DateTime.tryParse(s);
+      final s = prefs.getString(_kUltimaSyncDe(fincaId));
+      if (s != null && _lastSync == null && LocalDb.instance.fincaId == fincaId) {
+        _lastSync = DateTime.tryParse(s);
+      }
     } catch (_) {}
     await contarPendientes();
   }
 
   /// Recalcula cuántas filas locales esperan subirse.
   Future<int> contarPendientes() async {
+    if (!LocalDb.instance.abierta) return 0;
     final db = LocalDb.instance.db;
     var total = 0;
     for (final tabla in kTablasSync) {
@@ -167,6 +192,12 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> syncAll() async {
     if (_isSyncing) return;
     if (_supabase.auth.currentUser == null) return;
+    // Se fija la finca y su base al empezar: si se cambia de finca a mitad
+    // de camino, los datos nunca se cruzan (la base anterior ya está cerrada
+    // y lo que falte da error, sin escribir en la otra finca).
+    final fincaId = LocalDb.instance.fincaId;
+    if (fincaId == null || !LocalDb.instance.abierta) return;
+    final db = LocalDb.instance.db;
     _isSyncing = true;
     _ultimoIntento = DateTime.now();
     _lastError = null;
@@ -177,14 +208,14 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     // así que se puede bajar primero y luego subir.
     for (final tabla in kTablasSync) {
       try {
-        await _pull(tabla, errores);
+        await _pull(db, fincaId, tabla, errores);
       } catch (e) {
         errores.add('No se recibió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
       }
     }
     for (final tabla in kTablasSync) {
       try {
-        await _push(tabla, errores);
+        await _push(db, fincaId, tabla, errores);
       } catch (e) {
         errores.add('No se envió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
       }
@@ -195,7 +226,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     _lastSync = DateTime.now();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kUltimaSync, _lastSync!.toIso8601String());
+      await prefs.setString(
+          _kUltimaSyncDe(fincaId), _lastSync!.toIso8601String());
     } catch (_) {}
     if (errores.isNotEmpty) {
       const max = 25;
@@ -208,9 +240,17 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     _pendientesTrasSync = await contarPendientes();
     _isSyncing = false;
     notifyListeners();
+
+    // Se abrió otra finca mientras se sincronizaba: sincronizar esa también.
+    if (LocalDb.instance.abierta && LocalDb.instance.fincaId != fincaId) {
+      _alCambiarFinca();
+    }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchAll(String tabla) async {
+  Future<List<Map<String, dynamic>>> _fetchAll(
+      String tabla, String fincaId) async {
+    // Los usuarios de la finca salen de sus miembros.
+    if (tabla == 'perfiles_usuario') return _fetchPerfiles(fincaId);
     const pagina = 1000;
     final todos = <Map<String, dynamic>>[];
     var desde = 0;
@@ -218,6 +258,7 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       final rows = await _supabase
           .from(tabla)
           .select()
+          .eq('finca_id', fincaId)
           .order('id')
           .range(desde, desde + pagina - 1);
       todos.addAll(rows);
@@ -227,10 +268,30 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     return todos;
   }
 
-  Future<void> _pull(String tabla, List<String> errores) async {
-    final db = LocalDb.instance.db;
+  /// Miembros de la finca como "perfiles" locales (nombre, correo, activo),
+  /// que es lo que usan actividades, solicitudes y reportes.
+  Future<List<Map<String, dynamic>>> _fetchPerfiles(String fincaId) async {
+    final rows = await _supabase
+        .from('miembros_finca')
+        .select('usuario_id, nombre, correo, estado, created_at, updated_at')
+        .eq('finca_id', fincaId);
+    return [
+      for (final m in rows)
+        {
+          'id': m['usuario_id'],
+          'nombre': m['nombre'],
+          'correo': m['correo'] ?? '',
+          'activo': m['estado'] == 'aprobado',
+          'created_at': m['created_at'],
+          'updated_at': m['updated_at'],
+        }
+    ];
+  }
+
+  Future<void> _pull(Database db, String fincaId, String tabla,
+      List<String> errores) async {
     final columnas = await LocalDb.instance.columnas(tabla);
-    final remotos = await _fetchAll(tabla);
+    final remotos = await _fetchAll(tabla, fincaId);
 
     // Filas con cambios locales pendientes: no se sobrescriben.
     final pendientes = (await db.query(tabla,
@@ -288,12 +349,18 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Sube los cambios de [tabla]. Un registro con error no frena a los
   /// demás: el error se anota en [errores] y el registro queda pendiente.
-  Future<void> _push(String tabla, List<String> errores) async {
-    final db = LocalDb.instance.db;
+  Future<void> _push(Database db, String fincaId, String tabla,
+      List<String> errores) async {
+    // Los miembros se manejan en el servidor (aprobar, desactivar), no se
+    // suben desde aquí.
+    if (tabla == 'perfiles_usuario') {
+      await db.update(tabla, {'synced': 1}, where: 'synced = 0');
+      return;
+    }
 
     final unsynced = await db.query(tabla, where: 'synced = 0 AND deleted = 0');
     for (final row in unsynced) {
-      final remoto = _toRemoteRow(tabla, row);
+      final remoto = _toRemoteRow(tabla, row)..['finca_id'] = fincaId;
       var fotoPendiente = false;
       final bucket = _bucketFotos[tabla];
       final fotoPorSubir = bucket != null &&
@@ -304,8 +371,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
         await db.update(tabla, {'foto_local': null},
             where: 'id = ?', whereArgs: [row['id']]);
       } else if (fotoPorSubir) {
-        final url = await _subirFoto(bucket, tabla, row['id'] as String,
-            row['foto_local'] as String);
+        final url = await _subirFoto(bucket, fincaId, tabla,
+            row['id'] as String, row['foto_local'] as String);
         if (url != null) {
           remoto['foto_url'] = url;
           await db.update(tabla, {'foto_url': url},
@@ -364,7 +431,11 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     final deleted = await db.query(tabla, where: 'deleted = 1 AND synced = 0');
     for (final row in deleted) {
       try {
-        await _supabase.from(tabla).delete().eq('id', row['id'] as String);
+        await _supabase
+            .from(tabla)
+            .delete()
+            .eq('id', row['id'] as String)
+            .eq('finca_id', fincaId);
         await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
       } catch (e) {
         errores.add('No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
@@ -425,18 +496,20 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     'puede_crear',
     'puede_editar',
     'puede_eliminar',
+    'capado',
   };
 
-  /// Sube la foto de una solicitud al bucket "solicitudes" y devuelve su URL
+  /// Sube una foto a su bucket, en la carpeta de la finca, y devuelve su URL
   /// pública, o null si no se pudo (sin bucket, archivo borrado, etc.).
-  Future<String?> _subirFoto(
-      String bucket, String tabla, String id, String rutaLocal) async {
+  Future<String?> _subirFoto(String bucket, String fincaId, String tabla,
+      String id, String rutaLocal) async {
     try {
       final archivo = File(rutaLocal);
       if (!await archivo.exists()) return null;
       // Nombre único: si se cambia la foto, la URL cambia y no se ve la vieja.
       final nombre = '$id-${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final ruta = bucket == tabla ? nombre : '$tabla/$nombre';
+      // La seguridad de Storage exige que la primera carpeta sea la finca.
+      final ruta = '$fincaId/$tabla/$nombre';
       await _supabase.storage.from(bucket).upload(ruta, archivo,
           fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'));
       return _supabase.storage.from(bucket).getPublicUrl(ruta);

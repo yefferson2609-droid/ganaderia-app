@@ -32,11 +32,12 @@ android {
         versionName = flutter.versionName
         manifestPlaceholders["appLabel"] = "ganaderia"
 
-        // Versión de prueba instalable junto a la normal:
+        // Versión de prueba MULTI-FINCA, instalable junto a la app de la
+        // finca ("Ganadería (nueva)" = .prueba) sin reemplazarla:
         // GANADERIA_PRUEBA=1 flutter build apk --release
         if (System.getenv("GANADERIA_PRUEBA") == "1") {
-            applicationIdSuffix = ".prueba"
-            manifestPlaceholders["appLabel"] = "Ganadería (nueva)"
+            applicationIdSuffix = ".multifinca"
+            manifestPlaceholders["appLabel"] = "Ganadería (multi)"
         }
     }
 

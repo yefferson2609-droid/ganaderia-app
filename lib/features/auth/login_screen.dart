@@ -39,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(content: Text(error), backgroundColor: AppColors.danger),
       );
     } else {
-      context.go('/dashboard');
+      context.go('/fincas');
     }
   }
 
@@ -118,6 +118,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             )
                           : const Text('Ingresar'),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: _loading ? null : () => context.push('/registro'),
+                    child: const Text('¿No tienes cuenta? Crear cuenta'),
                   ),
                 ],
               ),

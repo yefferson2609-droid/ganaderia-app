@@ -83,8 +83,10 @@ pertenece.
 - 2026-10-12: primer APK multi-finca `ganaderia-MULTI-prueba-v1.0.21.apk`
   (paquete `com.agroyeff.ganaderia.multifinca`, "Ganadería (multi)", firmado
   con la misma llave que la app de la finca; la llave se copió a esta carpeta,
-  fuera de git). Pendiente: que el usuario la pruebe y nombrar súper admin a
-  `yefferson2609@gmail.com` cuando cree su cuenta.
+  fuera de git).
+- 2026-10-14: el usuario creó `yefferson2609@gmail.com` ("Yefferson Admin");
+  verificada (única cuenta) y nombrada súper administrador (administrador
+  general) en `super_admins`.
 
 ## Pendiente / ideas
 - Los permisos por módulo se aplican en la app, no en el servidor (igual que

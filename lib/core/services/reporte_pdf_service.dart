@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -54,11 +53,13 @@ class ReportePdfService {
     required DateTime desde,
     required DateTime hasta,
     required SeccionesReporte secciones,
+    String? finca,
   }) async {
-    final logo = pw.MemoryImage(
-        (await rootBundle.load('assets/images/hierro_logo.jpeg'))
-            .buffer
-            .asUint8List());
+    // Multi-finca: sin logo fijo (marca neutra); arriba va el nombre de la
+    // finca del cliente.
+    final titulo = finca == null || finca.trim().isEmpty
+        ? 'Reporte general - Ganadería'
+        : 'Reporte general - ${finca.trim()}';
 
     final contenido = <pw.Widget>[];
     if (secciones.inventario) {
@@ -71,7 +72,7 @@ class ReportePdfService {
     if (secciones.salud) contenido.addAll(await _salud(desde, hasta));
     if (secciones.eventos) contenido.addAll(await _eventos(desde, hasta));
 
-    final doc = pw.Document(title: 'Reporte general - Ganadería');
+    final doc = pw.Document(title: _l(titulo));
     doc.addPage(pw.MultiPage(
       pageFormat: PdfPageFormat.letter,
       margin: const pw.EdgeInsets.all(32),
@@ -81,13 +82,11 @@ class ReportePdfService {
         decoration: const pw.BoxDecoration(
             border: pw.Border(bottom: pw.BorderSide(color: _verde, width: 2))),
         child: pw.Row(children: [
-          pw.Image(logo, width: 36, height: 36),
-          pw.SizedBox(width: 10),
           pw.Expanded(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('Reporte general - Ganadería',
+                pw.Text(_l(titulo),
                     style: pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,

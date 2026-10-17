@@ -114,16 +114,22 @@ class AnimalFaceEditable extends StatelessWidget {
 }
 
 /// Logo del hierro de la finca.
-class HierroLogo extends StatelessWidget {
+/// Marca neutra de la app (multi-finca, sin el hierro AgroYeff): hoja de
+/// pasto blanca sobre un cuadro redondeado.
+class MarcaLogo extends StatelessWidget {
   final double size;
-  const HierroLogo({super.key, this.size = 32});
+  const MarcaLogo({super.key, this.size = 32});
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.2),
-      child: Image.asset('assets/images/hierro_logo.jpeg',
-          width: size, height: size, fit: BoxFit.cover),
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(size * 0.28),
+      ),
+      child: Icon(Icons.grass_rounded, size: size * 0.66, color: Colors.white),
     );
   }
 }

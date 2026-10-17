@@ -88,6 +88,18 @@ pertenece.
   verificada (única cuenta) y nombrada súper administrador (administrador
   general) en `super_admins`.
 
+## Apariencia nueva (decisiones 2026-10-17)
+- Solo en la multi-finca (la app de la finca queda igual).
+- Estilo "Campo moderno": verde pasto/oscuro + acentos tierra, tarjetas
+  blancas con bordes suaves, íconos claros.
+- Por etapas, con APK tras cada una: 1) colores, letras, botones y
+  formularios de toda la app; 2) entrada, Mis fincas y panel principal;
+  3) listas y fichas de animales.
+- Marca neutra por ahora: sin el hierro AgroYeff; "Ganadería" genérico y el
+  nombre de cada finca arriba.
+- Ojo al traer mejoras de la app de la finca: los cambios de diseño pueden
+  chocar en las mismas pantallas; resolver conservando el diseño nuevo.
+
 ## Pendiente / ideas
 - Los permisos por módulo se aplican en la app, no en el servidor (igual que
   antes): un trabajador recibe por sync los datos de la finca aunque no vea

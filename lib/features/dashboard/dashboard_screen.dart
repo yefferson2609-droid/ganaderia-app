@@ -333,7 +333,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         titleSpacing: 8,
         title: Row(children: [
-          const HierroLogo(size: 34),
+          const MarcaLogo(size: 34),
           const SizedBox(width: 10),
           Expanded(
             child: Text(finca?.nombre ?? 'Ganadería',

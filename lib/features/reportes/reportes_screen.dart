@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/finca_provider.dart';
 import '../../core/services/reporte_pdf_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -83,10 +85,11 @@ class _ReportesScreenState extends State<ReportesScreen> {
           content: Text('Elige al menos una sección para el reporte')));
       return;
     }
+    final finca = context.read<FincaProvider>().actual?.nombre;
     setState(() => _generando = true);
     try {
-      final bytes = await ReportePdfService()
-          .generar(desde: _desde, hasta: _hasta, secciones: _secciones);
+      final bytes = await ReportePdfService().generar(
+          desde: _desde, hasta: _hasta, secciones: _secciones, finca: finca);
       final nombre = ReportePdfService.nombreArchivo();
       if (compartir) {
         await Printing.sharePdf(bytes: bytes, filename: nombre);

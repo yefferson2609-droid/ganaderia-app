@@ -6,6 +6,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 
 class TorosScreen extends StatefulWidget {
   const TorosScreen({super.key});
@@ -91,19 +92,25 @@ class _TorosScreenState extends State<TorosScreen> {
                   onRefresh: _load,
                   textoVacio: 'No hay toros registrados',
                   itemBuilder: (t) {
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: AnimalFace(
+                      return AnimalTile(
+                          cara: AnimalFace(
                               tipo: 'toro',
+                              size: 52,
                               fotoLocal: t.fotoLocal,
                               fotoUrl: t.fotoUrl,
                               estadoColor: _estadoColor(t.estado)),
-                          title: Text(t.nombre,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold)),
-                          subtitle: Text(
-                              '#${t.numero} · ${t.estado[0].toUpperCase()}${t.estado.substring(1)} · ${t.edad}'),
+                          titulo: t.nombre,
+                          subtitulo: '#${t.numero}',
+                          etiquetas: [
+                            Etiqueta(
+                                '${t.estado[0].toUpperCase()}${t.estado.substring(1)}',
+                                _estadoColor(t.estado)),
+                          ],
+                          detalle: [
+                            t.edad,
+                            if (t.raza != null) t.raza!,
+                            if (t.color != null) t.color!,
+                          ].join(' · '),
                           trailing: PopupMenuButton<String>(
                             onSelected: (v) {
                               if (v == 'editar') {
@@ -126,7 +133,6 @@ class _TorosScreenState extends State<TorosScreen> {
                           onTap: () => context
                               .push('/toros/${t.id}')
                               .then((_) => _load()),
-                        ),
                       );
                   },
                 ),

@@ -11,6 +11,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 import '../../core/widgets/creador_info.dart';
 import '../../core/widgets/descendencia_section.dart';
 import '../../core/widgets/pesajes_section.dart';
@@ -388,13 +389,15 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
     final estadoProd = r?.estado;
     final chips = <Widget>[
       if (v.estado != 'activa')
-        _Chip(v.estado[0].toUpperCase() + v.estado.substring(1),
-            _estadoColor(v.estado))
+        Etiqueta(v.estado[0].toUpperCase() + v.estado.substring(1),
+            _estadoColor(v.estado),
+            sobreOscuro: true)
       else if (estadoProd != null)
-        _Chip(
+        Etiqueta(
             kEstadoProduccionLabels[estadoProd]! +
                 (r!.diasEnLeche != null ? ' · ${r.diasEnLeche} días' : ''),
-            estadoProduccionColor(estadoProd)),
+            estadoProduccionColor(estadoProd),
+            sobreOscuro: true),
     ];
 
     // Preñez o días vacía.
@@ -427,51 +430,26 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
       );
     }
 
-    return Card(
-      margin: const EdgeInsets.only(top: 16, bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              AnimalFaceEditable(
-                  tipo: 'vaca',
-                  id: v.id,
-                  fotoLocal: v.fotoLocal,
-                  fotoUrl: v.fotoUrl,
-                  estadoColor: _estadoColor(v.estado),
-                  onCambio: _load),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Vaca #${v.numero}',
-                        style: Theme.of(context).textTheme.titleLarge),
-                    Text(
-                      [
-                        v.fechaNacimiento != null ? v.edad : 'Edad sin registrar',
-                        '${r?.partos.length ?? 0} parto${(r?.partos.length ?? 0) == 1 ? '' : 's'}',
-                      ].join(' · '),
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                    if (chips.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Wrap(spacing: 6, runSpacing: 4, children: chips),
-                    ],
-                  ],
-                ),
-              ),
-            ]),
-            if (prenez != null) ...[
-              const SizedBox(height: 12),
-              prenez,
-            ],
-          ],
-        ),
+    return Column(children: [
+      PortadaAnimal(
+        cara: AnimalFaceEditable(
+            tipo: 'vaca',
+            id: v.id,
+            fotoLocal: v.fotoLocal,
+            fotoUrl: v.fotoUrl,
+            estadoColor: _estadoColor(v.estado),
+            onCambio: _load),
+        titulo: 'Vaca #${v.numero}',
+        detalle: [
+          v.fechaNacimiento != null ? v.edad : 'Edad sin registrar',
+          '${r?.partos.length ?? 0} parto${(r?.partos.length ?? 0) == 1 ? '' : 's'}',
+          if (v.raza != null) v.raza!,
+        ].join(' · '),
+        etiquetas: chips,
       ),
-    );
+      if (prenez != null)
+        Padding(padding: const EdgeInsets.only(bottom: 12), child: prenez),
+    ]);
   }
 
   Color _estadoColor(String estado) {
@@ -554,23 +532,6 @@ class _Plegable extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  final String texto;
-  final Color color;
-  const _Chip(this.texto, this.color);
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(texto,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-      );
-}
-
 /// Recuadro de color con la preñez o los días vacía.
 class _Destacado extends StatelessWidget {
   final Color color;
@@ -585,7 +546,7 @@ class _Destacado extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(children: [
           Icon(icono, color: color),

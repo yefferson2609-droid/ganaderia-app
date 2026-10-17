@@ -6,6 +6,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 
 Color estadoTerneroColor(String estado) {
   switch (estado) {
@@ -85,44 +86,32 @@ class _TernerosScreenState extends State<TernerosScreen> {
         textoVacio: 'No hay animales en esta categoría',
         itemBuilder: (t) {
           final avisos = <Widget>[
-            if (t.debeDestetarse) _Etiqueta('Por destetar', AppColors.warning),
+            if (t.estado != 'activo')
+              Etiqueta(t.estado[0].toUpperCase() + t.estado.substring(1),
+                  estadoTerneroColor(t.estado)),
+            if (t.debeDestetarse) const Etiqueta('Por destetar', AppColors.warning),
             if (t.cambioSugerido != null)
-              _Etiqueta('Pasar a ${kCategoriaLabels[t.cambioSugerido]}',
+              Etiqueta('Pasar a ${kCategoriaLabels[t.cambioSugerido]}',
                   AppColors.info),
             if (t.categoria == null && t.estado == 'activo')
-              _Etiqueta('Sin clasificar', Colors.grey),
+              const Etiqueta('Sin clasificar', Colors.grey),
           ];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: AnimalFace(
-                  tipo: 'ternero',
-                  fotoLocal: t.fotoLocal,
-                  fotoUrl: t.fotoUrl,
-                  estadoColor: estadoTerneroColor(t.estado)),
-              title: Text(nombreJoven(t),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text([
-                    t.esMacho ? (t.capado ? 'Macho capado' : 'Macho') : 'Hembra',
-                    t.edad,
-                    if (t.raza != null) t.raza!,
-                    if (t.estado != 'activo')
-                      t.estado[0].toUpperCase() + t.estado.substring(1),
-                  ].join(' · ')),
-                  if (avisos.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Wrap(spacing: 4, runSpacing: 4, children: avisos),
-                    ),
-                ],
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () =>
-                  context.push('/terneros/${t.id}').then((_) => _load()),
-            ),
+          return AnimalTile(
+            cara: AnimalFace(
+                tipo: 'ternero',
+                size: 52,
+                fotoLocal: t.fotoLocal,
+                fotoUrl: t.fotoUrl,
+                estadoColor: estadoTerneroColor(t.estado)),
+            titulo: nombreJoven(t),
+            etiquetas: avisos,
+            detalle: [
+              t.esMacho ? (t.capado ? 'Macho capado' : 'Macho') : 'Hembra',
+              t.edad,
+              if (t.raza != null) t.raza!,
+            ].join(' · '),
+            onTap: () =>
+                context.push('/terneros/${t.id}').then((_) => _load()),
           );
         });
   }
@@ -203,22 +192,3 @@ class _TernerosScreenState extends State<TernerosScreen> {
   }
 }
 
-class _Etiqueta extends StatelessWidget {
-  final String texto;
-  final Color color;
-  const _Etiqueta(this.texto, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(texto,
-          style: TextStyle(
-              fontSize: 11, color: color, fontWeight: FontWeight.bold)),
-    );
-  }
-}

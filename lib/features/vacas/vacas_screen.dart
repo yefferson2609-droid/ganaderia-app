@@ -8,6 +8,7 @@ import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 import 'partos_faltantes.dart';
 
 const _filtroLabels = {
@@ -199,28 +200,45 @@ class _VacasScreenState extends State<VacasScreen> {
                     onRefresh: _load,
                     textoVacio: 'No hay vacas en este filtro',
                     itemBuilder: (vaca) {
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: AnimalFace(
-                                    tipo: 'vaca',
-                                    fotoLocal: vaca.fotoLocal,
-                                    fotoUrl: vaca.fotoUrl,
-                                    estadoColor: _estadoColor(vaca.estado)),
-                                title: Text('Vaca #${vaca.numero}',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold)),
-                                subtitle: Text(
-                                    '${vaca.estado == 'activa' && _produccion[vaca.id] != null ? kEstadoProduccionLabels[_produccion[vaca.id]]! : vaca.estado[0].toUpperCase() + vaca.estado.substring(1)}'
-                                    '${vaca.prenada ? ' · ${_prenez(vaca)}' : ''}'
-                                    '${vaca.fechaNacimiento != null ? ' · ${vaca.edad}' : ''}'
-                                    '${vaca.color != null ? ' · ${vaca.color}' : ''}'),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: () => context
-                                    .push('/vacas/${vaca.id}')
-                                    .then((_) => _load()),
-                              ),
-                            );
+                      final prod = _produccion[vaca.id];
+                      final parto = vaca.fechaPartoProbable;
+                      return AnimalTile(
+                        cara: AnimalFace(
+                            tipo: 'vaca',
+                            size: 52,
+                            fotoLocal: vaca.fotoLocal,
+                            fotoUrl: vaca.fotoUrl,
+                            estadoColor: _estadoColor(vaca.estado)),
+                        titulo: 'Vaca #${vaca.numero}',
+                        etiquetas: [
+                          if (vaca.estado != 'activa')
+                            Etiqueta(
+                                vaca.estado[0].toUpperCase() +
+                                    vaca.estado.substring(1),
+                                _estadoColor(vaca.estado))
+                          else if (prod != null)
+                            Etiqueta(
+                                kEstadoProduccionLabels[prod]!,
+                                prod == EstadoProduccion.enOrdeno
+                                    ? AppColors.info
+                                    : AppColors.warning),
+                          if (vaca.estado == 'activa' && vaca.prenada)
+                            Etiqueta(_prenez(vaca).split(' · ').first,
+                                AppColors.success),
+                        ],
+                        detalle: [
+                          if (vaca.estado == 'activa' &&
+                              vaca.prenada &&
+                              parto != null)
+                            'Parto ${DateFormat('dd/MM/yyyy').format(parto)}',
+                          if (vaca.fechaNacimiento != null) vaca.edad,
+                          if (vaca.raza != null) vaca.raza!,
+                          if (vaca.color != null) vaca.color!,
+                        ].join(' · '),
+                        onTap: () => context
+                            .push('/vacas/${vaca.id}')
+                            .then((_) => _load()),
+                      );
                     },
                   ),
           ),

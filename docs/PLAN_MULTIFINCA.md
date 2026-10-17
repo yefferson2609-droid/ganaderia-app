@@ -103,6 +103,9 @@ pertenece.
   entrada y Mis fincas con `EncabezadoMarca`; estados de finca en color;
   ícono del teléfono = hoja blanca sobre verde (generado con
   `test/vista_previa_test.dart`, `VISTA_PREVIA=1`).
+- Etapa 3 hecha (2026-10-17): `lib/core/widgets/ficha_animal.dart`
+  (`Etiqueta`, `AnimalTile`, `PortadaAnimal`) en listas y fichas de vacas,
+  toros, levante y caballos.
 - Ojo al traer mejoras de la app de la finca: los cambios de diseño pueden
   chocar en las mismas pantallas; resolver conservando el diseño nuevo.
 

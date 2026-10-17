@@ -6,6 +6,7 @@ import '../../core/repositories/caballo_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 import '../../core/widgets/creador_info.dart';
 import '../../core/widgets/dato_fila.dart';
 import '../../core/widgets/pesajes_section.dart';
@@ -129,37 +130,31 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            PortadaAnimal(
+              cara: AnimalFaceEditable(
+                  tipo: 'caballo',
+                  id: c.id,
+                  fotoLocal: c.fotoLocal,
+                  fotoUrl: c.fotoUrl,
+                  estadoColor: estadoCaballoColor(c.estado),
+                  onCambio: _load),
+              titulo: c.nombre,
+              detalle: [
+                if (c.fechaNacimiento != null) c.edad,
+                if (c.raza != null) c.raza!,
+              ].join(' · '),
+              etiquetas: [
+                Etiqueta(c.estado[0].toUpperCase() + c.estado.substring(1),
+                    estadoCaballoColor(c.estado),
+                    sobreOscuro: true),
+              ],
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      AnimalFaceEditable(
-                          tipo: 'caballo',
-                          id: c.id,
-                          fotoLocal: c.fotoLocal,
-                          fotoUrl: c.fotoUrl,
-                          estadoColor: estadoCaballoColor(c.estado),
-                          onCambio: _load),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(c.nombre,
-                                style: Theme.of(context).textTheme.titleLarge),
-                            Text(
-                                c.estado[0].toUpperCase() + c.estado.substring(1),
-                                style: TextStyle(
-                                    color: estadoCaballoColor(c.estado),
-                                    fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                    ]),
-                    const Divider(height: 24),
                     DatoFila('Edad', c.edad),
                     DatoFila(
                         'Nacimiento',

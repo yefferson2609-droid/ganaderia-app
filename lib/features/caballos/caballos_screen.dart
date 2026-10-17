@@ -4,6 +4,7 @@ import '../../core/models/caballo.dart';
 import '../../core/repositories/caballo_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 
 Color estadoCaballoColor(String estado) {
   switch (estado) {
@@ -85,26 +86,27 @@ class _CaballosScreenState extends State<CaballosScreen> {
                     itemCount: _caballos.length,
                     itemBuilder: (_, i) {
                       final c = _caballos[i];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
+                      return AnimalTile(
                           onTap: () => context
                               .push('/caballos/${c.id}')
                               .then((_) => _load()),
-                          leading: AnimalFace(
+                          cara: AnimalFace(
                               tipo: 'caballo',
+                              size: 52,
                               fotoLocal: c.fotoLocal,
                               fotoUrl: c.fotoUrl,
                               estadoColor: estadoCaballoColor(c.estado)),
-                          title: Text(c.nombre,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold)),
-                          subtitle: Text([
-                            c.estado[0].toUpperCase() + c.estado.substring(1),
+                          titulo: c.nombre,
+                          etiquetas: [
+                            Etiqueta(
+                                c.estado[0].toUpperCase() + c.estado.substring(1),
+                                estadoCaballoColor(c.estado)),
+                          ],
+                          detalle: [
                             if (c.fechaNacimiento != null) c.edad,
                             if (c.raza != null) c.raza!,
                             if (c.color != null) c.color!,
-                          ].join(' · ')),
+                          ].join(' · '),
                           trailing: PopupMenuButton<String>(
                             onSelected: (v) {
                               if (v == 'editar') {
@@ -124,7 +126,6 @@ class _CaballosScreenState extends State<CaballosScreen> {
                                       style: TextStyle(color: AppColors.danger))),
                             ],
                           ),
-                        ),
                       );
                     },
                   ),

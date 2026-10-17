@@ -11,6 +11,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 import '../../core/widgets/creador_info.dart';
 import '../../core/widgets/salud_section.dart';
 import '../../core/widgets/venta_dialog.dart';
@@ -536,36 +537,38 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            PortadaAnimal(
+              cara: AnimalFaceEditable(
+                  tipo: 'ternero',
+                  id: t.id,
+                  fotoLocal: t.fotoLocal,
+                  fotoUrl: t.fotoUrl,
+                  estadoColor: estadoTerneroColor(t.estado),
+                  onCambio: _load),
+              titulo: nombreJoven(t),
+              detalle: '${t.esMacho ? 'Macho' : 'Hembra'}'
+                  '${t.capado ? ' · Capado' : ''}'
+                  ' · ${t.edad}'
+                  '${t.fechaDestete != null ? ' · Destetado ${_fmt.format(t.fechaDestete!)}' : (t.destetado ? '' : ' · Sin destetar')}',
+              etiquetas: [
+                Etiqueta(t.categoriaLabel,
+                    t.categoria == null ? Colors.grey : AppColors.primary,
+                    sobreOscuro: true),
+                if (t.estado != 'activo')
+                  Etiqueta(t.estado[0].toUpperCase() + t.estado.substring(1),
+                      estadoTerneroColor(t.estado),
+                      sobreOscuro: true),
+                if (t.debeDestetarse)
+                  const Etiqueta('Por destetar', AppColors.warning,
+                      sobreOscuro: true),
+              ],
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      AnimalFaceEditable(
-                          tipo: 'ternero',
-                          id: t.id,
-                          fotoLocal: t.fotoLocal,
-                          fotoUrl: t.fotoUrl,
-                          estadoColor: estadoTerneroColor(t.estado),
-                          onCambio: _load),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(nombreJoven(t),
-                                style: Theme.of(context).textTheme.titleLarge),
-                            Text(
-                                '${t.esMacho ? 'Macho' : 'Hembra'}'
-                                '${t.capado ? ' · Capado' : ''}'
-                                '${t.fechaDestete != null ? ' · Destetado ${_fmt.format(t.fechaDestete!)}' : (t.destetado ? '' : ' · Sin destetar')}'),
-                          ],
-                        ),
-                      ),
-                    ]),
-                    const Divider(height: 24),
                     _InfoRow('Categoría', t.categoriaLabel,
                         color: t.categoria == null ? Colors.grey : null),
                     if (t.cambioSugerido != null)

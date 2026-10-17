@@ -54,26 +54,117 @@ Widget _panel() => Builder(
           ],
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          padding: const EdgeInsets.only(bottom: 24),
           children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+              decoration: const BoxDecoration(
+                color: AppColors.primaryDark,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Buenos días, Yefferson',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800)),
+                  const Text('viernes 17 de octubre',
+                      style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    for (final (v, e, i, r) in [
+                      ('72', 'animales', Icons.pets, false),
+                      ('312 L', 'leche hoy', Icons.water_drop, false),
+                      ('2', 'avisos', Icons.notifications_active, true),
+                    ]) ...[
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(i,
+                                  size: 18,
+                                  color: r
+                                      ? const Color(0xFFFFC56B)
+                                      : Colors.white70),
+                              const SizedBox(height: 6),
+                              Text(v,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800)),
+                              Text(e,
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (e != 'avisos') const SizedBox(width: 10),
+                    ],
+                  ]),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+            _seccion(c, 'Accesos rápidos'),
+            Row(children: [
+              for (final (t, i, col) in [
+                ('Leche', Icons.water_drop, AppColors.info),
+                ('Actividades', Icons.task_alt, AppColors.primary),
+                ('Solicitudes', Icons.mark_email_unread_outlined, AppColors.secondary),
+                ('Alertas', Icons.notifications_active, AppColors.warning),
+              ])
+                Expanded(
+                  child: Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Column(children: [
+                        CircleAvatar(
+                            radius: 22,
+                            backgroundColor: col.withValues(alpha: 0.13),
+                            child: Icon(i, color: col, size: 24)),
+                        const SizedBox(height: 8),
+                        Text(t,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12.5, fontWeight: FontWeight.w600)),
+                      ]),
+                    ),
+                  ),
+                ),
+            ]),
             _seccion(c, 'Avisos'),
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.child_friendly, color: AppColors.info),
-                title: Text('2 partos próximos',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                trailing: Icon(Icons.chevron_right),
+            for (final (t, i, col) in [
+              ('2 partos próximos', Icons.child_friendly, AppColors.info),
+              ('1 vaca para secar', Icons.water_drop_outlined, AppColors.warning),
+            ])
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: col.withValues(alpha: 0.13),
+                      child: Icon(i, color: col, size: 22)),
+                  title: Text(t,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  trailing: const Icon(Icons.chevron_right),
+                ),
               ),
-            ),
-            const Card(
-              child: ListTile(
-                leading:
-                    Icon(Icons.water_drop_outlined, color: AppColors.warning),
-                title: Text('1 vaca para secar',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-                trailing: Icon(Icons.chevron_right),
-              ),
-            ),
             _seccion(c, 'Total general'),
             GridView.count(
               shrinkWrap: true,
@@ -96,6 +187,9 @@ Widget _panel() => Builder(
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text('Mañana 180 L · Tarde 132 L'),
                 trailing: Icon(Icons.chevron_right),
+              ),
+            ),
+                ],
               ),
             ),
           ],
@@ -171,6 +265,40 @@ void main() {
     // vista previa se vea igual que en el teléfono.
     AppTheme.fuente = 'Roboto';
     await _fuente('MaterialIcons', ['$r/materialicons-regular.otf']);
+  });
+
+  // Ícono de la app (512 px): hoja de pasto blanca sobre verde, esquinas
+  // redondeadas y fondo transparente. Se reduce luego a los tamaños de
+  // android/app/src/main/res/mipmap-*.
+  testWidgets('icono app',
+      skip: Platform.environment['VISTA_PREVIA'] != '1', (tester) async {
+    tester.view.physicalSize = const Size(512, 512);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: Center(
+        child: RepaintBoundary(
+          key: const ValueKey('icono'),
+          child: Container(
+            width: 512,
+            height: 512,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.primaryDark],
+              ),
+              borderRadius: BorderRadius.circular(112),
+            ),
+            child: const Icon(Icons.grass_rounded,
+                size: 330, color: Colors.white),
+          ),
+        ),
+      ),
+    ));
+    await expectLater(find.byKey(const ValueKey('icono')),
+        matchesGoldenFile('vista_previa/icono.png'));
   });
 
   for (final (nombre, pantalla) in [('panel', _panel), ('formulario', _formulario)]) {

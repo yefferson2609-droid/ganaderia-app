@@ -62,6 +62,9 @@ flutter build apk --release
 - **No usar funciones "Patch" de PowerShell con arrays de un solo par**:
   `@(@(a,b))` se aplana y reemplaza caracteres sueltos en TODO el archivo
   (ya rompió 4 pantallas una vez). Usar la herramienta Edit.
+- **No pasar `dart format` a archivos existentes completos** (solo a archivos
+  nuevos): reacomoda cientos de líneas y luego cada merge desde la app de la
+  finca choca en todo el archivo.
 - En SQL de SQLite usar comillas simples para textos (`estado = 'activa'`),
   nunca dobles.
 - Los archivos del repo usan LF; PowerShell lee UTF-8 sin BOM como ANSI al

@@ -5,6 +5,7 @@ import '../../core/models/mi_finca.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/finca_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/encabezado_marca.dart';
 
 /// "Mis fincas": elegir finca, registrar una nueva o entrar con un código.
 class FincasScreen extends StatefulWidget {
@@ -163,7 +164,6 @@ class _FincasScreenState extends State<FincasScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis fincas'),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -187,13 +187,24 @@ class _FincasScreenState extends State<FincasScreen> {
       body: RefreshIndicator(
         onRefresh: fp.cargar,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.zero,
           children: [
-            if (auth.currentUser?.email != null)
+            EncabezadoMarca(
+              titulo: 'Mis fincas',
+              subtitulo: auth.currentUser?.email,
+              logo: 48,
+              espacioArriba: 0,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+            if (fp.fincas.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text('Sesión: ${auth.currentUser!.email}',
-                    style: TextStyle(color: Colors.grey[600])),
+                padding: const EdgeInsets.only(bottom: 10, left: 4),
+                child: Text('Elige con cuál vas a trabajar',
+                    style: Theme.of(context).textTheme.titleMedium),
               ),
             if (fp.error != null)
               Card(
@@ -241,6 +252,9 @@ class _FincasScreenState extends State<FincasScreen> {
               icon: const Icon(Icons.vpn_key_outlined),
               label: const Text('Unirme con un código'),
             ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -253,26 +267,85 @@ class _FincaCard extends StatelessWidget {
   final VoidCallback onTap;
   const _FincaCard({required this.finca, required this.onTap});
 
+  /// Texto y color de la etiqueta de estado.
+  (String, Color) get _estado {
+    if (finca.soporte) return ('Soporte', AppColors.accentPurple);
+    if (finca.estadoMiembro == 'pendiente') {
+      return ('Esperando aprobación', AppColors.info);
+    }
+    if (finca.estadoMiembro != 'aprobado') return ('Sin acceso', AppColors.danger);
+    if (finca.estadoFinca == 'pendiente') return ('En revisión', AppColors.warning);
+    if (finca.estadoFinca == 'suspendida' || finca.pruebaVencida) {
+      return ('Suspendida', AppColors.danger);
+    }
+    if (finca.estadoFinca == 'prueba') {
+      final h = finca.pruebaHasta;
+      return (
+        h == null ? 'Prueba' : 'Prueba hasta ${h.day}/${h.month}',
+        AppColors.info
+      );
+    }
+    return ('Activa', AppColors.success);
+  }
+
   @override
   Widget build(BuildContext context) {
     final motivo = finca.motivoBloqueo;
+    final (estado, color) = _estado;
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: finca.usable
-              ? AppColors.primaryContainer
-              : Colors.grey[200],
-          child: Icon(Icons.agriculture,
-              color: finca.usable ? AppColors.primary : Colors.grey),
-        ),
-        title: Text(finca.nombre,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(motivo == null
-            ? finca.rolTexto
-            : '${finca.rolTexto} · $motivo'),
-        trailing: Icon(finca.usable ? Icons.chevron_right : Icons.hourglass_empty),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: finca.usable
+                  ? AppColors.primaryContainer
+                  : Colors.grey.withValues(alpha: 0.15),
+              child: Icon(Icons.agriculture,
+                  color: finca.usable ? AppColors.primary : Colors.grey),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(finca.nombre,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.13),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(estado,
+                          style: TextStyle(
+                              color: color,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(finca.rolTexto,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ]),
+                  if (motivo != null) ...[
+                    const SizedBox(height: 4),
+                    Text(motivo, style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ],
+              ),
+            ),
+            Icon(finca.usable ? Icons.chevron_right : Icons.hourglass_empty,
+                color: AppColors.textoSuave),
+          ]),
+        ),
       ),
     );
   }

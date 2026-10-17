@@ -97,6 +97,12 @@ pertenece.
   3) listas y fichas de animales.
 - Marca neutra por ahora: sin el hierro AgroYeff; "Ganadería" genérico y el
   nombre de cada finca arriba.
+- Etapa 1 hecha (tema en `app_theme.dart`, `MarcaLogo`, PDF sin hierro).
+- Etapa 2 hecha (2026-10-17): panel con encabezado verde (saludo, fecha,
+  animales/leche/avisos), accesos rápidos primero y avisos en tarjetas;
+  entrada y Mis fincas con `EncabezadoMarca`; estados de finca en color;
+  ícono del teléfono = hoja blanca sobre verde (generado con
+  `test/vista_previa_test.dart`, `VISTA_PREVIA=1`).
 - Ojo al traer mejoras de la app de la finca: los cambios de diseño pueden
   chocar en las mismas pantallas; resolver conservando el diseño nuevo.
 

@@ -404,27 +404,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                padding: const EdgeInsets.only(bottom: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 12),
+                    _Encabezado(
+                      nombre: _nombreUsuario,
+                      animales: _totalAnimales(permisos),
+                      leche: permisos.puedeVer('vacas') ? _lecheHoy : null,
+                      avisos: _avisos.length,
+                      onLeche: () => _abrir('/leche'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                    const SizedBox(height: 16),
                     _EstadoSync(sync: sync),
-                    if (_avisos.isNotEmpty) ...[
-                      _seccion('Avisos'),
-                      ..._avisos.map((a) => Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              dense: true,
-                              leading: Icon(a.icon, color: a.color),
-                              title: Text(a.texto,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600)),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () => _abrirAviso(a),
-                            ),
-                          )),
-                    ],
 
                     if (accesos.isNotEmpty) ...[
                       _seccion('Accesos rápidos'),
@@ -435,6 +432,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 opcion: o, onTap: () => _abrir(o.ruta)),
                           ),
                       ]),
+                    ],
+
+                    if (_avisos.isNotEmpty) ...[
+                      _seccion('Avisos'),
+                      ..._avisos.map((a) =>
+                          _AvisoTile(aviso: a, onTap: () => _abrirAviso(a))),
                     ],
 
                     _seccion('Total general'),
@@ -589,10 +592,201 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: _filaConteos(_sinUbicacion),
                         ),
                     ],
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  /// Animales que el usuario puede ver (para el resumen de arriba).
+  int _totalAnimales(PermisosProvider permisos) {
+    const modulos = {
+      'vacas': 'vacas',
+      'toros': 'toros',
+      'terneros': 'terneros',
+      'caballos': 'caballos',
+      'cerdos': 'lotes',
+      'ovejos': 'lotes',
+    };
+    var total = 0;
+    modulos.forEach((clave, modulo) {
+      if (permisos.puedeVer(modulo)) total += _totales[clave] ?? 0;
+    });
+    return total;
+  }
+}
+
+const _diasSemana = [
+  'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'
+];
+const _meses = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+  'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
+
+/// Franja verde de arriba: saludo, fecha y tres números del día.
+class _Encabezado extends StatelessWidget {
+  final String? nombre;
+  final int animales;
+  final double? leche; // null = no ve el módulo de vacas
+  final int avisos;
+  final VoidCallback onLeche;
+  const _Encabezado({
+    required this.nombre,
+    required this.animales,
+    required this.leche,
+    required this.avisos,
+    required this.onLeche,
+  });
+
+  String get _saludo {
+    final h = DateTime.now().hour;
+    final s = h < 12
+        ? 'Buenos días'
+        : h < 19
+            ? 'Buenas tardes'
+            : 'Buenas noches';
+    final primero = (nombre ?? '').trim().split(' ').first;
+    return primero.isEmpty ? s : '$s, $primero';
+  }
+
+  String get _fecha {
+    final n = DateTime.now();
+    return '${_diasSemana[n.weekday - 1]} ${n.day} de ${_meses[n.month - 1]}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fondo = Theme.of(context).appBarTheme.backgroundColor ??
+        AppColors.primaryDark;
+    final litros = leche == null
+        ? null
+        : '${leche!.toStringAsFixed(leche! % 1 == 0 ? 0 : 1)} L';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      decoration: BoxDecoration(
+        color: fondo,
+        borderRadius:
+            const BorderRadius.vertical(bottom: Radius.circular(28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_saludo,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(_fecha,
+              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          const SizedBox(height: 16),
+          Row(children: [
+            Expanded(
+                child: _Dato(
+                    valor: '$animales',
+                    etiqueta: animales == 1 ? 'animal' : 'animales',
+                    icono: Icons.pets)),
+            if (litros != null) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                  child: _Dato(
+                      valor: litros,
+                      etiqueta: 'leche hoy',
+                      icono: Icons.water_drop,
+                      onTap: onLeche)),
+            ],
+            const SizedBox(width: 10),
+            Expanded(
+                child: _Dato(
+                    valor: '$avisos',
+                    etiqueta: avisos == 1 ? 'aviso' : 'avisos',
+                    icono: Icons.notifications_active,
+                    resaltar: avisos > 0)),
+          ]),
+        ],
+      ),
+    );
+  }
+}
+
+/// Cuadrito translúcido dentro del encabezado.
+class _Dato extends StatelessWidget {
+  final String valor;
+  final String etiqueta;
+  final IconData icono;
+  final bool resaltar;
+  final VoidCallback? onTap;
+  const _Dato({
+    required this.valor,
+    required this.etiqueta,
+    required this.icono,
+    this.resaltar = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icono,
+                  size: 18,
+                  color: resaltar ? const Color(0xFFFFC56B) : Colors.white70),
+              const SizedBox(height: 6),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(valor,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+              ),
+              Text(etiqueta,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Aviso en tarjeta, con el ícono en un círculo de su color.
+class _AvisoTile extends StatelessWidget {
+  final _Aviso aviso;
+  final VoidCallback onTap;
+  const _AvisoTile({required this.aviso, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          radius: 20,
+          backgroundColor: aviso.color.withValues(alpha: 0.13),
+          child: Icon(aviso.icon, color: aviso.color, size: 22),
+        ),
+        title: Text(aviso.texto,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        trailing: const Icon(Icons.chevron_right),
+      ),
     );
   }
 }
@@ -687,7 +881,7 @@ class _EstadoSync extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      color: color.withOpacity(0.08),
+      color: color.withValues(alpha: 0.08),
       child: ListTile(
         dense: true,
         onTap: conErrores ? () => _verErrores(context, sync.lastError!) : null,
@@ -752,22 +946,25 @@ class _AnimalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: EdgeInsets.zero,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimalFace(tipo: tipo, size: 44),
-              const SizedBox(height: 4),
+              AnimalFace(tipo: tipo, size: 46),
+              const SizedBox(height: 6),
               Text(count.toString(),
                   style: TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+                      fontSize: 22, fontWeight: FontWeight.w800, color: color)),
               Text(label,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12.5)),
             ],
           ),
         ),
@@ -790,7 +987,8 @@ class _MiniCount extends StatelessWidget {
         Text(count.toString(),
             style: TextStyle(
                 fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+        Text(label,
+            style: const TextStyle(fontSize: 11, color: AppColors.textoSuave)),
       ],
     );
   }
@@ -963,23 +1161,36 @@ class _AccesoRapido extends StatelessWidget {
   final VoidCallback onTap;
   const _AccesoRapido({required this.opcion, required this.onTap});
 
+  // Color de cada acceso, para reconocerlos de un vistazo.
+  static const _colores = {
+    '/leche': AppColors.info,
+    '/actividades': AppColors.primary,
+    '/solicitudes': AppColors.secondary,
+    '/alertas': AppColors.warning,
+  };
+
   @override
   Widget build(BuildContext context) {
+    final color = _colores[opcion.ruta] ?? AppColors.primary;
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
           child: Column(children: [
-            Icon(opcion.icono, color: AppColors.primary, size: 28),
-            const SizedBox(height: 6),
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: color.withValues(alpha: 0.13),
+              child: Icon(opcion.icono, color: color, size: 24),
+            ),
+            const SizedBox(height: 8),
             Text(opcion.corto ?? opcion.texto,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
           ]),
         ),
       ),

@@ -279,11 +279,20 @@ class AppTheme {
 
       progressIndicatorTheme: ProgressIndicatorThemeData(color: principal),
 
+      // Las pestañas van siempre en la barra verde de arriba: letra blanca
+      // (la elegida en negrita y con raya gruesa) para que se lean bien.
       tabBarTheme: TabBarThemeData(
-        labelColor: principal,
-        unselectedLabelColor: textoSuave,
-        indicatorColor: principal,
-        labelStyle: TextStyle(fontFamily: fuente, fontWeight: FontWeight.w700),
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withValues(alpha: 0.75),
+        indicatorColor: Colors.white,
+        indicator: const UnderlineTabIndicator(
+            borderSide: BorderSide(color: Colors.white, width: 3)),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelStyle: TextStyle(
+            fontFamily: fuente, fontWeight: FontWeight.w800, fontSize: 15),
+        unselectedLabelStyle: TextStyle(
+            fontFamily: fuente, fontWeight: FontWeight.w500, fontSize: 15),
       ),
     );
   }

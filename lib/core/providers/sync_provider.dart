@@ -387,6 +387,17 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       try {
         await _supabase.from(tabla).delete().eq('id', row['id'] as String);
         await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
+      } on PostgrestException catch (e) {
+        // 23503 = otros datos lo usan (p. ej. un concepto con movimientos).
+        // Si la tabla se puede desactivar, se desactiva en vez de borrar:
+        // así no se pierde nada y deja de salir en las listas.
+        if (e.code == '23503' && row.containsKey('activo')) {
+          await db.update(tabla, {'deleted': 0, 'activo': 0, 'synced': 0},
+              where: 'id = ?', whereArgs: [row['id']]);
+        } else {
+          errores.add(
+              'No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
+        }
       } catch (e) {
         errores.add('No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
       }

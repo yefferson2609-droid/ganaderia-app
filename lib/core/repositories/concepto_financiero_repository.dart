@@ -59,6 +59,15 @@ class ConceptoFinancieroRepository {
         where: 'id = ?', whereArgs: [concepto.id]);
   }
 
+  /// Cuántos movimientos (no borrados) usan este concepto.
+  Future<int> movimientosQueLoUsan(String id) async {
+    final r = await _db.rawQuery(
+        'SELECT COUNT(*) AS n FROM movimientos_financieros '
+        'WHERE concepto_id = ? AND deleted = 0',
+        [id]);
+    return (r.first['n'] as int?) ?? 0;
+  }
+
   Future<void> delete(String id) async {
     await _db.update('conceptos_financieros', {'deleted': 1, 'synced': 0},
         where: 'id = ?', whereArgs: [id]);

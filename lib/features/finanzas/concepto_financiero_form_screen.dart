@@ -76,12 +76,41 @@ class _ConceptoFinancieroFormScreenState
   }
 
   Future<void> _eliminar() async {
+    // Un concepto con movimientos no se puede borrar (se perdería a qué
+    // corresponden): se ofrece desactivarlo.
+    final usados = await _repo.movimientosQueLoUsan(widget.id!);
+    if (!mounted) return;
+    if (usados > 0) {
+      final desactivar = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('No se puede eliminar'),
+          content: Text(
+              '"${_nombreCtrl.text.trim()}" tiene $usados '
+              'movimiento${usados == 1 ? '' : 's'} registrado${usados == 1 ? '' : 's'}.\n\n'
+              'Puedes desactivarlo: deja de salir al registrar, y los '
+              'movimientos que ya tiene conservan su nombre.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Desactivar')),
+          ],
+        ),
+      );
+      if (desactivar != true) return;
+      final c = await _repo.getById(widget.id!);
+      if (c != null) await _repo.update(c.copyWith(activo: false));
+      if (mounted) context.pop();
+      return;
+    }
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar concepto'),
-        content: Text('¿Eliminar "${_nombreCtrl.text.trim()}"?\n\n'
-            'Los movimientos ya registrados con este concepto no se borran.'),
+        content: Text('¿Eliminar "${_nombreCtrl.text.trim()}"?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),

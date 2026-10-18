@@ -6,6 +6,7 @@ import 'package:ganaderia/core/models/vaca.dart';
 import 'package:ganaderia/core/repositories/leche_repository.dart';
 import 'package:ganaderia/core/models/nomina.dart';
 import 'package:ganaderia/core/repositories/movimiento_financiero_repository.dart';
+import 'package:ganaderia/core/repositories/concepto_financiero_repository.dart';
 import 'package:ganaderia/core/repositories/nomina_repository.dart';
 import 'package:ganaderia/core/repositories/perfil_usuario_repository.dart';
 import 'package:ganaderia/core/repositories/pesaje_repository.dart';
@@ -167,6 +168,21 @@ void main() {
     expect(await repro.partoSiFalta(josefa.id, d(2025, 3, 20)), isFalse);
     expect((await repro.resumen(josefa.id)).partos, [d(2025, 3, 14)]);
     expect((await repro.partosFaltantes()).map((x) => x.cria), ['pinto']);
+  });
+
+  test('conceptos: cuenta los movimientos que lo usan', () async {
+    final conceptos = ConceptoFinancieroRepository();
+    final movs = MovimientoFinancieroRepository();
+    final usado = await conceptos.create(nombre: 'Vacunas prueba', tipo: 'gasto');
+    final libre = await conceptos.create(nombre: 'Sin uso prueba', tipo: 'gasto');
+    final m = await movs.create(
+        tipo: 'gasto', conceptoId: usado.id, monto: 10, fecha: d(2026, 10, 1));
+    await movs.create(
+        tipo: 'gasto', conceptoId: usado.id, monto: 5, fecha: d(2026, 10, 2));
+    expect(await conceptos.movimientosQueLoUsan(usado.id), 2);
+    expect(await conceptos.movimientosQueLoUsan(libre.id), 0);
+    await movs.delete(m.id);
+    expect(await conceptos.movimientosQueLoUsan(usado.id), 1);
   });
 
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {

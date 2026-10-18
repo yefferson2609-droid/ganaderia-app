@@ -14,6 +14,10 @@ Supabase. Dueño: yefferson2609-droid (GitHub). Repo:
 > `com.agroyeff.ganaderia.multifinca`, nombre "Ganadería (multi)" (se instala
 > aparte, sin reemplazar "Ganadería (nueva)"). APK:
 > `ganaderia-MULTI-prueba-vX.Y.Z.apk`. Estado y diseño: `docs/PLAN_MULTIFINCA.md`.
+> **Desde la 1.0.23 compilar solo 64 bits** (decisión del usuario, APK ~21 MB
+> en vez de ~61): `flutter build apk --release --target-platform android-arm64`.
+> No usar `--split-per-abi` (cambia el versionCode y rompería las
+> actualizaciones encima).
 > Las mejoras de la app de la finca se traen aquí con
 > `git merge origin/reconstruccion-desde-apk`, adaptando lo que toque el
 > servidor (tablas nuevas → `supabase_multifinca/` con `finca_id`).

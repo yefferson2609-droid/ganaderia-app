@@ -55,10 +55,10 @@ flutter build apk --release
   mostrar (los acentos "se ven mal" pero están bien).
 
 ## Arquitectura
-- `lib/core/database/local_db.dart`: SQLite local, versión **11**. Migraciones en
+- `lib/core/database/local_db.dart`: SQLite local, versión **12**. Migraciones en
   `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal;
   `_createV9` agrega `categoria` y `fecha_destete` a terneros; `_createV10`
-  agrega `eliminado` a perfiles_usuario; `_createV11` las tablas de nómina.
+  agrega `eliminado` a perfiles_usuario; `_createV11` las tablas de nómina; `_createV12` la procedencia (origen, registro, padre/madre de fuera; `models/procedencia.dart`).
 - **"Levante y ceba"** (tabla/ruta `terneros`): categorías en
   `lib/core/models/ternero.dart` (ternera, novilla_levante, novilla_vientre,
   ternero, torete, torete_venta, novillo_ceba). `categoria` null = sin
@@ -93,7 +93,7 @@ flutter build apk --release
 
 ## Supabase (proyecto actual, una sola finca)
 - URL `https://punqawvuwxlrdipapnja.supabase.co` (clave anon en lib/main.dart).
-- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 010**
+- Migraciones en `supabase_migrations/`; **ejecutadas hasta la 010; la 011 (procedencia) pendiente de permiso del usuario**
   (la 007 reúne 005 y 006). Ejecutadas por Claude desde el navegador integrado
   con la sesión del usuario (editor SQL vía `monaco.editor.getEditors()[0]`).
 - Usuarios: "Eliminar" llama a la función `eliminar_usuario` (solo admin, no a sí mismo): bloquea la cuenta (banned_until), cierra sesiones, borra permisos y marca `eliminado` (no se borra la cuenta porque hay FK created_by → auth.users). Usuario inactivo/eliminado no puede entrar y se le cierra la sesión al sincronizar. La sync, si un upsert es rechazado por RLS (42501), intenta update.
@@ -115,3 +115,11 @@ flutter build apk --release
 
 ## Próximo trabajo: versión comercial multi-finca
 Ver `docs/PLAN_MULTIFINCA.md`.
+
+## Traído de multi-finca (2026-10-18)
+Apariencia "Campo moderno" (tema, panel con encabezado, entrada nueva,
+`ficha_animal.dart`), procedencia y colores de alto contraste, por
+cherry-pick (ver `docs/PARA_LA_FINCA.md` en la rama multi-finca). En la
+finca se conserva el hierro AgroYeff (`MarcaLogo` muestra el hierro), el
+ícono del teléfono, las pantallas de Usuarios y la entrada sin "Crear
+cuenta" (al entrar va a /dashboard).

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/procedencia.dart';
 import '../../core/models/ternero.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/ubicacion.dart';
@@ -594,12 +595,29 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                             ? '${_fmt.format(t.fechaNacimiento!)} (${t.edad})'
                             : 'No registrada'),
                     _InfoRow('Ubicación', _ubic(t.ubicacionId)),
-                    _InfoRow('Madre',
-                        _madre != null ? 'Vaca #${_madre!.numero}' : 'No registrada'),
-                    _InfoRow('Padre',
-                        _padre != null ? 'Toro ${_padre!.displayName}' : 'No registrado'),
+                    _InfoRow(
+                        'Madre',
+                        _madre != null
+                            ? 'Vaca #${_madre!.numero}'
+                            : t.procedencia.madreTexto != null
+                                ? '${t.procedencia.madreTexto} · de fuera'
+                                : 'No registrada'),
+                    _InfoRow(
+                        'Padre',
+                        _padre != null
+                            ? 'Toro ${_padre!.displayName}'
+                            : t.procedencia.padreTexto != null
+                                ? '${t.procedencia.padreTexto} · de fuera'
+                                : 'No registrado'),
                     _InfoRow('Edad', t.edad),
                     _InfoRow('Raza', t.raza ?? 'Sin registrar'),
+                    if (t.procedencia.origen != null)
+                      _InfoRow(
+                          'Origen',
+                          Procedencia.origenTexto(t.procedencia.origen!,
+                              hembra: !t.esMacho)),
+                    if (t.procedencia.registro != null)
+                      _InfoRow('Registro', t.procedencia.registro!),
                     _InfoRow('Color', t.color ?? 'Sin registrar'),
                     _InfoRow('Notas', t.nota ?? 'Sin notas'),
                     const SizedBox(height: 8),

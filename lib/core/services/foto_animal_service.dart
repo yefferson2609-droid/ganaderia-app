@@ -41,6 +41,44 @@ class FotoAnimalService {
   Future<void> quitar(String tipo, String id) =>
       _actualizar(tipo, id, {'foto_local': null, 'foto_url': null});
 
+  /// Al registrar un animal (aún sin guardar): menú Cámara / Galería y
+  /// devuelve la ruta de la foto elegida, o null. Se guarda con [guardar]
+  /// después de crear el animal.
+  static Future<String?> elegirArchivo(BuildContext context) async {
+    final opcion = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_camera),
+            title: const Text('Tomar foto'),
+            onTap: () => Navigator.pop(ctx, 'camara'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Elegir de la galería'),
+            onTap: () => Navigator.pop(ctx, 'galeria'),
+          ),
+        ]),
+      ),
+    );
+    if (opcion == null) return null;
+    try {
+      final x = await ImagePicker().pickImage(
+        source: opcion == 'camara' ? ImageSource.camera : ImageSource.gallery,
+        maxWidth: 1280,
+        imageQuality: 70,
+      );
+      return x?.path;
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo abrir la cámara/galería: $e')));
+      }
+      return null;
+    }
+  }
+
   /// Menú Cámara / Galería / Quitar. Devuelve true si cambió la foto.
   static Future<bool> elegir(BuildContext context,
       {required String tipo, required String id, required bool tieneFoto}) async {

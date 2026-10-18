@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import '../models/procedencia.dart';
+
 class LocalDb {
   LocalDb._();
   static final LocalDb instance = LocalDb._();
@@ -17,7 +19,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -205,6 +207,7 @@ class LocalDb {
     await _createV9(db);
     await _createV10(db);
     await _createV11(db);
+    await _createV12(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -257,6 +260,19 @@ class LocalDb {
     }
     if (oldVersion < 11) {
       await _createV11(db);
+    }
+    if (oldVersion < 12) {
+      await _createV12(db);
+    }
+  }
+
+  /// Procedencia: origen, registro y padres de fuera de la finca
+  /// (animales comprados o importados).
+  Future<void> _createV12(Database db) async {
+    for (final t in ['vacas', 'toros', 'terneros']) {
+      for (final c in Procedencia.columnas) {
+        await db.execute('ALTER TABLE $t ADD COLUMN $c TEXT');
+      }
     }
   }
 

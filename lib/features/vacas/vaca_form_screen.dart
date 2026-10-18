@@ -10,6 +10,8 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/services/foto_animal_service.dart';
+import '../../core/widgets/procedencia_campos.dart';
 import '../../core/widgets/raza_field.dart';
 
 class VacaFormScreen extends StatefulWidget {
@@ -45,6 +47,8 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
   List<Toro> _toros = [];
   List<Ubicacion> _ubicaciones = [];
   Vaca? _vacaOriginal;
+  final _proc = ProcedenciaControl();
+  String? _foto; // foto elegida al registrar (se guarda al crear)
 
   bool get _isEditing => widget.id != null;
 
@@ -56,6 +60,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
 
   @override
   void dispose() {
+    _proc.dispose();
     _numeroCtrl.dispose();
     _colorCtrl.dispose();
     _razaCtrl.dispose();
@@ -87,6 +92,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         _fechaMonta = _vacaOriginal!.fechaMonta;
         _toroId = _vacaOriginal!.toroId;
         _ubicacionId = _vacaOriginal!.ubicacionId;
+        _proc.cargar(_vacaOriginal!.procedencia);
       }
     }
     // Evita valores que ya no existen en los desplegables.
@@ -138,13 +144,18 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
       fechaParto = _fechaMonta!.add(const Duration(days: 283));
     }
 
+    // Padre o madre de fuera de la finca: no se liga a un animal de aquí.
+    final padreId = _proc.padreExterno ? null : _padreId;
+    final madreId = _proc.madreExterna ? null : _madreId;
+
     if (_isEditing && _vacaOriginal != null) {
       await _repo.update(_vacaOriginal!.copyWith(
         numero: numero,
         fechaNacimiento: _fechaNacimiento,
         estado: _estado,
-        padreId: _padreId,
-        madreId: _madreId,
+        padreId: padreId,
+        madreId: madreId,
+        procedencia: _proc.valor,
         estadoReproductivo: _estadoReproductivo,
         fechaMonta: _fechaMonta,
         clearFechaMonta: _estadoReproductivo == 'vacia',
@@ -159,12 +170,13 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         nota: textoONull(_notaCtrl.text),
       ));
     } else {
-      await _repo.create(
+      final nueva = await _repo.create(
         numero: numero,
         fechaNacimiento: _fechaNacimiento,
         estado: _estado,
-        padreId: _padreId,
-        madreId: _madreId,
+        padreId: padreId,
+        madreId: madreId,
+        procedencia: _proc.valor,
         estadoReproductivo: _estadoReproductivo,
         fechaMonta: _estadoReproductivo == 'prenada' ? _fechaMonta : null,
         toroId: _estadoReproductivo == 'prenada' ? _toroId : null,
@@ -174,13 +186,14 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
         raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       );
+      if (_foto != null) await FotoAnimalService().guardar('vaca', nueva.id, _foto!);
     }
 
     // Si se puso o cambió la madre (o la fecha), anotar su parto si falta.
-    if (_madreId != null &&
-        (_vacaOriginal?.madreId != _madreId ||
+    if (madreId != null &&
+        (_vacaOriginal?.madreId != madreId ||
             _vacaOriginal?.fechaNacimiento != _fechaNacimiento) &&
-        await ReproduccionRepository().partoSiFalta(_madreId!, _fechaNacimiento,
+        await ReproduccionRepository().partoSiFalta(madreId, _fechaNacimiento,
             notas: 'Registrado al poner la madre de $numero') &&
         mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -204,6 +217,14 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // La foto de una vaca ya registrada se cambia en su ficha.
+                    if (!_isEditing) ...[
+                      FotoAlRegistrar(
+                          tipo: 'vaca',
+                          ruta: _foto,
+                          onCambio: (r) => setState(() => _foto = r)),
+                      const SizedBox(height: 8),
+                    ],
                     TextFormField(
                       controller: _numeroCtrl,
                       decoration: const InputDecoration(
@@ -212,20 +233,10 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                           (v == null || v.isEmpty) ? 'Campo requerido' : null,
                     ),
                     const SizedBox(height: 16),
-                    InkWell(
-                      onTap: () => _pickDate(false),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                            labelText: 'Fecha de nacimiento',
-                            prefixIcon: Icon(Icons.calendar_today)),
-                        child: Text(_fechaNacimiento != null
-                            ? DateFormat('dd/MM/yyyy').format(_fechaNacimiento!)
-                            : 'Seleccionar fecha',
-                            style: TextStyle(
-                                color: _fechaNacimiento != null
-                                    ? null
-                                    : Colors.grey[600])),
-                      ),
+                    FechaNacimientoCampo(
+                      fecha: _fechaNacimiento,
+                      onElegir: () => _pickDate(false),
+                      onBorrar: () => setState(() => _fechaNacimiento = null),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -315,34 +326,55 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _ubicacionId = v),
                     ),
+                    const SizedBox(height: 20),
+                    // Procedencia: origen, registro y padres (de la finca o de fuera)
+                    OrigenCampos(
+                        control: _proc,
+                        hembra: true,
+                        onCambio: () => setState(() {})),
                     const SizedBox(height: 16),
-                    // Padres
-                    DropdownButtonFormField<String?>(
-                      value: _padreId,
-                      decoration: const InputDecoration(
-                          labelText: 'Padre (toro)', prefixIcon: Icon(Icons.male)),
-                      items: [
-                        const DropdownMenuItem(
-                            value: null, child: Text('Sin registrar')),
-                        ..._toros.map((t) => DropdownMenuItem(
-                            value: t.id, child: Text(t.displayName))),
-                      ],
-                      onChanged: (v) => setState(() => _padreId = v),
+                    PadreCampo(
+                      esPadre: true,
+                      externo: _proc.padreExterno,
+                      onExterno: (v) => setState(() => _proc.padreExterno = v),
+                      nombre: _proc.padreNombre,
+                      registro: _proc.padreRegistro,
+                      raza: _proc.padreRaza,
+                      selectorFinca: DropdownButtonFormField<String?>(
+                        value: _padreId,
+                        decoration: const InputDecoration(
+                            labelText: 'Padre (toro)', prefixIcon: Icon(Icons.male)),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Sin registrar')),
+                          ..._toros.map((t) => DropdownMenuItem(
+                              value: t.id, child: Text(t.displayName))),
+                        ],
+                        onChanged: (v) => setState(() => _padreId = v),
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String?>(
-                      value: _madreId,
-                      decoration: const InputDecoration(
-                          labelText: 'Madre', prefixIcon: Icon(Icons.female)),
-                      items: [
-                        const DropdownMenuItem(
-                            value: null, child: Text('Sin registrar')),
-                        ..._vacasDisponibles
-                            .where((v) => v.id != widget.id)
-                            .map((v) => DropdownMenuItem(
-                                value: v.id, child: Text('Vaca #${v.numero}'))),
-                      ],
-                      onChanged: (v) => setState(() => _madreId = v),
+                    const SizedBox(height: 12),
+                    PadreCampo(
+                      esPadre: false,
+                      externo: _proc.madreExterna,
+                      onExterno: (v) => setState(() => _proc.madreExterna = v),
+                      nombre: _proc.madreNombre,
+                      registro: _proc.madreRegistro,
+                      raza: _proc.madreRaza,
+                      selectorFinca: DropdownButtonFormField<String?>(
+                        value: _madreId,
+                        decoration: const InputDecoration(
+                            labelText: 'Madre', prefixIcon: Icon(Icons.female)),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Sin registrar')),
+                          ..._vacasDisponibles
+                              .where((v) => v.id != widget.id)
+                              .map((v) => DropdownMenuItem(
+                                  value: v.id, child: Text('Vaca #${v.numero}'))),
+                        ],
+                        onChanged: (v) => setState(() => _madreId = v),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     RazaField(controller: _razaCtrl),

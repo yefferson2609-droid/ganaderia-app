@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
+import '../models/procedencia.dart';
 import '../models/ternero.dart';
 import '../utils/auditoria.dart';
 import '../config/ajustes.dart';
@@ -64,6 +65,7 @@ class TerneroRepository {
     String? color,
     String? raza,
     String? nota,
+    Procedencia procedencia = const Procedencia(),
   }) async {
     final now = DateTime.now();
     final ternero = Ternero(
@@ -81,6 +83,7 @@ class TerneroRepository {
       color: color,
       raza: raza,
       nota: nota,
+      procedencia: procedencia,
       createdAt: now,
       updatedAt: now,
     );
@@ -224,6 +227,7 @@ class TerneroRepository {
       color: t.color,
       raza: t.raza,
       nota: t.nota,
+      procedencia: t.procedencia,
     );
     // La foto la acompaña.
     if (t.fotoLocal != null || t.fotoUrl != null) {
@@ -262,6 +266,7 @@ class TerneroRepository {
       color: t.color,
       raza: t.raza,
       nota: t.nota,
+      procedencia: t.procedencia,
     );
     await delete(t.id);
     return toro.id;

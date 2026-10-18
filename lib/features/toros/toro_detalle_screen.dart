@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/procedencia.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/repositories/toro_repository.dart';
@@ -170,6 +171,14 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                     _toro!.estado[0].toUpperCase() + _toro!.estado.substring(1),
                     _estadoColor(_toro!.estado),
                     sobreOscuro: true),
+                if (_toro!.procedencia.origen == 'comprada' ||
+                    _toro!.procedencia.origen == 'importada')
+                  Etiqueta(
+                      Procedencia.origenTexto(_toro!.procedencia.origen!,
+                          hembra: false),
+                      AppColors.secondary,
+                      icono: Icons.local_shipping_outlined,
+                      sobreOscuro: true),
               ],
             ),
             Card(
@@ -198,6 +207,16 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
                         label: 'Ubicación',
                         value: _ubicacion?.nombre ?? 'Sin asignar'),
                     _InfoRow(label: 'Raza', value: _toro!.raza ?? 'Sin registrar'),
+                    if (_toro!.procedencia.origen != null)
+                      _InfoRow(
+                          label: 'Origen',
+                          value: Procedencia.origenTexto(
+                              _toro!.procedencia.origen!,
+                              hembra: false)),
+                    if (_toro!.procedencia.registro != null)
+                      _InfoRow(
+                          label: 'Registro',
+                          value: _toro!.procedencia.registro!),
                     _InfoRow(label: 'Color', value: _toro!.color ?? 'Sin registrar'),
                     _InfoRow(label: 'Notas', value: _toro!.nota ?? 'Sin notas'),
                     const SizedBox(height: 8),
@@ -217,6 +236,7 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
               animalId: widget.id,
               madreId: _toro!.madreId,
               padreId: _toro!.padreId,
+              procedencia: _toro!.procedencia,
             ),
             const SizedBox(height: 12),
             SaludSection(animalTipo: 'toro', animalId: widget.id),

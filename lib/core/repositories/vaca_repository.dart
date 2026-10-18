@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
 import '../utils/auditoria.dart';
+import '../models/procedencia.dart';
 import '../models/vaca.dart';
 
 class VacaRepository {
@@ -36,6 +37,7 @@ class VacaRepository {
     String? color,
     String? raza,
     String? nota,
+    Procedencia procedencia = const Procedencia(),
   }) async {
     final now = DateTime.now();
     final vaca = Vaca(
@@ -53,6 +55,7 @@ class VacaRepository {
       color: color,
       raza: raza,
       nota: nota,
+      procedencia: procedencia,
       createdAt: now,
       updatedAt: now,
     );

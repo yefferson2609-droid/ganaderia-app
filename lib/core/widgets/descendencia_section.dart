@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../database/local_db.dart';
+import '../models/procedencia.dart';
 import '../models/ternero.dart';
 import '../theme/app_theme.dart';
 
@@ -95,6 +96,8 @@ class DescendenciaSection extends StatefulWidget {
   final bool marco;
   /// Avisa cuántas crías tiene (para el título del cuadro).
   final ValueChanged<int>? onTotal;
+  /// Padre/madre de fuera de la finca (animales comprados o importados).
+  final Procedencia? procedencia;
   const DescendenciaSection({
     super.key,
     required this.animalId,
@@ -102,6 +105,7 @@ class DescendenciaSection extends StatefulWidget {
     this.padreId,
     this.marco = true,
     this.onTotal,
+    this.procedencia,
   });
 
   @override
@@ -157,8 +161,10 @@ class _DescendenciaSectionState extends State<DescendenciaSection> {
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.bold)),
           ),
-        _progenitor('Madre', _madre, widget.madreId != null),
-        _progenitor('Padre', _padre, widget.padreId != null),
+        _progenitor('Madre', _madre, widget.madreId != null,
+            deFuera: widget.procedencia?.madreTexto),
+        _progenitor('Padre', _padre, widget.padreId != null,
+            deFuera: widget.procedencia?.padreTexto),
         const SizedBox(height: 8),
         Text(
           _hijos.isEmpty
@@ -177,7 +183,24 @@ class _DescendenciaSectionState extends State<DescendenciaSection> {
         : contenido;
   }
 
-  Widget _progenitor(String label, Pariente? p, bool tieneId) => InkWell(
+  Widget _progenitor(String label, Pariente? p, bool tieneId,
+          {String? deFuera}) =>
+      (p == null && !tieneId && deFuera != null)
+          // De fuera de la finca: sus datos, sin enlace.
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                SizedBox(
+                    width: 70,
+                    child: Text(label,
+                        style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                Expanded(
+                  child: Text('$deFuera · de fuera',
+                      style: const TextStyle(fontWeight: FontWeight.w500)),
+                ),
+              ]),
+            )
+          : InkWell(
         onTap: p == null ? null : () => _abrir(p.ruta),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),

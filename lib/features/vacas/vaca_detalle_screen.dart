@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/models/procedencia.dart';
 import '../../core/models/evento_vaca.dart';
 import '../../core/models/tipo_evento.dart';
 import '../../core/models/vaca.dart';
@@ -281,6 +282,13 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                 valueColor: _estadoColor(_vaca!.estado),
               ),
               _InfoRow(label: 'Raza', value: _vaca!.raza ?? 'Sin registrar'),
+              if (_vaca!.procedencia.origen != null)
+                _InfoRow(
+                    label: 'Origen',
+                    value: Procedencia.origenTexto(_vaca!.procedencia.origen!,
+                        hembra: true)),
+              if (_vaca!.procedencia.registro != null)
+                _InfoRow(label: 'Registro', value: _vaca!.procedencia.registro!),
               _InfoRow(label: 'Color', value: _vaca!.color ?? 'Sin registrar'),
               _InfoRow(label: 'Ubicación', value: _ubicacion ?? 'Sin ubicación'),
               _InfoRow(label: 'Notas', value: _vaca!.nota ?? 'Sin notas'),
@@ -319,6 +327,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                 animalId: widget.id,
                 madreId: _vaca!.madreId,
                 padreId: _vaca!.padreId,
+                procedencia: _vaca!.procedencia,
                 marco: false,
                 onTotal: (n) {
                   if (n != _crias) setState(() => _crias = n);
@@ -397,6 +406,12 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
             kEstadoProduccionLabels[estadoProd]! +
                 (r!.diasEnLeche != null ? ' · ${r.diasEnLeche} días' : ''),
             estadoProduccionColor(estadoProd),
+            sobreOscuro: true),
+      if (v.procedencia.origen == 'comprada' ||
+          v.procedencia.origen == 'importada')
+        Etiqueta(Procedencia.origenTexto(v.procedencia.origen!, hembra: true),
+            AppColors.secondary,
+            icono: Icons.local_shipping_outlined,
             sobreOscuro: true),
     ];
 

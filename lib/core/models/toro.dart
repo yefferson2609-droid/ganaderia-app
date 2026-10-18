@@ -1,4 +1,5 @@
 import '../utils/auditoria.dart';
+import 'procedencia.dart';
 
 class Toro {
   final String id;
@@ -14,6 +15,7 @@ class Toro {
   final String? fotoUrl; // foto subida a Supabase Storage
   final String? fotoLocal; // ruta en el teléfono (solo local)
   final String? nota;
+  final Procedencia procedencia;
   final String? createdBy;
   final String? updatedBy;
   final DateTime createdAt;
@@ -35,6 +37,7 @@ class Toro {
     this.fotoUrl,
     this.fotoLocal,
     this.nota,
+    this.procedencia = const Procedencia(),
     this.createdBy,
     this.updatedBy,
     required this.createdAt,
@@ -70,6 +73,7 @@ class Toro {
         fotoUrl: map['foto_url'] as String?,
         fotoLocal: map['foto_local'] as String?,
         nota: map['nota'] as String?,
+        procedencia: Procedencia.fromMap(map),
         createdBy: map['created_by'] as String?,
         updatedBy: map['updated_by'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
@@ -90,6 +94,7 @@ class Toro {
         'foto_url': fotoUrl,
         'foto_local': fotoLocal,
         'nota': nota,
+        ...procedencia.toMap(),
         'created_by': createdBy,
         'updated_by': updatedBy,
         'created_at': createdAt.toIso8601String(),
@@ -99,7 +104,7 @@ class Toro {
   Toro copyWith({
     String? numero,
     String? nombre,
-    DateTime? fechaNacimiento,
+    Object? fechaNacimiento = sinCambio,
     String? estado,
     String? padreId,
     bool clearPadreId = false,
@@ -110,12 +115,14 @@ class Toro {
     Object? color = sinCambio,
     Object? raza = sinCambio,
     Object? nota = sinCambio,
+    Procedencia? procedencia,
   }) =>
       Toro(
         id: id,
         numero: numero ?? this.numero,
         nombre: nombre ?? this.nombre,
-        fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
+        fechaNacimiento:
+            valorOAnterior<DateTime>(fechaNacimiento, this.fechaNacimiento),
         estado: estado ?? this.estado,
         padreId: clearPadreId ? null : (padreId ?? this.padreId),
         madreId: clearMadreId ? null : (madreId ?? this.madreId),
@@ -126,6 +133,7 @@ class Toro {
         fotoUrl: fotoUrl,
         fotoLocal: fotoLocal,
         nota: valorOAnterior<String>(nota, this.nota),
+        procedencia: procedencia ?? this.procedencia,
         createdBy: createdBy,
         updatedBy: updatedBy,
         createdAt: createdAt,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../core/models/toro.dart';
 import '../../core/models/ubicacion.dart';
 import '../../core/models/vaca.dart';
@@ -10,6 +9,8 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/auditoria.dart';
+import '../../core/services/foto_animal_service.dart';
+import '../../core/widgets/procedencia_campos.dart';
 import '../../core/widgets/raza_field.dart';
 
 class ToroFormScreen extends StatefulWidget {
@@ -41,6 +42,8 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
   List<Vaca> _vacas = [];
   List<Ubicacion> _ubicaciones = [];
   Toro? _toroOriginal;
+  final _proc = ProcedenciaControl();
+  String? _foto; // foto elegida al registrar (se guarda al crear)
 
   bool _loading = false;
   bool _loadingData = false;
@@ -55,6 +58,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
 
   @override
   void dispose() {
+    _proc.dispose();
     _numeroCtrl.dispose();
     _nombreCtrl.dispose();
     _colorCtrl.dispose();
@@ -84,6 +88,7 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         _padreId = _toroOriginal!.padreId;
         _madreId = _toroOriginal!.madreId;
         _ubicacionId = _toroOriginal!.ubicacionId;
+        _proc.cargar(_toroOriginal!.procedencia);
       }
     }
     if (!_torosDisponibles.any((t) => t.id == _padreId)) _padreId = null;
@@ -119,16 +124,21 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
       return;
     }
 
+    // Padre o madre de fuera de la finca: no se liga a un animal de aquí.
+    final padreId = _proc.padreExterno ? null : _padreId;
+    final madreId = _proc.madreExterna ? null : _madreId;
+
     if (_isEditing && _toroOriginal != null) {
       await _repo.update(_toroOriginal!.copyWith(
         numero: numero,
         nombre: _nombreCtrl.text.trim(),
         fechaNacimiento: _fechaNacimiento,
         estado: _estado,
-        padreId: _padreId,
-        clearPadreId: _padreId == null,
-        madreId: _madreId,
-        clearMadreId: _madreId == null,
+        padreId: padreId,
+        clearPadreId: padreId == null,
+        madreId: madreId,
+        clearMadreId: madreId == null,
+        procedencia: _proc.valor,
         ubicacionId: _ubicacionId,
         clearUbicacion: _ubicacionId == null,
         color: textoONull(_colorCtrl.text),
@@ -136,24 +146,26 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
         nota: textoONull(_notaCtrl.text),
       ));
     } else {
-      await _repo.create(
+      final nuevo = await _repo.create(
         numero: numero,
         nombre: _nombreCtrl.text.trim(),
         fechaNacimiento: _fechaNacimiento,
         estado: _estado,
-        padreId: _padreId,
-        madreId: _madreId,
+        padreId: padreId,
+        madreId: madreId,
+        procedencia: _proc.valor,
         ubicacionId: _ubicacionId,
         color: textoONull(_colorCtrl.text),
         raza: textoONull(_razaCtrl.text),
         nota: textoONull(_notaCtrl.text),
       );
+      if (_foto != null) await FotoAnimalService().guardar('toro', nuevo.id, _foto!);
     }
     // Si se puso o cambió la madre (o la fecha), anotar su parto si falta.
-    if (_madreId != null &&
-        (_toroOriginal?.madreId != _madreId ||
+    if (madreId != null &&
+        (_toroOriginal?.madreId != madreId ||
             _toroOriginal?.fechaNacimiento != _fechaNacimiento) &&
-        await ReproduccionRepository().partoSiFalta(_madreId!, _fechaNacimiento,
+        await ReproduccionRepository().partoSiFalta(madreId, _fechaNacimiento,
             notas: 'Registrado al poner la madre de $numero') &&
         mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -178,6 +190,14 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // La foto de un toro ya registrado se cambia en su ficha.
+                    if (!_isEditing) ...[
+                      FotoAlRegistrar(
+                          tipo: 'toro',
+                          ruta: _foto,
+                          onCambio: (r) => setState(() => _foto = r)),
+                      const SizedBox(height: 8),
+                    ],
                     TextFormField(
                       controller: _numeroCtrl,
                       decoration: const InputDecoration(
@@ -198,23 +218,10 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                           (v == null || v.isEmpty) ? 'Campo requerido' : null,
                     ),
                     const SizedBox(height: 16),
-                    InkWell(
-                      onTap: _pickFechaNacimiento,
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Fecha de nacimiento',
-                          prefixIcon: Icon(Icons.calendar_today),
-                        ),
-                        child: Text(
-                          _fechaNacimiento != null
-                              ? DateFormat('dd/MM/yyyy').format(_fechaNacimiento!)
-                              : 'Seleccionar fecha',
-                          style: TextStyle(
-                              color: _fechaNacimiento != null
-                                  ? null
-                                  : Colors.grey[600]),
-                        ),
-                      ),
+                    FechaNacimientoCampo(
+                      fecha: _fechaNacimiento,
+                      onElegir: _pickFechaNacimiento,
+                      onBorrar: () => setState(() => _fechaNacimiento = null),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
@@ -245,37 +252,59 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                       ],
                       onChanged: (v) => setState(() => _ubicacionId = v),
                     ),
+                    const SizedBox(height: 20),
+                    // Procedencia: origen, registro y padres (de la finca o de fuera)
+                    OrigenCampos(
+                        control: _proc,
+                        hembra: false,
+                        onCambio: () => setState(() {})),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String?>(
-                      value: _padreId,
-                      decoration: const InputDecoration(
-                        labelText: 'Padre (toro)',
-                        prefixIcon: Icon(Icons.male),
+                    PadreCampo(
+                      esPadre: true,
+                      externo: _proc.padreExterno,
+                      onExterno: (v) => setState(() => _proc.padreExterno = v),
+                      nombre: _proc.padreNombre,
+                      registro: _proc.padreRegistro,
+                      raza: _proc.padreRaza,
+                      selectorFinca: DropdownButtonFormField<String?>(
+                        value: _padreId,
+                        decoration: const InputDecoration(
+                          labelText: 'Padre (toro)',
+                          prefixIcon: Icon(Icons.male),
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Sin registrar')),
+                          ..._torosDisponibles
+                              .where((t) => t.id != widget.id)
+                              .map((t) => DropdownMenuItem(
+                                  value: t.id, child: Text(t.displayName))),
+                        ],
+                        onChanged: (v) => setState(() => _padreId = v),
                       ),
-                      items: [
-                        const DropdownMenuItem(
-                            value: null, child: Text('Sin registrar')),
-                        ..._torosDisponibles
-                            .where((t) => t.id != widget.id)
-                            .map((t) => DropdownMenuItem(
-                                value: t.id, child: Text(t.displayName))),
-                      ],
-                      onChanged: (v) => setState(() => _padreId = v),
                     ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String?>(
-                      value: _madreId,
-                      decoration: const InputDecoration(
-                        labelText: 'Madre (vaca)',
-                        prefixIcon: Icon(Icons.female),
+                    const SizedBox(height: 12),
+                    PadreCampo(
+                      esPadre: false,
+                      externo: _proc.madreExterna,
+                      onExterno: (v) => setState(() => _proc.madreExterna = v),
+                      nombre: _proc.madreNombre,
+                      registro: _proc.madreRegistro,
+                      raza: _proc.madreRaza,
+                      selectorFinca: DropdownButtonFormField<String?>(
+                        value: _madreId,
+                        decoration: const InputDecoration(
+                          labelText: 'Madre (vaca)',
+                          prefixIcon: Icon(Icons.female),
+                        ),
+                        items: [
+                          const DropdownMenuItem(
+                              value: null, child: Text('Sin registrar')),
+                          ..._vacas.map((v) => DropdownMenuItem(
+                              value: v.id, child: Text('Vaca #${v.numero}'))),
+                        ],
+                        onChanged: (v) => setState(() => _madreId = v),
                       ),
-                      items: [
-                        const DropdownMenuItem(
-                            value: null, child: Text('Sin registrar')),
-                        ..._vacas.map((v) => DropdownMenuItem(
-                            value: v.id, child: Text('Vaca #${v.numero}'))),
-                      ],
-                      onChanged: (v) => setState(() => _madreId = v),
                     ),
                     const SizedBox(height: 16),
                     RazaField(controller: _razaCtrl),

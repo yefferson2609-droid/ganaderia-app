@@ -492,9 +492,13 @@ void main() {
     });
     await v6.close();
 
-    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 11
+    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 12
     final db = LocalDb.instance.db;
-    expect(await db.getVersion(), 11);
+    expect(await db.getVersion(), 12);
+    for (final t in ['vacas', 'toros', 'terneros']) {
+      expect(await LocalDb.instance.columnas(t),
+          containsAll(['origen', 'registro', 'padre_ext_nombre', 'madre_ext_raza']));
+    }
     expect(await LocalDb.instance.columnas('trabajadores'), contains('salario_semanal'));
     expect(await LocalDb.instance.columnas('perfiles_usuario'), contains('eliminado'));
     expect(await LocalDb.instance.columnas('terneros'),

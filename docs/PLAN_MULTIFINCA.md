@@ -109,6 +109,17 @@ pertenece.
 - Ojo al traer mejoras de la app de la finca: los cambios de diseño pueden
   chocar en las mismas pantallas; resolver conservando el diseño nuevo.
 
+## Procedencia (2026-10-18) — para llevar también a la app de la finca
+- Commit `430cb06` (rama multi-finca), autocontenido: foto al registrar
+  vacas/toros/levante, fecha de nacimiento que se puede borrar, origen
+  (nacido aquí/comprado/importado), registro propio y padre/madre de fuera
+  (nombre, registro, raza). Base local v12; modelo `Procedencia`;
+  widgets en `procedencia_campos.dart`.
+- Para la app de la finca: la otra conversación hace
+  `git cherry-pick 430cb06` en `reconstruccion-desde-apk` (las fichas allí no
+  tienen `PortadaAnimal`/`Etiqueta`: ajustar esos choques) y ejecuta, con
+  permiso del usuario, `supabase_migrations/011_procedencia.sql`.
+
 ## Pendiente / ideas
 - Los permisos por módulo se aplican en la app, no en el servidor (igual que
   antes): un trabajador recibe por sync los datos de la finca aunque no vea

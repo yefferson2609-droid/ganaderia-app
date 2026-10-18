@@ -257,7 +257,7 @@ class _TrabajadoresScreenState extends State<TrabajadoresScreen> {
                               ? AppColors.primaryContainer
                               : Colors.grey[300],
                           child: Icon(Icons.badge,
-                              color: t.activo ? AppColors.primary : Colors.grey),
+                              color: t.activo ? AppColors.primary : AppColors.textoSuave),
                         ),
                         title: Text(t.nombre,
                             style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -281,7 +281,7 @@ class _TrabajadoresScreenState extends State<TrabajadoresScreen> {
                               style: Theme.of(context).textTheme.labelLarge),
                           if (prestamos.isEmpty)
                             const Text('Sin préstamos',
-                                style: TextStyle(color: Colors.grey))
+                                style: TextStyle(color: AppColors.textoSuave))
                           else
                             ...prestamos.map((p) => Padding(
                                   padding: const EdgeInsets.only(top: 4),

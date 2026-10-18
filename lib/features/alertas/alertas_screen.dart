@@ -52,7 +52,7 @@ class _AlertasScreenState extends State<AlertasScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ExpansionTile(
                       initiallyExpanded: lista.isNotEmpty && lista.length <= 8,
-                      leading: Icon(icono, color: lista.isEmpty ? Colors.grey : color),
+                      leading: Icon(icono, color: lista.isEmpty ? AppColors.textoSuave : color),
                       title: Text('$titulo (${lista.length})',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text(ayuda, style: const TextStyle(fontSize: 12)),

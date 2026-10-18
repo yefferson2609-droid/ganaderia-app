@@ -814,7 +814,7 @@ class _EstadoSync extends StatelessWidget {
       texto = 'Actualizando datos...';
     } else if (!sync.isOnline) {
       icono = Icons.signal_cellular_connected_no_internet_4_bar;
-      color = Colors.grey;
+      color = AppColors.textoSuave;
       texto = 'Sin internet · se guardará al volver la señal';
       detalle = [
         if (sync.pendientes > 0) '${_cambios(sync.pendientes)} esperando señal',
@@ -836,7 +836,7 @@ class _EstadoSync extends StatelessWidget {
       texto = 'Datos al día · $hora';
     } else {
       icono = Icons.cloud_download_outlined;
-      color = Colors.grey;
+      color = AppColors.textoSuave;
       texto = 'Toca Actualizar para traer los datos';
     }
 
@@ -1029,7 +1029,7 @@ class _MenuLateral extends StatelessWidget {
             style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey,
+                color: AppColors.textoSuave,
                 letterSpacing: 0.8)),
       ));
       for (final o in visibles) {

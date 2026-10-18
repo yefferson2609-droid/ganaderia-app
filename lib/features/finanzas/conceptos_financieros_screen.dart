@@ -91,12 +91,12 @@ class _ConceptosFinancierosScreenState
                     c.tipo == 'ingreso'
                         ? Icons.arrow_downward
                         : Icons.arrow_upward,
-                    color: c.activo ? AppColors.primary : Colors.grey),
+                    color: c.activo ? AppColors.primary : AppColors.textoSuave),
               ),
               title: Text(c.nombre,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: c.activo ? null : Colors.grey,
+                    color: c.activo ? null : AppColors.textoSuave,
                   )),
               trailing: PopupMenuButton<String>(
                 onSelected: (v) {

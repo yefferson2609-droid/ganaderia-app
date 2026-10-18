@@ -193,7 +193,7 @@ class _DescendenciaSectionState extends State<DescendenciaSection> {
                 SizedBox(
                     width: 70,
                     child: Text(label,
-                        style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                        style: const TextStyle(color: AppColors.textoSuave, fontSize: 13))),
                 Expanded(
                   child: Text('$deFuera · de fuera',
                       style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -208,7 +208,7 @@ class _DescendenciaSectionState extends State<DescendenciaSection> {
             SizedBox(
                 width: 70,
                 child: Text(label,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                    style: const TextStyle(color: AppColors.textoSuave, fontSize: 13))),
             Expanded(
               child: Text(
                 p?.nombre ?? (tieneId ? 'Ya no está registrado' : 'No registrado'),
@@ -235,7 +235,7 @@ class _DescendenciaSectionState extends State<DescendenciaSection> {
       contentPadding: EdgeInsets.zero,
       dense: true,
       leading: Icon(h.macho ? Icons.male : Icons.female,
-          color: h.macho ? AppColors.info : Colors.pink),
+          color: h.macho ? AppColors.info : AppColors.rosa),
       title: Text(h.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: detalles.isEmpty ? null : Text(detalles.join(' · ')),
       trailing: const Icon(Icons.chevron_right),

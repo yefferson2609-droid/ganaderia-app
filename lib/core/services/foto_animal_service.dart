@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../database/local_db.dart';
+import '../theme/app_theme.dart';
 import '../utils/auditoria.dart';
 
 /// Tablas de animales que admiten foto, por tipo.
@@ -98,7 +99,7 @@ class FotoAnimalService {
           ),
           if (tieneFoto)
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              leading: const Icon(Icons.delete_outline, color: AppColors.danger),
               title: const Text('Quitar foto'),
               onTap: () => Navigator.pop(ctx, 'quitar'),
             ),

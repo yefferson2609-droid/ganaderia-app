@@ -61,7 +61,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
                             child: Icon(Icons.person,
                                 color: u.activo
                                     ? AppColors.primary
-                                    : Colors.grey),
+                                    : AppColors.textoSuave),
                           ),
                           title: Text(u.nombre,
                               style: const TextStyle(

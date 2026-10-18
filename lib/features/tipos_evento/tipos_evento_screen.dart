@@ -89,12 +89,12 @@ class _TiposEventoScreenState extends State<TiposEventoScreen> {
                             child: Icon(Icons.event_note,
                                 color: t.activo
                                     ? AppColors.primary
-                                    : Colors.grey),
+                                    : AppColors.textoSuave),
                           ),
                           title: Text(t.nombre,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: t.activo ? null : Colors.grey,
+                                color: t.activo ? null : AppColors.textoSuave,
                               )),
                           subtitle: t.descripcion != null
                               ? Text(t.descripcion!)

@@ -28,7 +28,7 @@ Color estadoSolicitudColor(String e) {
     case 'rechazada':
       return AppColors.danger;
   }
-  return Colors.grey;
+  return AppColors.textoSuave;
 }
 
 /// Foto de la solicitud: la del teléfono si existe, si no la de Supabase.
@@ -46,7 +46,7 @@ class FotoSolicitud extends StatelessWidget {
       width: size,
       height: size,
       color: Colors.grey.shade300,
-      child: const Icon(Icons.broken_image, color: Colors.grey),
+      child: const Icon(Icons.broken_image, color: AppColors.textoSuave),
     );
     if (local != null && File(local).existsSync()) {
       return Image.file(File(local),

@@ -279,7 +279,7 @@ class FechaNacimientoCampo extends StatelessWidget {
           fecha != null
               ? DateFormat('dd/MM/yyyy').format(fecha!)
               : 'Sin fecha · toca para elegir',
-          style: TextStyle(color: fecha != null ? null : Colors.grey[600]),
+          style: TextStyle(color: fecha != null ? null : AppColors.textoSuave),
         ),
       ),
     );

@@ -154,7 +154,7 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
         onPressed: _registrarBaja,
         icon: const Icon(Icons.remove_circle_outline),
         label: const Text('Registrar baja'),
-        backgroundColor: Colors.red[700],
+        backgroundColor: AppColors.danger,
       ),
       body: RefreshIndicator(
         onRefresh: _load,
@@ -182,7 +182,7 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
                         _CountChip(
                             label: 'Hembras ♀',
                             count: _lote!.hembras,
-                            color: Colors.pink),
+                            color: AppColors.rosa),
                         _CountChip(
                             label: 'Machos ♂',
                             count: _lote!.machos,

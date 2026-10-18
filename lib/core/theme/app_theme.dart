@@ -3,35 +3,41 @@ import 'package:flutter/material.dart';
 /// Paleta "Campo moderno" (multi-finca): verde pasto como color de marca,
 /// tierra como acento, fondo crema claro con tarjetas blancas, y colores de
 /// estado que se leen bien al sol y en tema oscuro.
+///
+/// Colores oscurecidos para leer al sol (2026-10-18): contraste medido sobre
+/// el fondo crema de 7:1 o más en letra y verde; etiquetas teñidas, 5:1 o más.
+/// Comparación en Design: https://claude.ai/artifact/NbKufCVfM9gZCzLFRn7hTv
 class AppColors {
   AppColors._();
 
   // Marca
-  static const primary = Color(0xFF2E6B3F);
-  static const primaryLight = Color(0xFF5E9A68);
-  static const primaryDark = Color(0xFF1E4A2B);
+  static const primary = Color(0xFF1F5A30);
+  static const primaryLight = Color(0xFF3F7A4B);
+  static const primaryDark = Color(0xFF163F22);
   static const primaryContainer = Color(0xFFDCEBDD);
 
   // Tierra
-  static const secondary = Color(0xFF9C6B3C);
+  static const secondary = Color(0xFF7A4D22);
   static const secondaryContainer = Color(0xFFF3E6D3);
 
   // Estado / semántica
-  static const success = Color(0xFF2E6B3F);
-  static const warning = Color(0xFFC27A12);
-  static const danger = Color(0xFFB3261E);
+  static const success = Color(0xFF1F5A30);
+  static const warning = Color(0xFF8A5200);
+  static const danger = Color(0xFF9E1B14);
   static const dangerContainer = Color(0xFFFBE9E7);
-  static const info = Color(0xFF2563A8);
-  static const accentPurple = Color(0xFF6A3D9A);
+  static const info = Color(0xFF1A4E8A);
+  static const accentPurple = Color(0xFF55307F);
+  static const rosa = Color(0xFFA8124A); // hembras
 
-  static const neutralGrey = Color(0xFF6B7470);
+  static const neutralGrey = Color(0xFF4A524D);
 
   // Superficies (tema claro)
   static const fondo = Color(0xFFF6F3EC); // crema
   static const tarjeta = Colors.white;
-  static const borde = Color(0xFFE5E0D4);
-  static const texto = Color(0xFF1D2A21);
-  static const textoSuave = Color(0xFF5C6660);
+  static const borde = Color(0xFFB8B09E);
+  static const bordeCampo = Color(0xFF8A8272); // campos para escribir
+  static const texto = Color(0xFF111A14);
+  static const textoSuave = Color(0xFF3E4741);
 
   // Superficies (tema oscuro)
   static const fondoOscuro = Color(0xFF121813);
@@ -54,6 +60,7 @@ class AppTheme {
     final fondo = oscuro ? AppColors.fondoOscuro : AppColors.fondo;
     final tarjeta = oscuro ? AppColors.tarjetaOscura : AppColors.tarjeta;
     final borde = oscuro ? AppColors.bordeOscuro : AppColors.borde;
+    final bordeCampo = oscuro ? AppColors.bordeOscuro : AppColors.bordeCampo;
     final texto = oscuro ? const Color(0xFFE6ECE7) : AppColors.texto;
     final textoSuave = oscuro ? const Color(0xFFA3AEA6) : AppColors.textoSuave;
 
@@ -159,9 +166,9 @@ class AppTheme {
         floatingLabelStyle: TextStyle(
             fontFamily: fuente, color: principal, fontWeight: FontWeight.w600),
         border: OutlineInputBorder(
-            borderRadius: redondo12, borderSide: BorderSide(color: borde)),
+            borderRadius: redondo12, borderSide: BorderSide(color: bordeCampo)),
         enabledBorder: OutlineInputBorder(
-            borderRadius: redondo12, borderSide: BorderSide(color: borde)),
+            borderRadius: redondo12, borderSide: BorderSide(color: bordeCampo)),
         focusedBorder: OutlineInputBorder(
             borderRadius: redondo12,
             borderSide: BorderSide(color: principal, width: 2)),

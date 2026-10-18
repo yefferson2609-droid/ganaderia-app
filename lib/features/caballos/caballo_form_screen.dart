@@ -7,6 +7,7 @@ import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/utils/auditoria.dart';
 import '../../core/widgets/raza_field.dart';
 import '../../core/utils/edad.dart';
+import '../../core/theme/app_theme.dart';
 
 class CaballoFormScreen extends StatefulWidget {
   final String? id;
@@ -151,7 +152,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
                           style: TextStyle(
                               color: _fechaNacimiento != null
                                   ? null
-                                  : Colors.grey[600]),
+                                  : AppColors.textoSuave),
                         ),
                       ),
                     ),

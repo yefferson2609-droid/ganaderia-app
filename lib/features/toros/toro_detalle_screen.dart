@@ -82,7 +82,7 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
       case 'muerto':
         return AppColors.danger;
       default:
-        return Colors.grey;
+        return AppColors.textoSuave;
     }
   }
 
@@ -266,7 +266,7 @@ class _InfoRow extends StatelessWidget {
           SizedBox(
             width: 140,
             child: Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                style: const TextStyle(color: AppColors.textoSuave, fontSize: 13)),
           ),
           Expanded(
             child: Text(

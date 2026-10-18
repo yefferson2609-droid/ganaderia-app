@@ -129,7 +129,7 @@ class _InventarioScreenState extends State<InventarioScreen> {
                       const Padding(
                         padding: EdgeInsets.only(left: 30, top: 4),
                         child: Text('Sin animales que coincidan',
-                            style: TextStyle(color: Colors.grey)),
+                            style: TextStyle(color: AppColors.textoSuave)),
                       ),
                   ],
                 ],
@@ -173,7 +173,7 @@ class _FichaCard extends StatelessWidget {
                       width: 120,
                       child: Text(k,
                           style:
-                              const TextStyle(color: Colors.grey, fontSize: 13))),
+                              const TextStyle(color: AppColors.textoSuave, fontSize: 13))),
                   Expanded(child: Text(v)),
                 ],
               ),
@@ -182,14 +182,14 @@ class _FichaCard extends StatelessWidget {
           Text('Enfermedades y tratamientos', style: sub),
           if (ficha.salud.isEmpty)
             const Text('Sin registros de salud',
-                style: TextStyle(color: Colors.grey))
+                style: TextStyle(color: AppColors.textoSuave))
           else
             ...ficha.salud.map((s) => Text('• $s')),
           if (ficha.tipo == 'vaca') ...[
             const SizedBox(height: 8),
             Text('Historial de eventos', style: sub),
             if (ficha.eventos.isEmpty)
-              const Text('Sin eventos', style: TextStyle(color: Colors.grey))
+              const Text('Sin eventos', style: TextStyle(color: AppColors.textoSuave))
             else
               ...ficha.eventos.map((e) => Text('• $e')),
           ],

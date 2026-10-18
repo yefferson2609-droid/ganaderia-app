@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// Fila "Etiqueta   Valor" para las fichas de los animales.
 class DatoFila extends StatelessWidget {
   final String label;
@@ -18,7 +20,7 @@ class DatoFila extends StatelessWidget {
           SizedBox(
             width: 120,
             child: Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                style: const TextStyle(color: AppColors.textoSuave, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,

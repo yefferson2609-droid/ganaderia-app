@@ -118,7 +118,7 @@ class _UsuarioFormScreenState extends State<UsuarioFormScreen> {
               Text(
                 'El usuario podrá cambiar su contraseña luego de iniciar sesión. '
                 'Después de crearlo, asígnale sus permisos desde la lista de usuarios.',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                style: TextStyle(color: AppColors.textoSuave, fontSize: 12),
               ),
               const SizedBox(height: 32),
               ElevatedButton(

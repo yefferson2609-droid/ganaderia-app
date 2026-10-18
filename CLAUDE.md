@@ -93,7 +93,7 @@ flutter build apk --release
 
 ## Supabase (proyecto actual, una sola finca)
 - URL `https://punqawvuwxlrdipapnja.supabase.co` (clave anon en lib/main.dart).
-- Migraciones en `supabase_migrations/`; **ejecutadas hasta la 010; la 011 (procedencia) pendiente de permiso del usuario**
+- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 011** (011 = procedencia, ejecutada el 2026-10-18 con permiso del usuario)
   (la 007 reúne 005 y 006). Ejecutadas por Claude desde el navegador integrado
   con la sesión del usuario (editor SQL vía `monaco.editor.getEditors()[0]`).
 - Usuarios: "Eliminar" llama a la función `eliminar_usuario` (solo admin, no a sí mismo): bloquea la cuenta (banned_until), cierra sesiones, borra permisos y marca `eliminado` (no se borra la cuenta porque hay FK created_by → auth.users). Usuario inactivo/eliminado no puede entrar y se le cierra la sesión al sincronizar. La sync, si un upsert es rechazado por RLS (42501), intenta update.

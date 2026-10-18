@@ -75,6 +75,33 @@ class _ConceptoFinancieroFormScreenState
     if (mounted) context.pop();
   }
 
+  /// Finaliza (archiva) o reactiva el concepto y vuelve a la lista.
+  Future<void> _finalizar() async {
+    if (_activo) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Finalizar concepto'),
+          content: Text('"${_nombreCtrl.text.trim()}" se archiva: deja de '
+              'salir al registrar, y sus movimientos se conservan en '
+              'Finanzas y en los reportes.\n\nPuedes reactivarlo cuando quieras.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Finalizar')),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+    final c = await _repo.getById(widget.id!);
+    if (c != null) await _repo.update(c.copyWith(activo: !_activo));
+    if (mounted) context.pop();
+  }
+
   Future<void> _eliminar() async {
     // Un concepto con movimientos no se puede borrar (se perdería a qué
     // corresponden): se ofrece desactivarlo.
@@ -88,7 +115,7 @@ class _ConceptoFinancieroFormScreenState
           content: Text(
               '"${_nombreCtrl.text.trim()}" tiene $usados '
               'movimiento${usados == 1 ? '' : 's'} registrado${usados == 1 ? '' : 's'}.\n\n'
-              'Puedes desactivarlo: deja de salir al registrar, y los '
+              'Puedes finalizarlo (archivarlo): deja de salir al registrar, y los '
               'movimientos que ya tiene conservan su nombre.'),
           actions: [
             TextButton(
@@ -96,7 +123,7 @@ class _ConceptoFinancieroFormScreenState
                 child: const Text('Cancelar')),
             ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Desactivar')),
+                child: const Text('Finalizar')),
           ],
         ),
       );
@@ -170,15 +197,17 @@ class _ConceptoFinancieroFormScreenState
                     ),
                     if (_isEditing) ...[
                       const SizedBox(height: 8),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Activo'),
-                        subtitle: Text(_activo
-                            ? 'Sale en la lista al registrar'
-                            : 'No sale al registrar (se conserva en lo ya anotado)'),
-                        value: _activo,
-                        onChanged: (v) => setState(() => _activo = v),
-                      ),
+                      if (!_activo)
+                        Card(
+                          color: AppColors.warning.withValues(alpha: 0.1),
+                          child: const ListTile(
+                            leading: Icon(Icons.inventory_2_outlined,
+                                color: AppColors.warning),
+                            title: Text('Finalizado (archivado)'),
+                            subtitle: Text(
+                                'No sale al registrar. Sus movimientos se conservan.'),
+                          ),
+                        ),
                     ],
                     const SizedBox(height: 32),
                     ElevatedButton(
@@ -193,6 +222,16 @@ class _ConceptoFinancieroFormScreenState
                               _isEditing ? 'Guardar cambios' : 'Crear concepto'),
                     ),
                     if (_isEditing) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _loading ? null : _finalizar,
+                        icon: Icon(_activo
+                            ? Icons.inventory_2_outlined
+                            : Icons.unarchive_outlined),
+                        label: Text(_activo
+                            ? 'Finalizar (archivar)'
+                            : 'Reactivar'),
+                      ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _loading ? null : _eliminar,

@@ -20,6 +20,10 @@ class _ConceptosFinancierosScreenState
   List<ConceptoFinanciero> _ingresos = [];
   List<ConceptoFinanciero> _gastos = [];
   bool _loading = true;
+  bool _verArchivados = false;
+
+  int get _archivados =>
+      [..._ingresos, ..._gastos].where((c) => !c.activo).length;
 
   @override
   void initState() {
@@ -41,7 +45,12 @@ class _ConceptosFinancierosScreenState
     setState(() => _loading = false);
   }
 
-  Widget _buildLista(List<ConceptoFinanciero> conceptos) {
+  Widget _buildLista(List<ConceptoFinanciero> todos) {
+    // Activos arriba; los finalizados (archivados) solo si se piden.
+    final conceptos = [
+      ...todos.where((c) => c.activo),
+      if (_verArchivados) ...todos.where((c) => !c.activo),
+    ];
     if (conceptos.isEmpty) {
       return const Center(child: Text('No hay conceptos'));
     }
@@ -71,7 +80,7 @@ class _ConceptosFinancierosScreenState
                   )),
               subtitle: c.activo
                   ? null
-                  : const Text('Desactivado (no sale al registrar)'),
+                  : const Text('Finalizado (archivado)'),
               trailing: const Icon(Icons.edit, color: AppColors.primary),
               onTap: () => context
                   .push('/finanzas/conceptos/${c.id}/editar')
@@ -88,6 +97,19 @@ class _ConceptosFinancierosScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Conceptos Financieros'),
+        actions: [
+          if (_archivados > 0)
+            TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              onPressed: () => setState(() => _verArchivados = !_verArchivados),
+              icon: Icon(_verArchivados
+                  ? Icons.visibility_off_outlined
+                  : Icons.inventory_2_outlined),
+              label: Text(_verArchivados
+                  ? 'Ocultar archivados'
+                  : 'Archivados ($_archivados)'),
+            ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [

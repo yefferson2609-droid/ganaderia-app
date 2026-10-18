@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ganaderia/core/theme/app_theme.dart';
 import 'package:ganaderia/core/widgets/animal_face.dart';
+import 'package:ganaderia/core/widgets/ficha_animal.dart';
 
 Future<void> _fuente(String familia, List<String> archivos) async {
   final f = FontLoader(familia);
@@ -251,6 +252,120 @@ Widget _formulario() => Builder(
       ),
     );
 
+Widget _lista() => Scaffold(
+      appBar: AppBar(
+          leading: const Icon(Icons.arrow_back), title: const Text('Vacas')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          AnimalTile(
+            cara: const AnimalFace(
+                tipo: 'vaca', size: 52, estadoColor: AppColors.success),
+            titulo: 'Vaca #128',
+            etiquetas: const [
+              Etiqueta('En ordeño', AppColors.info),
+              Etiqueta('Preñada 4 m', AppColors.success),
+            ],
+            detalle: 'Parto 12/02/2027 · 6 años · Brahman · Roja',
+            onTap: () {},
+          ),
+          AnimalTile(
+            cara: const AnimalFace(
+                tipo: 'vaca', size: 52, estadoColor: AppColors.success),
+            titulo: 'Vaca #131',
+            etiquetas: const [Etiqueta('Seca', AppColors.warning)],
+            detalle: '8 años · Blanca',
+            onTap: () {},
+          ),
+          AnimalTile(
+            cara: const AnimalFace(
+                tipo: 'toro', size: 52, estadoColor: AppColors.success),
+            titulo: 'Relámpago',
+            subtitulo: '#T-04',
+            etiquetas: const [Etiqueta('Activo', AppColors.success)],
+            detalle: '4 años · Gyr',
+            trailing: const Padding(
+                padding: EdgeInsets.all(12), child: Icon(Icons.more_vert)),
+            onTap: () {},
+          ),
+          AnimalTile(
+            cara: const AnimalFace(
+                tipo: 'ternero', size: 52, estadoColor: AppColors.success),
+            titulo: 'Ternera #C-17',
+            etiquetas: const [
+              Etiqueta('Por destetar', AppColors.warning),
+              Etiqueta('Pasar a Novilla de levante', AppColors.info),
+            ],
+            detalle: 'Hembra · 9 meses',
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+
+Widget _ficha() => Scaffold(
+      appBar: AppBar(
+        leading: const Icon(Icons.arrow_back),
+        title: const Text('Vaca #128'),
+        actions: const [
+          Icon(Icons.edit),
+          Padding(padding: EdgeInsets.all(12), child: Icon(Icons.more_vert)),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          const PortadaAnimal(
+            cara: AnimalFace(tipo: 'vaca', size: 72, estadoColor: AppColors.success),
+            titulo: 'Vaca #128',
+            detalle: '6 años · 3 partos · Brahman',
+            etiquetas: [
+              Etiqueta('En ordeño · 140 días', AppColors.info, sobreOscuro: true),
+            ],
+          ),
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Row(children: [
+              Icon(Icons.pregnant_woman, color: AppColors.success),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Preñada · 4 meses',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    Text('Parto posible: 12/02/2027 (faltan 118 días)',
+                        style: TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+          for (final (t, i) in [
+            ('Datos', Icons.info_outline),
+            ('Reproducción', Icons.favorite_outline),
+            ('Descendencia', Icons.family_restroom),
+            ('Salud', Icons.vaccines),
+          ])
+            Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: Icon(i, color: AppColors.primary),
+                title: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)),
+                trailing: const Icon(Icons.expand_more),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+          onPressed: () {}, icon: const Icon(Icons.add), label: const Text('Evento')),
+    );
+
 void main() {
   setUpAll(() async {
     const r = 'C:/flutter/bin/cache/artifacts/material_fonts';
@@ -301,7 +416,12 @@ void main() {
         matchesGoldenFile('vista_previa/icono.png'));
   });
 
-  for (final (nombre, pantalla) in [('panel', _panel), ('formulario', _formulario)]) {
+  for (final (nombre, pantalla) in [
+    ('panel', _panel),
+    ('formulario', _formulario),
+    ('lista', _lista),
+    ('ficha', _ficha),
+  ]) {
     // Solo corre si se pide (VISTA_PREVIA=1); no es una prueba de lógica.
     testWidgets('vista $nombre',
         skip: Platform.environment['VISTA_PREVIA'] != '1', (tester) async {

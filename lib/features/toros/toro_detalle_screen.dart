@@ -7,6 +7,7 @@ import '../../core/repositories/toro_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
+import '../../core/widgets/ficha_animal.dart';
 import '../../core/widgets/creador_info.dart';
 import '../../core/widgets/descendencia_section.dart';
 import '../../core/widgets/pesajes_section.dart';
@@ -151,27 +152,32 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            PortadaAnimal(
+              cara: AnimalFaceEditable(
+                  tipo: 'toro',
+                  id: _toro!.id,
+                  fotoLocal: _toro!.fotoLocal,
+                  fotoUrl: _toro!.fotoUrl,
+                  estadoColor: _estadoColor(_toro!.estado),
+                  onCambio: _load),
+              titulo: _toro!.displayName,
+              detalle: [
+                _toro!.edad,
+                if (_toro!.raza != null) _toro!.raza!,
+              ].join(' · '),
+              etiquetas: [
+                Etiqueta(
+                    _toro!.estado[0].toUpperCase() + _toro!.estado.substring(1),
+                    _estadoColor(_toro!.estado),
+                    sobreOscuro: true),
+              ],
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [
-                      AnimalFaceEditable(
-                          tipo: 'toro',
-                          id: _toro!.id,
-                          fotoLocal: _toro!.fotoLocal,
-                          fotoUrl: _toro!.fotoUrl,
-                          estadoColor: _estadoColor(_toro!.estado),
-                          onCambio: _load),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(_toro!.displayName,
-                            style: Theme.of(context).textTheme.titleLarge),
-                      ),
-                    ]),
-                    const Divider(height: 24),
                     _InfoRow(label: 'Número', value: _toro!.numero),
                     _InfoRow(label: 'Nombre', value: _toro!.nombre),
                     _InfoRow(

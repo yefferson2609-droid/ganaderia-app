@@ -242,7 +242,8 @@ class ReportePdfService {
             .map((m) => [
                   _fmt.format(m.fecha),
                   m.tipo == 'ingreso' ? 'Ingreso' : 'Gasto',
-                  conceptos[m.conceptoId] ?? '-',
+                  conceptos[m.conceptoId] ??
+                      (m.conceptoId == null ? 'Otros' : '-'),
                   m.nota ?? '',
                   '${m.tipo == 'gasto' ? '-' : ''}${_money.format(m.monto)}',
                 ])

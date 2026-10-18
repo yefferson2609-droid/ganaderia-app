@@ -41,35 +41,6 @@ class _ConceptosFinancierosScreenState
     setState(() => _loading = false);
   }
 
-  Future<void> _delete(ConceptoFinanciero concepto) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Eliminar concepto'),
-        content: Text('¿Eliminar "${concepto.nombre}"?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-    if (confirm == true) {
-      await _repo.delete(concepto.id);
-      _load();
-    }
-  }
-
-  Future<void> _toggleActivo(ConceptoFinanciero concepto) async {
-    await _repo.update(concepto.copyWith(activo: !concepto.activo));
-    _load();
-  }
-
   Widget _buildLista(List<ConceptoFinanciero> conceptos) {
     if (conceptos.isEmpty) {
       return const Center(child: Text('No hay conceptos'));
@@ -98,30 +69,13 @@ class _ConceptosFinancierosScreenState
                     fontWeight: FontWeight.bold,
                     color: c.activo ? null : AppColors.textoSuave,
                   )),
-              trailing: PopupMenuButton<String>(
-                onSelected: (v) {
-                  if (v == 'editar') {
-                    context
-                        .push('/finanzas/conceptos/${c.id}/editar')
-                        .then((_) => _load());
-                  } else if (v == 'toggle') {
-                    _toggleActivo(c);
-                  } else {
-                    _delete(c);
-                  }
-                },
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                      value: 'toggle',
-                      child: Text(c.activo ? 'Desactivar' : 'Activar')),
-                  const PopupMenuItem(
-                      value: 'editar', child: Text('Editar')),
-                  const PopupMenuItem(
-                      value: 'eliminar',
-                      child: Text('Eliminar',
-                          style: TextStyle(color: AppColors.danger))),
-                ],
-              ),
+              subtitle: c.activo
+                  ? null
+                  : const Text('Desactivado (no sale al registrar)'),
+              trailing: const Icon(Icons.edit, color: AppColors.primary),
+              onTap: () => context
+                  .push('/finanzas/conceptos/${c.id}/editar')
+                  .then((_) => _load()),
             ),
           );
         },

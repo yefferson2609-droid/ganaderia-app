@@ -252,13 +252,16 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                                           : AppColors.danger,
                                     ),
                                   ),
+                                  // Sin concepto = "Otros" (gasto o ingreso
+                                  // especial); la descripción va en la nota.
                                   title: Text(
-                                      concepto?.nombre ?? m.nota ?? 'Sin concepto',
+                                      concepto?.nombre ??
+                                          (m.conceptoId == null ? 'Otros' : 'Sin concepto'),
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   subtitle: Text(
                                       '${_dateFormat.format(m.fecha)}'
-                                      '${concepto != null && m.nota != null && m.nota!.isNotEmpty ? ' · ${m.nota}' : ''}'
+                                      '${m.nota != null && m.nota!.isNotEmpty ? ' · ${m.nota}' : ''}'
                                       '${esNomina ? '\nToca para ver el detalle de cada trabajador' : ''}'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,

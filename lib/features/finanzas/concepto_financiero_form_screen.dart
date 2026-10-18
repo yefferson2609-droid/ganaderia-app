@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/repositories/concepto_financiero_repository.dart';
+import '../../core/theme/app_theme.dart';
 
 class ConceptoFinancieroFormScreen extends StatefulWidget {
   final String? id;
@@ -22,6 +23,7 @@ class _ConceptoFinancieroFormScreenState
   final _repo = ConceptoFinancieroRepository();
   final _nombreCtrl = TextEditingController();
   late String _tipo;
+  bool _activo = true;
   bool _loading = false;
   bool _loadingData = false;
 
@@ -46,6 +48,7 @@ class _ConceptoFinancieroFormScreenState
     if (c != null) {
       _nombreCtrl.text = c.nombre;
       _tipo = c.tipo;
+      _activo = c.activo;
     }
     setState(() => _loadingData = false);
   }
@@ -60,6 +63,7 @@ class _ConceptoFinancieroFormScreenState
         await _repo.update(c.copyWith(
           nombre: _nombreCtrl.text.trim(),
           tipo: _tipo,
+          activo: _activo,
         ));
       }
     } else {
@@ -68,6 +72,30 @@ class _ConceptoFinancieroFormScreenState
         tipo: _tipo,
       );
     }
+    if (mounted) context.pop();
+  }
+
+  Future<void> _eliminar() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar concepto'),
+        content: Text('¿Eliminar "${_nombreCtrl.text.trim()}"?\n\n'
+            'Los movimientos ya registrados con este concepto no se borran.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await _repo.delete(widget.id!);
     if (mounted) context.pop();
   }
 
@@ -111,6 +139,18 @@ class _ConceptoFinancieroFormScreenState
                       validator: (v) =>
                           (v == null || v.isEmpty) ? 'Campo requerido' : null,
                     ),
+                    if (_isEditing) ...[
+                      const SizedBox(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Activo'),
+                        subtitle: Text(_activo
+                            ? 'Sale en la lista al registrar'
+                            : 'No sale al registrar (se conserva en lo ya anotado)'),
+                        value: _activo,
+                        onChanged: (v) => setState(() => _activo = v),
+                      ),
+                    ],
                     const SizedBox(height: 32),
                     ElevatedButton(
                       onPressed: _loading ? null : _save,
@@ -123,6 +163,16 @@ class _ConceptoFinancieroFormScreenState
                           : Text(
                               _isEditing ? 'Guardar cambios' : 'Crear concepto'),
                     ),
+                    if (_isEditing) ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _loading ? null : _eliminar,
+                        style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.danger),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Eliminar concepto'),
+                      ),
+                    ],
                   ],
                 ),
               ),

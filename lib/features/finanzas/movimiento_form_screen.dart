@@ -7,6 +7,10 @@ import '../../core/repositories/concepto_financiero_repository.dart';
 import '../../core/repositories/movimiento_financiero_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
 
+/// Valor de la lista para "Otro (gasto/ingreso especial)": se guarda sin
+/// concepto y con la descripción en la nota.
+const kConceptoOtro = '__otro__';
+
 class MovimientoFormScreen extends StatefulWidget {
   final String? id;
   final String tipoInicial;
@@ -30,6 +34,7 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
   final _notaCtrl = TextEditingController();
   late String _tipo;
   String? _conceptoId;
+  bool _otro = false; // "Otro (especial)": sin concepto, con descripción
   String? _ubicacionId;
   DateTime _fecha = DateTime.now();
   List<ConceptoFinanciero> _conceptos = [];
@@ -64,6 +69,8 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
         _fecha = m.fecha;
         _montoCtrl.text = m.monto.toStringAsFixed(2);
         _notaCtrl.text = m.nota ?? '';
+        // Sin concepto pero con descripción = gasto/ingreso especial.
+        _otro = m.conceptoId == null && (m.nota ?? '').trim().isNotEmpty;
       }
     }
     await _loadConceptos();
@@ -74,7 +81,13 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
   Future<void> _loadConceptos() async {
     _conceptos = await _conceptoRepo.getAll(tipo: _tipo, soloActivos: true);
     if (_conceptoId != null && !_conceptos.any((c) => c.id == _conceptoId)) {
-      _conceptoId = null;
+      // Al editar, conservar el concepto aunque luego se haya desactivado.
+      final actual = await _conceptoRepo.getById(_conceptoId!);
+      if (actual != null && actual.tipo == _tipo) {
+        _conceptos = [..._conceptos, actual];
+      } else {
+        _conceptoId = null;
+      }
     }
   }
 
@@ -168,17 +181,48 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _conceptoId,
+                      value: _otro ? kConceptoOtro : _conceptoId,
                       decoration: const InputDecoration(
-                        labelText: 'Concepto (opcional)',
+                        labelText: 'Concepto',
                         prefixIcon: Icon(Icons.category_outlined),
                       ),
-                      items: _conceptos
-                          .map((c) => DropdownMenuItem(
-                              value: c.id, child: Text(c.nombre)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _conceptoId = v),
+                      items: [
+                        ..._conceptos.map((c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.activo
+                                ? c.nombre
+                                : '${c.nombre} (desactivado)'))),
+                        DropdownMenuItem(
+                          value: kConceptoOtro,
+                          child: Text(
+                              esIngreso
+                                  ? 'Otro (ingreso especial)'
+                                  : 'Otro (gasto especial)',
+                              style: const TextStyle(
+                                  fontStyle: FontStyle.italic)),
+                        ),
+                      ],
+                      onChanged: (v) => setState(() {
+                        _otro = v == kConceptoOtro;
+                        _conceptoId = _otro ? null : v;
+                      }),
                     ),
+                    if (_otro) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _notaCtrl,
+                        decoration: InputDecoration(
+                          labelText: '¿Qué fue? *',
+                          hintText: esIngreso
+                              ? 'Ej: venta de una montura'
+                              : 'Ej: reparación de la bomba',
+                          prefixIcon: const Icon(Icons.edit_note),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Escribe qué fue'
+                            : null,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     InkWell(
                       onTap: () async {
@@ -211,15 +255,17 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
                           .toList(),
                       onChanged: (v) => setState(() => _ubicacionId = v),
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _notaCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nota (opcional)',
-                        prefixIcon: Icon(Icons.notes),
+                    if (!_otro) ...[
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _notaCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Nota (opcional)',
+                          prefixIcon: Icon(Icons.notes),
+                        ),
+                        maxLines: 3,
                       ),
-                      maxLines: 3,
-                    ),
+                    ],
                     const SizedBox(height: 32),
                     ElevatedButton(
                       onPressed: _loading ? null : _save,

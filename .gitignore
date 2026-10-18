@@ -54,3 +54,6 @@ app.*.map.json
 
 # Supabase CLI local state
 /supabase/.temp/
+
+# Vista previa de diseño (imágenes generadas)
+test/vista_previa/

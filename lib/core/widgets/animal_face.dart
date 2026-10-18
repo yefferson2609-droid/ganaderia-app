@@ -114,6 +114,12 @@ class AnimalFaceEditable extends StatelessWidget {
 }
 
 /// Logo del hierro de la finca.
+/// Logo de la app. En la finca es el hierro AgroYeff (en multi-finca, una
+/// marca neutra con el mismo nombre de clase).
+class MarcaLogo extends HierroLogo {
+  const MarcaLogo({super.key, super.size});
+}
+
 class HierroLogo extends StatelessWidget {
   final double size;
   const HierroLogo({super.key, this.size = 32});

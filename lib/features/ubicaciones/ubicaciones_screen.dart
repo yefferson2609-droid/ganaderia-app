@@ -134,12 +134,12 @@ class _UbicacionesScreenState extends State<UbicacionesScreen> {
                           child: Icon(Icons.location_on,
                               color: ub.activa
                                   ? AppColors.primary
-                                  : Colors.grey),
+                                  : AppColors.textoSuave),
                         ),
                         title: Text(ub.nombre,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: ub.activa ? null : Colors.grey,
+                              color: ub.activa ? null : AppColors.textoSuave,
                             )),
                         subtitle: ub.descripcion != null
                             ? Text(ub.descripcion!)

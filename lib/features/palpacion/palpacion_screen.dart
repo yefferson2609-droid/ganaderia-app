@@ -170,7 +170,7 @@ class _PalpacionScreenState extends State<PalpacionScreen> {
                 const SizedBox(height: 8),
                 const Text(
                     'Marca solo las vacas que revisó. Las que dejes sin marcar no cambian.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: TextStyle(fontSize: 12, color: AppColors.textoSuave)),
                 const SizedBox(height: 8),
                 ...visibles.map((v) => _fila(v)),
                 if (novillasVisibles.isNotEmpty) ...[

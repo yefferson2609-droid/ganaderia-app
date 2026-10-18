@@ -315,7 +315,7 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
               activo ? AppColors.primaryContainer : Colors.grey[200],
           child: Icon(
               m.rol == 'empleado' ? Icons.person : Icons.admin_panel_settings,
-              color: activo ? AppColors.primary : Colors.grey),
+              color: activo ? AppColors.primary : AppColors.textoSuave),
         ),
         title: Text(esYo ? '${m.nombre} (tú)' : m.nombre,
             style: const TextStyle(fontWeight: FontWeight.bold)),

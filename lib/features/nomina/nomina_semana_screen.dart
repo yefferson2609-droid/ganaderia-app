@@ -55,7 +55,7 @@ class _NominaSemanaScreenState extends State<NominaSemanaScreen> {
                             Text(
                                 'Semana del ${_fmt.format(s.semanaFin.subtract(const Duration(days: 6)))} '
                                 'al ${_fmt.format(s.semanaFin)}',
-                                style: const TextStyle(color: Colors.grey)),
+                                style: const TextStyle(color: AppColors.textoSuave)),
                             Text(money.format(s.total),
                                 style: const TextStyle(
                                     fontSize: 28, fontWeight: FontWeight.bold)),

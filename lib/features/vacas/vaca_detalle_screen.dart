@@ -362,7 +362,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
                 const Padding(
                   padding: EdgeInsets.all(8),
                   child: Text('Sin eventos registrados',
-                      style: TextStyle(color: Colors.grey)),
+                      style: TextStyle(color: AppColors.textoSuave)),
                 )
               else
                 for (final e in _eventos)
@@ -477,7 +477,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
       case 'muerta':
         return AppColors.danger;
       default:
-        return Colors.grey;
+        return AppColors.textoSuave;
     }
   }
 }
@@ -499,7 +499,7 @@ class _InfoRow extends StatelessWidget {
           SizedBox(
             width: 140,
             child: Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                style: const TextStyle(color: AppColors.textoSuave, fontSize: 13)),
           ),
           Expanded(
             child: Text(

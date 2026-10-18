@@ -277,7 +277,7 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                               style: TextStyle(
                                   color: _fechaMonta != null
                                       ? null
-                                      : Colors.grey[600])),
+                                      : AppColors.textoSuave)),
                         ),
                       ),
                       const SizedBox(height: 16),

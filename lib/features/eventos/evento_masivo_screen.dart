@@ -222,7 +222,7 @@ class _EventoMasivoScreenState extends State<EventoMasivoScreen> {
                                     size: 16,
                                     color: seleccionada
                                         ? Colors.white
-                                        : Colors.grey),
+                                        : AppColors.textoSuave),
                               ),
                             );
                           },

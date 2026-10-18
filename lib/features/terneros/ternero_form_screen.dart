@@ -303,7 +303,7 @@ class _TerneroFormScreenState extends State<TerneroFormScreen> {
                             style: TextStyle(
                                 color: _fechaDestete != null
                                     ? null
-                                    : Colors.grey[600])),
+                                    : AppColors.textoSuave)),
                       ),
                     ),
                     const SizedBox(height: 16),

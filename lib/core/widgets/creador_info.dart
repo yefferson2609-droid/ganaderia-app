@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../repositories/perfil_usuario_repository.dart';
+import '../theme/app_theme.dart';
 
 /// Nombre visible de un usuario a partir de su id (o null si no se conoce).
 Future<String?> nombreUsuario(String? id) async {
@@ -44,7 +45,7 @@ class CreadorInfo extends StatelessWidget {
         final style = Theme.of(context)
             .textTheme
             .bodySmall
-            ?.copyWith(color: Colors.grey[600]);
+            ?.copyWith(color: AppColors.textoSuave);
         final editado = updatedAt.difference(createdAt).inMinutes > 0;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -115,7 +115,7 @@ class _UsuarioPermisosScreenState extends State<UsuarioPermisosScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(_perfil!.correo, style: TextStyle(color: Colors.grey[600])),
+          Text(_perfil!.correo, style: TextStyle(color: AppColors.textoSuave)),
           const SizedBox(height: 16),
           Text('Permisos por módulo',
               style: Theme.of(context)

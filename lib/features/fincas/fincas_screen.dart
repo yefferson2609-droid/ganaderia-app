@@ -81,7 +81,7 @@ class _FincasScreenState extends State<FincasScreen> {
                   crear
                       ? 'Quedará en revisión. Cuando la activemos podrás usarla.'
                       : 'Pídele el código al dueño de la finca. Él debe aprobarte.',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  style: TextStyle(color: AppColors.textoSuave, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -304,9 +304,9 @@ class _FincaCard extends StatelessWidget {
               radius: 24,
               backgroundColor: finca.usable
                   ? AppColors.primaryContainer
-                  : Colors.grey.withValues(alpha: 0.15),
+                  : AppColors.textoSuave.withValues(alpha: 0.15),
               child: Icon(Icons.agriculture,
-                  color: finca.usable ? AppColors.primary : Colors.grey),
+                  color: finca.usable ? AppColors.primary : AppColors.textoSuave),
             ),
             const SizedBox(width: 14),
             Expanded(

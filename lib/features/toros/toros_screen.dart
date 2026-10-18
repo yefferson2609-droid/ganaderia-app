@@ -66,7 +66,7 @@ class _TorosScreenState extends State<TorosScreen> {
       case 'vendido': return AppColors.warning;
       case 'fallecido':
       case 'muerto': return AppColors.danger;
-      default: return Colors.grey;
+      default: return AppColors.textoSuave;
     }
   }
 

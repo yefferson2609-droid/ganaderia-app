@@ -288,7 +288,7 @@ class _LecheScreenState extends State<LecheScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Hoy', style: TextStyle(color: Colors.grey)),
+            const Text('Hoy', style: TextStyle(color: AppColors.textoSuave)),
             Text(litros(h.total),
                 style: const TextStyle(
                     fontSize: 30,
@@ -345,7 +345,7 @@ class _LecheScreenState extends State<LecheScreen> {
       final total = _suma(d);
       return Expanded(
         child: Column(children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textoSuave)),
           Text(litros(total),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text(n > 0 ? '${litros(total / n)}/día' : '—',
@@ -443,7 +443,7 @@ class _LecheScreenState extends State<LecheScreen> {
               const Padding(
                 padding: EdgeInsets.only(top: 6),
                 child: Text('Litros = promedio diario de los últimos 30 días',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    style: TextStyle(fontSize: 11, color: AppColors.textoSuave)),
               ),
           ],
         ),
@@ -464,7 +464,7 @@ class _LecheScreenState extends State<LecheScreen> {
             const SizedBox(height: 4),
             const Text(
                 'Calculado con los partos y secados registrados. Se usa para sugerir cuándo secar.',
-                style: TextStyle(fontSize: 12, color: Colors.grey)),
+                style: TextStyle(fontSize: 12, color: AppColors.textoSuave)),
             const SizedBox(height: 8),
             if (filas.isEmpty)
               const Text('Aún no hay suficientes partos y secados registrados.')
@@ -501,7 +501,7 @@ class _LecheScreenState extends State<LecheScreen> {
               const Padding(
                 padding: EdgeInsets.only(top: 6),
                 child: Text('d = días · (n) = casos registrados',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    style: TextStyle(fontSize: 11, color: AppColors.textoSuave)),
               ),
           ],
         ),

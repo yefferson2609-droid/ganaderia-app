@@ -17,7 +17,7 @@ Color estadoTerneroColor(String estado) {
     case 'fallecido':
       return AppColors.danger;
     default:
-      return Colors.grey;
+      return AppColors.textoSuave;
   }
 }
 
@@ -94,7 +94,7 @@ class _TernerosScreenState extends State<TernerosScreen> {
               Etiqueta('Pasar a ${kCategoriaLabels[t.cambioSugerido]}',
                   AppColors.info),
             if (t.categoria == null && t.estado == 'activo')
-              const Etiqueta('Sin clasificar', Colors.grey),
+              const Etiqueta('Sin clasificar', AppColors.textoSuave),
           ];
           return AnimalTile(
             cara: AnimalFace(

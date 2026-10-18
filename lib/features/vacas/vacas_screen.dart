@@ -114,7 +114,7 @@ class _VacasScreenState extends State<VacasScreen> {
       case 'muerta':
         return AppColors.danger;
       default:
-        return Colors.grey;
+        return AppColors.textoSuave;
     }
   }
 

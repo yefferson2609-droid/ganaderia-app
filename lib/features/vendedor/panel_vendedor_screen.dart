@@ -364,7 +364,7 @@ class _PanelVendedorScreenState extends State<PanelVendedorScreen> {
   }
 
   Widget _tarjeta(_FincaPanel f, int fincasDelDueno) {
-    final (texto, color) = _estados[f.estado] ?? (f.estado, Colors.grey);
+    final (texto, color) = _estados[f.estado] ?? (f.estado, AppColors.textoSuave);
     final estadoTexto = f.estado == 'prueba' && f.pruebaHasta != null
         ? '$texto hasta ${_fecha.format(f.pruebaHasta!)}'
         : texto;
@@ -407,12 +407,12 @@ class _PanelVendedorScreenState extends State<PanelVendedorScreen> {
                 '${f.pendientes > 0 ? ' (+${f.pendientes} por aprobar)' : ''}'
                 ' · ${f.animales} animales '
                 '(${f.vacas} vacas, ${f.toros} toros, ${f.terneros} levante, ${f.caballos} caballos)',
-                style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                style: TextStyle(color: AppColors.textoSuave, fontSize: 13),
               ),
               Text(
                 'Registrada ${_fecha.format(f.creada)} · Código ${f.codigo}'
                 ' · Último uso: ${f.ultimaActividad == null ? 'sin datos' : _fecha.format(f.ultimaActividad!)}',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                style: TextStyle(color: AppColors.textoSuave, fontSize: 12),
               ),
             ],
           ),

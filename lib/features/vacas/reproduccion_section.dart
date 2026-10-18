@@ -19,7 +19,7 @@ Color estadoProduccionColor(EstadoProduccion e) {
     case EstadoProduccion.seca:
       return AppColors.warning;
     case EstadoProduccion.sinPartos:
-      return Colors.grey;
+      return AppColors.textoSuave;
   }
 }
 
@@ -104,7 +104,7 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
           padding: const EdgeInsets.fromLTRB(16, 2, 0, 2),
           child: Row(children: [
             Icon(c.macho ? Icons.male : Icons.female,
-                size: 18, color: c.macho ? AppColors.info : Colors.pink),
+                size: 18, color: c.macho ? AppColors.info : AppColors.rosa),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -670,7 +670,7 @@ class _ReproduccionSectionState extends State<ReproduccionSection> {
             SizedBox(
                 width: 130,
                 child: Text(label,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13))),
+                    style: const TextStyle(color: AppColors.textoSuave, fontSize: 13))),
             Expanded(
                 child: Text(valor,
                     style: const TextStyle(fontWeight: FontWeight.w500))),

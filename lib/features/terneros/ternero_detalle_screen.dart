@@ -553,7 +553,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                   '${t.fechaDestete != null ? ' · Destetado ${_fmt.format(t.fechaDestete!)}' : (t.destetado ? '' : ' · Sin destetar')}',
               etiquetas: [
                 Etiqueta(t.categoriaLabel,
-                    t.categoria == null ? Colors.grey : AppColors.primary,
+                    t.categoria == null ? AppColors.textoSuave : AppColors.primary,
                     sobreOscuro: true),
                 if (t.estado != 'activo')
                   Etiqueta(t.estado[0].toUpperCase() + t.estado.substring(1),
@@ -571,7 +571,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _InfoRow('Categoría', t.categoriaLabel,
-                        color: t.categoria == null ? Colors.grey : null),
+                        color: t.categoria == null ? AppColors.textoSuave : null),
                     if (t.cambioSugerido != null)
                       _InfoRow('Sugerencia',
                           'Pasar a ${kCategoriaLabels[t.cambioSugerido]} (menú ⋮)',
@@ -756,7 +756,7 @@ class _InfoRow extends StatelessWidget {
           SizedBox(
             width: 110,
             child: Text(label,
-                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                style: const TextStyle(color: AppColors.textoSuave, fontSize: 13)),
           ),
           Expanded(
             child: Text(value,

@@ -126,7 +126,7 @@ class _PesajesSectionState extends State<PesajesSection> {
             ]),
             if (_pesajes.isEmpty)
               const Text('Sin pesajes (opcional)',
-                  style: TextStyle(color: Colors.grey))
+                  style: TextStyle(color: AppColors.textoSuave))
             else
               ..._pesajes.take(6).toList().asMap().entries.map((e) {
                 final p = e.value;

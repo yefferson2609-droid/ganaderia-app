@@ -166,7 +166,7 @@ class _FinanzasScreenState extends State<FinanzasScreen> {
                       children: [
                         Text(
                           '${_dateFormat.format(_rango.start)} - ${_dateFormat.format(_rango.end)}',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style: TextStyle(color: AppColors.textoSuave, fontSize: 12),
                         ),
                         const SizedBox(height: 12),
                         Row(

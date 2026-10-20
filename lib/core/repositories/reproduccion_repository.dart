@@ -25,6 +25,14 @@ const _toroDeLaMonta = Object();
 bool esTipoParto(String nombre) =>
     nombre.toLowerCase().trim().startsWith('parto');
 
+/// Tipos que tienen su propio botón (Registrar parto, Secar vaca,
+/// Palpación) y por eso no se ofrecen en "Evento" ni en "Evento masivo":
+/// así cada uno se registra de una sola manera.
+bool esTipoConBotonPropio(String nombre) {
+  final n = nombre.toLowerCase().trim();
+  return n.startsWith('parto') || n.startsWith('secad') || n.startsWith('palpaci');
+}
+
 enum EstadoProduccion { enOrdeno, seca, sinPartos }
 
 const kEstadoProduccionLabels = {
@@ -158,12 +166,22 @@ class ReproduccionRepository {
       JOIN tipos_evento t ON t.id = e.tipo_evento_id
       WHERE e.vaca_id = ? AND e.deleted = 0 AND $_esSecado
     ''', [vacaId]);
+    // Última vitamina: un evento cuyo tipo dice "vitamina" o un tratamiento
+    // aplicado en Salud cuyo medicamento lo dice.
     final vitamina = await _db.rawQuery('''
-      SELECT e.fecha, t.nombre FROM eventos_vaca e
-      JOIN tipos_evento t ON t.id = e.tipo_evento_id
-      WHERE e.vaca_id = ? AND e.deleted = 0 AND $_esVitamina
-      ORDER BY e.fecha DESC LIMIT 1
-    ''', [vacaId]);
+      SELECT fecha, nombre FROM (
+        SELECT e.fecha AS fecha, t.nombre AS nombre FROM eventos_vaca e
+        JOIN tipos_evento t ON t.id = e.tipo_evento_id
+        WHERE e.vaca_id = ? AND e.deleted = 0 AND $_esVitamina
+        UNION ALL
+        SELECT substr(ts.fecha, 1, 10) AS fecha, ts.medicamento AS nombre
+        FROM tratamientos_salud ts
+        JOIN registros_salud rs ON rs.id = ts.registro_salud_id
+        WHERE rs.animal_tipo = 'vaca' AND rs.animal_id = ? AND rs.deleted = 0
+          AND ts.deleted = 0 AND ts.estado = 'aplicado'
+          AND lower(ts.medicamento) LIKE '%vitamin%'
+      ) ORDER BY fecha DESC LIMIT 1
+    ''', [vacaId, vacaId]);
 
     // Varios partos el mismo día (p. ej. gemelos) cuentan como uno.
     final fechas = <DateTime>[];
@@ -468,6 +486,21 @@ class ReproduccionRepository {
           return PartoFaltante(x.vacaId, x.vaca, x.cria, x.fecha, ordeno);
         }(),
     ]..sort((a, b) => a.vaca.compareTo(b.vaca));
+  }
+
+  /// Deja en el historial una "Palpación" cuando la preñez se cambia
+  /// editando la ficha de la vaca (sin tocar sus datos, que ya se guardaron).
+  Future<void> anotarCambioDePrenez(String vacaId,
+      {required bool prenada, DateTime? fechaMonta}) async {
+    final f = DateTime.now();
+    await EventoVacaRepository().create(
+      vacaId: vacaId,
+      tipoEventoId: await _tipoId(kTipoPalpacion),
+      fecha: DateTime(f.year, f.month, f.day),
+      notas: prenada
+          ? 'Preñada${fechaMonta != null ? ' (monta ${fechaMonta.day}/${fechaMonta.month}/${fechaMonta.year})' : ''} · anotado al editar la vaca'
+          : 'Vacía · anotado al editar la vaca',
+    );
   }
 
   /// Resultado de la palpación del veterinario. Si está preñada, se estima

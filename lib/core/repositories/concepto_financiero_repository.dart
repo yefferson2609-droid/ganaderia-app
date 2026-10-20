@@ -59,6 +59,18 @@ class ConceptoFinancieroRepository {
         where: 'id = ?', whereArgs: [concepto.id]);
   }
 
+  /// Concepto de ingreso "Venta de animal" (el que ya exista, aunque esté
+  /// escrito distinto; si no hay, se crea). Lo usa "Marcar como vendido".
+  Future<String> idVentaDeAnimal() async {
+    final rows = await _db.query('conceptos_financieros',
+        where: "deleted = 0 AND tipo = 'ingreso' AND "
+            "lower(nombre) LIKE 'venta%animal%'",
+        orderBy: 'activo DESC, created_at ASC',
+        limit: 1);
+    if (rows.isNotEmpty) return rows.first['id'] as String;
+    return (await create(nombre: 'Venta de animal', tipo: 'ingreso')).id;
+  }
+
   /// Cuántos movimientos (no borrados) usan este concepto.
   Future<int> movimientosQueLoUsan(String id) async {
     final r = await _db.rawQuery(

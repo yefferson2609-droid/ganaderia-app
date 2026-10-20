@@ -7,6 +7,7 @@ import 'package:ganaderia/core/repositories/leche_repository.dart';
 import 'package:ganaderia/core/models/nomina.dart';
 import 'package:ganaderia/core/repositories/movimiento_financiero_repository.dart';
 import 'package:ganaderia/core/repositories/concepto_financiero_repository.dart';
+import 'package:ganaderia/core/repositories/registro_salud_repository.dart';
 import 'package:ganaderia/core/repositories/nomina_repository.dart';
 import 'package:ganaderia/core/repositories/perfil_usuario_repository.dart';
 import 'package:ganaderia/core/repositories/pesaje_repository.dart';
@@ -203,6 +204,33 @@ void main() {
     expect(esTipoParto('Parto'), isTrue);
     expect(esTipoParto(' parto normal'), isTrue);
     expect(esTipoParto('Palpación'), isFalse);
+  });
+
+  test('un solo camino: vitamina en Salud, venta con concepto, tipos con botón',
+      () async {
+    final repro = ReproduccionRepository();
+    final v = await VacaRepository().create(numero: '400');
+    expect((await repro.resumen(v.id)).ultimaVitamina, isNull);
+
+    // Vitamina aplicada en Salud: cuenta como última vitamina.
+    final salud = RegistroSaludRepository();
+    final reg = await salud.create(
+        animalTipo: 'vaca', animalId: v.id,
+        fechaInicio: d(2026, 9, 1), diagnostico: 'Debilidad');
+    await salud.registrarTratamiento(
+        registroId: reg.id, fecha: d(2026, 9, 2), medicamento: 'Vitamina AD3E');
+    final r = await repro.resumen(v.id);
+    expect(r.ultimaVitamina, d(2026, 9, 2));
+    expect(r.ultimaVitaminaNombre, 'Vitamina AD3E');
+
+    // Venta: usa el concepto "Venta de animal" que ya existe.
+    final conceptos = ConceptoFinancieroRepository();
+    final venta = await conceptos.create(nombre: 'Venta de animal', tipo: 'ingreso');
+    expect(await conceptos.idVentaDeAnimal(), venta.id);
+
+    expect(esTipoConBotonPropio('Secado'), isTrue);
+    expect(esTipoConBotonPropio('Palpación'), isTrue);
+    expect(esTipoConBotonPropio('Desparasitación y vitaminas'), isFalse);
   });
 
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {

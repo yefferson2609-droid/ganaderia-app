@@ -189,6 +189,18 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
       if (_foto != null) await FotoAnimalService().guardar('vaca', nueva.id, _foto!);
     }
 
+    // Si al editar se cambió la preñez (o la fecha de monta), queda anotada
+    // como "Palpación" en el historial de la vaca.
+    final orig = _vacaOriginal;
+    if (_isEditing &&
+        orig != null &&
+        (orig.estadoReproductivo != _estadoReproductivo ||
+            (_estadoReproductivo == 'prenada' &&
+                orig.fechaMonta != _fechaMonta))) {
+      await ReproduccionRepository().anotarCambioDePrenez(widget.id!,
+          prenada: _estadoReproductivo == 'prenada', fechaMonta: _fechaMonta);
+    }
+
     // Si se puso o cambió la madre (o la fecha), anotar su parto si falta.
     if (madreId != null &&
         (_vacaOriginal?.madreId != madreId ||

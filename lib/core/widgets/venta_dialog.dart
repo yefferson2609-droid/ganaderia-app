@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../repositories/concepto_financiero_repository.dart';
 import '../repositories/movimiento_financiero_repository.dart';
 
 /// Pide confirmación (y precio opcional) para marcar un animal como vendido.
@@ -46,13 +47,49 @@ Future<bool> confirmarVenta(
 
   final precio = double.tryParse(precioCtrl.text.replaceAll(',', '.'));
   if (precio != null && precio > 0) {
-    await MovimientoFinancieroRepository().create(
-      tipo: 'ingreso',
-      nota: 'Venta de $descripcion',
-      monto: precio,
-      fecha: DateTime.now(),
-      ubicacionId: ubicacionId,
-    );
+    final movs = MovimientoFinancieroRepository();
+    final hoy = DateTime.now();
+    // ¿Ya se anotó a mano un ingreso igual estos días? Evita contarlo dos veces.
+    final parecidos = (await movs.getAll(
+            tipo: 'ingreso',
+            desde: hoy.subtract(const Duration(days: 7)),
+            hasta: hoy))
+        .where((m) => (m.monto - precio).abs() < 0.01)
+        .toList();
+    var registrar = true;
+    if (parecidos.isNotEmpty && context.mounted) {
+      final m = parecidos.first;
+      registrar = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('¿Ya anotaste este ingreso?'),
+              content: Text(
+                  'Ya hay un ingreso de \$${m.monto.toStringAsFixed(2)} el '
+                  '${m.fecha.day}/${m.fecha.month}/${m.fecha.year}'
+                  '${m.nota != null ? ' ("${m.nota}")' : ''}.\n\n'
+                  'Si es esta misma venta, no la registres otra vez.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, false),
+                    child: const Text('Ya está, no registrar')),
+                ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('Registrar igual')),
+              ],
+            ),
+          ) ??
+          false;
+    }
+    if (registrar) {
+      await movs.create(
+        tipo: 'ingreso',
+        conceptoId: await ConceptoFinancieroRepository().idVentaDeAnimal(),
+        nota: 'Venta de $descripcion',
+        monto: precio,
+        fecha: hoy,
+        ubicacionId: ubicacionId,
+      );
+    }
   }
   return true;
 }

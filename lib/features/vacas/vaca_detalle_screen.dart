@@ -58,9 +58,9 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
           : null;
       _resumen = await ReproduccionRepository().resumen(widget.id);
     }
-    // Los partos se registran con "Registrar parto" o "Agregar cría".
+    // Partos, secados y palpaciones tienen su propio botón.
     _tipos = (await _tipoRepo.getAll(soloActivos: true))
-        .where((t) => !esTipoParto(t.nombre))
+        .where((t) => !esTipoConBotonPropio(t.nombre))
         .toList();
     setState(() => _loading = false);
   }

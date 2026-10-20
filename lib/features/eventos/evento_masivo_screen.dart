@@ -44,9 +44,9 @@ class _EventoMasivoScreenState extends State<EventoMasivoScreen> {
   }
 
   Future<void> _loadData() async {
-    // Los partos se registran en la ficha de cada vaca (Registrar parto).
+    // Partos, secados y palpaciones se registran con su propio botón.
     _tipos = (await _tipoRepo.getAll(soloActivos: true))
-        .where((t) => !esTipoParto(t.nombre))
+        .where((t) => !esTipoConBotonPropio(t.nombre))
         .toList();
     _vacas = await _vacaRepo.getAll();
     if (_tipos.isNotEmpty) _tipoSeleccionado = _tipos.first.id;

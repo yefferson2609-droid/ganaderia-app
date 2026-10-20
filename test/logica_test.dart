@@ -18,6 +18,7 @@ import 'package:ganaderia/core/repositories/evento_vaca_repository.dart';
 import 'package:ganaderia/core/repositories/vaca_repository.dart';
 import 'package:ganaderia/core/repositories/toro_repository.dart';
 import 'package:ganaderia/core/widgets/descendencia_section.dart';
+import 'package:ganaderia/core/widgets/venta_dialog.dart';
 import 'package:ganaderia/core/services/alertas_service.dart';
 import 'package:ganaderia/core/services/inventario_service.dart';
 
@@ -231,6 +232,23 @@ void main() {
     expect(esTipoConBotonPropio('Secado'), isTrue);
     expect(esTipoConBotonPropio('Palpación'), isTrue);
     expect(esTipoConBotonPropio('Desparasitación y vitaminas'), isFalse);
+  });
+
+  test('venta: nota con los animales y marcar vendido', () async {
+    final datos = DatosVenta(800, d(2026, 7, 10), 'platanero', null);
+    final nota = notaDeVenta(['Ternero #santo', 'Ternero #capito'], datos);
+    expect(nota, 'Venta de Ternero #santo, Ternero #capito · Comprador: platanero');
+    expect(animalesDeNota(nota), ['Ternero #santo', 'Ternero #capito']);
+    // "#1" no se confunde con "#12".
+    expect(animalesDeNota('Venta de Vaca #12').contains('Vaca #1'), isFalse);
+    expect(animalesDeNota('quesos 111 kg'), isEmpty);
+
+    final v = await VacaRepository().create(numero: '12');
+    final t = await TerneroRepository().create(numero: 'santo', sexo: 'macho');
+    await marcarVendido(AnimalEnVenta('vaca', v.id, 'Vaca #12'));
+    await marcarVendido(AnimalEnVenta('ternero', t.id, 'Ternero #santo'));
+    expect((await VacaRepository().getById(v.id))!.estado, 'vendida');
+    expect((await TerneroRepository().getById(t.id))!.estado, 'vendido');
   });
 
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {

@@ -200,9 +200,10 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
     final vaca = _vaca!;
     switch (v) {
       case 'vendida':
-        if (await confirmarVenta(context,
-            descripcion: 'Vaca #${vaca.numero}', ubicacionId: vaca.ubicacionId)) {
-          await _vacaRepo.update(vaca.copyWith(estado: 'vendida'));
+        if (await venderAnimales(context, [
+          AnimalEnVenta('vaca', vaca.id, 'Vaca #${vaca.numero}',
+              ubicacionId: vaca.ubicacionId)
+        ])) {
           _load();
         }
       case 'fallecida':
@@ -212,6 +213,9 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
         }
       case 'activa':
         await _vacaRepo.update(vaca.copyWith(estado: 'activa'));
+        if (vaca.estado == 'vendida' && mounted) {
+          await ofrecerAnularIngresoDeVenta(context, 'Vaca #${vaca.numero}');
+        }
         _load();
       case 'eliminar':
         await _eliminarVaca();
@@ -234,6 +238,7 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
       appBar: AppBar(
         title: Text('Vaca #${_vaca!.numero}'),
         actions: [
+          if (_vaca!.estado == 'activa') BotonVender(onPressed: () => _accion('vendida')),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () =>
@@ -243,8 +248,6 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
             onSelected: _accion,
             itemBuilder: (_) => [
               if (_vaca!.estado == 'activa') ...[
-                const PopupMenuItem(
-                    value: 'vendida', child: Text('Marcar como vendida')),
                 const PopupMenuItem(
                     value: 'fallecida', child: Text('Marcar como fallecida')),
               ] else

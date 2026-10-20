@@ -25,6 +25,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
   final _razaCtrl = TextEditingController();
   final _notaCtrl = TextEditingController();
   String _estado = 'activo';
+  bool _estabaVendido = false;
   DateTime? _fechaNacimiento;
   String? _ubicacionId;
   List<Ubicacion> _ubicaciones = [];
@@ -58,6 +59,7 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
         _razaCtrl.text = c.raza ?? '';
         _notaCtrl.text = c.nota ?? '';
         _estado = c.estado == 'muerto' ? 'fallecido' : c.estado;
+        _estabaVendido = c.estado == 'vendido';
         _fechaNacimiento = c.fechaNacimiento;
         _ubicacionId = c.ubicacionId;
       }
@@ -163,11 +165,14 @@ class _CaballoFormScreenState extends State<CaballoFormScreen> {
                         labelText: 'Estado',
                         prefixIcon: Icon(Icons.info_outline),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'activo', child: Text('Activo')),
-                        DropdownMenuItem(
-                            value: 'vendido', child: Text('Vendido')),
-                        DropdownMenuItem(
+                      items: [
+                        const DropdownMenuItem(
+                            value: 'activo', child: Text('Activo')),
+                        // Vender se hace con el botón "Vender" de la ficha.
+                        if (_estabaVendido)
+                          const DropdownMenuItem(
+                              value: 'vendido', child: Text('Vendido')),
+                        const DropdownMenuItem(
                             value: 'fallecido', child: Text('Fallecido')),
                       ],
                       onChanged: (v) => setState(() => _estado = v!),

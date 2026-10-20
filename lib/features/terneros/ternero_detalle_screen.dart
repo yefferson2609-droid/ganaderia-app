@@ -196,10 +196,10 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
         await _promoverAToro(t);
       case 'vendido':
         if (mounted &&
-            await confirmarVenta(context,
-                descripcion: nombreJoven(t),
-                ubicacionId: t.ubicacionId)) {
-          await _repo.update(t.copyWith(estado: 'vendido'));
+            await venderAnimales(context, [
+              AnimalEnVenta('ternero', t.id, descripcionVentaJoven(t),
+                  ubicacionId: t.ubicacionId)
+            ])) {
           _load();
         }
       case 'fallecido':
@@ -210,6 +210,9 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
         }
       case 'activo':
         await _repo.update(t.copyWith(estado: 'activo'));
+        if (t.estado == 'vendido' && mounted) {
+          await ofrecerAnularIngresoDeVenta(context, descripcionVentaJoven(t));
+        }
         _load();
       case 'eliminar':
         if (await _confirmar('Eliminar ternero',
@@ -476,6 +479,7 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
       appBar: AppBar(
         title: Text(nombreJoven(t)),
         actions: [
+          if (t.estado == 'activo') BotonVender(onPressed: () => _accion('vendido')),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () =>
@@ -518,8 +522,6 @@ class _TerneroDetalleScreenState extends State<TerneroDetalleScreen> {
                 const PopupMenuItem(
                     value: 'promover_toro', child: Text('Promover a Toro')),
               if (t.estado == 'activo') ...[
-                const PopupMenuItem(
-                    value: 'vendido', child: Text('Marcar como vendido')),
                 const PopupMenuItem(
                     value: 'fallecido', child: Text('Marcar como fallecido')),
               ] else

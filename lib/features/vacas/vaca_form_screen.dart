@@ -255,10 +255,12 @@ class _VacaFormScreenState extends State<VacaFormScreen> {
                       value: _estado,
                       decoration: const InputDecoration(
                           labelText: 'Estado', prefixIcon: Icon(Icons.info_outline)),
-                      items: const [
-                        DropdownMenuItem(value: 'activa', child: Text('Activa')),
-                        DropdownMenuItem(value: 'vendida', child: Text('Vendida')),
-                        DropdownMenuItem(value: 'fallecida', child: Text('Fallecida')),
+                      items: [
+                        const DropdownMenuItem(value: 'activa', child: Text('Activa')),
+                        // Vender se hace con el botón "Vender" de la ficha.
+                        if (_vacaOriginal?.estado == 'vendida')
+                          const DropdownMenuItem(value: 'vendida', child: Text('Vendida')),
+                        const DropdownMenuItem(value: 'fallecida', child: Text('Fallecida')),
                       ],
                       onChanged: (v) => setState(() => _estado = v!),
                     ),

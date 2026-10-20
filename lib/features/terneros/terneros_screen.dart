@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/models/ternero.dart';
 import '../../core/repositories/ternero_repository.dart';
 import '../../core/repositories/ubicacion_repository.dart';
+import '../../core/widgets/venta_dialog.dart';
 import '../../core/widgets/grupos_ubicacion.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
@@ -24,6 +25,11 @@ Color estadoTerneroColor(String estado) {
 /// Nombre corto del animal según su categoría: "Novilla de levante #12".
 String nombreJoven(Ternero t) => '${t.categoriaLabel} #${t.numero}';
 
+/// Nombre en la nota de una venta; no depende de la categoría (que cambia
+/// con la edad), para poder encontrar luego el ingreso de esa venta.
+String descripcionVentaJoven(Ternero t) =>
+    '${t.esMacho ? 'Ternero' : 'Ternera'} #${t.numero}';
+
 /// Sección "Levante y ceba": animales desde que nacen hasta pasar a vaca
 /// o toro, o venderse.
 class TernerosScreen extends StatefulWidget {
@@ -40,6 +46,22 @@ class _TernerosScreenState extends State<TernerosScreen> {
   bool _loading = true;
   bool _soloActivos = true;
   String _buscar = '';
+  final Set<String> _sel = {}; // seleccionados para vender juntos
+
+  void _alternar(String id) =>
+      setState(() => _sel.contains(id) ? _sel.remove(id) : _sel.add(id));
+
+  Future<void> _venderSeleccionados() async {
+    final animales = [
+      for (final t in _terneros.where((t) => _sel.contains(t.id)))
+        AnimalEnVenta('ternero', t.id, descripcionVentaJoven(t),
+            ubicacionId: t.ubicacionId)
+    ];
+    if (await venderAnimales(context, animales)) {
+      setState(() => _sel.clear());
+      _load();
+    }
+  }
 
   @override
   void initState() {
@@ -96,6 +118,7 @@ class _TernerosScreenState extends State<TernerosScreen> {
             if (t.categoria == null && t.estado == 'activo')
               const Etiqueta('Sin clasificar', AppColors.textoSuave),
           ];
+          final vendible = t.estado == 'activo';
           return AnimalTile(
             cara: AnimalFace(
                 tipo: 'ternero',
@@ -110,8 +133,13 @@ class _TernerosScreenState extends State<TernerosScreen> {
               t.edad,
               if (t.raza != null) t.raza!,
             ].join(' · '),
-            onTap: () =>
-                context.push('/terneros/${t.id}').then((_) => _load()),
+            seleccionado: _sel.isEmpty ? null : _sel.contains(t.id),
+            onLongPress: vendible ? () => _alternar(t.id) : null,
+            onTap: _sel.isNotEmpty
+                ? () {
+                    if (vendible) _alternar(t.id);
+                  }
+                : () => context.push('/terneros/${t.id}').then((_) => _load()),
           );
         });
   }
@@ -123,9 +151,19 @@ class _TernerosScreenState extends State<TernerosScreen> {
       length: pestanas.length,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Levante y ceba'),
-          leading: BackButton(onPressed: () => context.go('/dashboard')),
+          title: Text(_sel.isEmpty
+              ? 'Levante y ceba'
+              : '${_sel.length} seleccionado${_sel.length == 1 ? '' : 's'}'),
+          leading: _sel.isEmpty
+              ? BackButton(onPressed: () => context.go('/dashboard'))
+              : IconButton(
+                  tooltip: 'Cancelar selección',
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(() => _sel.clear())),
           actions: [
+            if (_sel.isNotEmpty)
+              BotonVender(onPressed: _venderSeleccionados),
+            if (_sel.isEmpty)
             IconButton(
               tooltip: _soloActivos ? 'Ver también vendidos' : 'Solo activos',
               icon: Icon(_soloActivos ? Icons.filter_alt : Icons.filter_alt_off),
@@ -147,10 +185,13 @@ class _TernerosScreenState extends State<TernerosScreen> {
             }).toList(),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => context.push('/terneros/nuevo').then((_) => _load()),
-          child: const Icon(Icons.add),
-        ),
+        floatingActionButton: _sel.isNotEmpty
+            ? null
+            : FloatingActionButton(
+                onPressed: () =>
+                    context.push('/terneros/nuevo').then((_) => _load()),
+                child: const Icon(Icons.add),
+              ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : Column(children: [
@@ -159,6 +200,8 @@ class _TernerosScreenState extends State<TernerosScreen> {
                   child: TextField(
                     decoration: const InputDecoration(
                       hintText: 'Buscar por número...',
+                      helperText:
+                          'Mantén presionado un animal para vender varios juntos',
                       prefixIcon: Icon(Icons.search),
                       isDense: true,
                     ),

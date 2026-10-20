@@ -230,10 +230,12 @@ class _ToroFormScreenState extends State<ToroFormScreen> {
                         labelText: 'Estado',
                         prefixIcon: Icon(Icons.info_outline),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'activo', child: Text('Activo')),
-                        DropdownMenuItem(value: 'vendido', child: Text('Vendido')),
-                        DropdownMenuItem(value: 'fallecido', child: Text('Fallecido')),
+                      items: [
+                        const DropdownMenuItem(value: 'activo', child: Text('Activo')),
+                        // Vender se hace con el botón "Vender" de la ficha.
+                        if (_toroOriginal?.estado == 'vendido')
+                          const DropdownMenuItem(value: 'vendido', child: Text('Vendido')),
+                        const DropdownMenuItem(value: 'fallecido', child: Text('Fallecido')),
                       ],
                       onChanged: (v) => setState(() => _estado = v!),
                     ),

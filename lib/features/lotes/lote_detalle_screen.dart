@@ -5,6 +5,7 @@ import '../../core/models/lote.dart';
 import '../../core/models/movimiento_lote.dart';
 import '../../core/repositories/lote_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/venta_dialog.dart';
 
 class LoteDetalleScreen extends StatefulWidget {
   final String id;
@@ -39,6 +40,8 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
     final cantCtrl = TextEditingController(text: '1');
     DateTime fecha = DateTime.now();
     final notasCtrl = TextEditingController();
+    final precioCtrl = TextEditingController();
+    final compradorCtrl = TextEditingController();
 
     await showDialog(
       context: context,
@@ -92,6 +95,25 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
                         Text(DateFormat('dd/MM/yyyy').format(fecha)),
                   ),
                 ),
+                if (tipoMovimiento == 'venta') ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: precioCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: r'Precio total ($)',
+                      helperText: 'Se anota el ingreso en Finanzas',
+                      prefixText: r'$ ',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: compradorCtrl,
+                    decoration: const InputDecoration(
+                        labelText: 'Comprador (opcional)'),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: notasCtrl,
@@ -117,6 +139,25 @@ class _LoteDetalleScreenState extends State<LoteDetalleScreen> {
                   notas: notasCtrl.text.isEmpty ? null : notasCtrl.text,
                 );
                 if (ctx.mounted) Navigator.pop(ctx);
+                // Venta con precio: el ingreso va a Finanzas ("Venta de animal").
+                final precio =
+                    double.tryParse(precioCtrl.text.replaceAll(',', '.'));
+                if (tipoMovimiento == 'venta' &&
+                    precio != null &&
+                    precio > 0 &&
+                    mounted) {
+                  String? texto(TextEditingController c) =>
+                      c.text.trim().isEmpty ? null : c.text.trim();
+                  final datos = DatosVenta(precio, fecha, texto(compradorCtrl),
+                      texto(notasCtrl));
+                  final l = _lote;
+                  await anotarIngresoDeVenta(context,
+                      nota: notaDeVenta([
+                        '$cant ${sexo == 'hembra' ? '♀' : '♂'} del lote ${l?.nombre ?? ''}'.trim()
+                      ], datos),
+                      datos: datos,
+                      ubicacionId: l?.ubicacionId);
+                }
                 _load();
               },
               child: const Text('Registrar'),

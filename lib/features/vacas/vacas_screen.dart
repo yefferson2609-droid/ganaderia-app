@@ -9,6 +9,7 @@ import '../../core/repositories/vaca_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/animal_face.dart';
 import '../../core/widgets/ficha_animal.dart';
+import '../../core/widgets/venta_dialog.dart';
 import 'partos_faltantes.dart';
 
 const _filtroLabels = {
@@ -38,6 +39,22 @@ class _VacasScreenState extends State<VacasScreen> {
   Map<String, String> _ubicaciones = {};
   List<PartoFaltante> _faltantes = [];
   bool _loading = true;
+  final Set<String> _sel = {}; // seleccionadas para vender juntas
+
+  void _alternar(String id) =>
+      setState(() => _sel.contains(id) ? _sel.remove(id) : _sel.add(id));
+
+  Future<void> _venderSeleccionadas() async {
+    final animales = [
+      for (final v in _vacas.where((v) => _sel.contains(v.id)))
+        AnimalEnVenta('vaca', v.id, 'Vaca #${v.numero}',
+            ubicacionId: v.ubicacionId)
+    ];
+    if (await venderAnimales(context, animales)) {
+      setState(() => _sel.clear());
+      _load();
+    }
+  }
   String _filtroEstado = 'todos';
   final _searchCtrl = TextEditingController();
 
@@ -122,14 +139,26 @@ class _VacasScreenState extends State<VacasScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vacas'),
-        leading: BackButton(onPressed: () => context.go('/dashboard')),
+        title: Text(_sel.isEmpty
+            ? 'Vacas'
+            : '${_sel.length} seleccionada${_sel.length == 1 ? '' : 's'}'),
+        leading: _sel.isEmpty
+            ? BackButton(onPressed: () => context.go('/dashboard'))
+            : IconButton(
+                tooltip: 'Cancelar selección',
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _sel.clear())),
+        actions: [
+          if (_sel.isNotEmpty) BotonVender(onPressed: _venderSeleccionadas),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () =>
-            context.push('/vacas/nueva').then((_) => _load()),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _sel.isNotEmpty
+          ? null
+          : FloatingActionButton(
+              onPressed: () =>
+                  context.push('/vacas/nueva').then((_) => _load()),
+              child: const Icon(Icons.add),
+            ),
       body: Column(
         children: [
           Padding(
@@ -138,6 +167,8 @@ class _VacasScreenState extends State<VacasScreen> {
               controller: _searchCtrl,
               decoration: const InputDecoration(
                 hintText: 'Buscar por número...',
+                helperText:
+                    'Mantén presionada una vaca para vender varias juntas',
                 prefixIcon: Icon(Icons.search),
                 isDense: true,
               ),
@@ -235,9 +266,18 @@ class _VacasScreenState extends State<VacasScreen> {
                           if (vaca.raza != null) vaca.raza!,
                           if (vaca.color != null) vaca.color!,
                         ].join(' · '),
-                        onTap: () => context
-                            .push('/vacas/${vaca.id}')
-                            .then((_) => _load()),
+                        seleccionado:
+                            _sel.isEmpty ? null : _sel.contains(vaca.id),
+                        onLongPress: vaca.estado == 'activa'
+                            ? () => _alternar(vaca.id)
+                            : null,
+                        onTap: _sel.isNotEmpty
+                            ? () {
+                                if (vaca.estado == 'activa') _alternar(vaca.id);
+                              }
+                            : () => context
+                                .push('/vacas/${vaca.id}')
+                                .then((_) => _load()),
                       );
                     },
                   ),

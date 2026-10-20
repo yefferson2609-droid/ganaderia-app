@@ -46,9 +46,10 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
     final c = _c!;
     switch (v) {
       case 'vendido':
-        if (await confirmarVenta(context,
-            descripcion: 'Caballo ${c.nombre}', ubicacionId: c.ubicacionId)) {
-          await _repo.update(c.copyWith(estado: 'vendido'));
+        if (await venderAnimales(context, [
+          AnimalEnVenta('caballo', c.id, 'Caballo ${c.nombre}',
+              ubicacionId: c.ubicacionId)
+        ])) {
           _load();
         }
       case 'fallecido':
@@ -58,6 +59,9 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
         }
       case 'activo':
         await _repo.update(c.copyWith(estado: 'activo'));
+        if (c.estado == 'vendido' && mounted) {
+          await ofrecerAnularIngresoDeVenta(context, 'Caballo ${c.nombre}');
+        }
         _load();
       case 'eliminar':
         final ok = await showDialog<bool>(
@@ -101,6 +105,7 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
       appBar: AppBar(
         title: Text(c.nombre),
         actions: [
+          if (c.estado == 'activo') BotonVender(onPressed: () => _accion('vendido')),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () =>
@@ -110,8 +115,6 @@ class _CaballoDetalleScreenState extends State<CaballoDetalleScreen> {
             onSelected: _accion,
             itemBuilder: (_) => [
               if (c.estado == 'activo') ...[
-                const PopupMenuItem(
-                    value: 'vendido', child: Text('Marcar como vendido')),
                 const PopupMenuItem(
                     value: 'fallecido', child: Text('Marcar como fallecido')),
               ] else

@@ -90,9 +90,10 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
     final toro = _toro!;
     switch (v) {
       case 'vendido':
-        if (await confirmarVenta(context,
-            descripcion: 'Toro #${toro.numero}', ubicacionId: toro.ubicacionId)) {
-          await _toroRepo.update(toro.copyWith(estado: 'vendido'));
+        if (await venderAnimales(context, [
+          AnimalEnVenta('toro', toro.id, 'Toro #${toro.numero}',
+              ubicacionId: toro.ubicacionId)
+        ])) {
           _load();
         }
       case 'fallecido':
@@ -102,6 +103,9 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
         }
       case 'activo':
         await _toroRepo.update(toro.copyWith(estado: 'activo'));
+        if (toro.estado == 'vendido' && mounted) {
+          await ofrecerAnularIngresoDeVenta(context, 'Toro #${toro.numero}');
+        }
         _load();
       case 'eliminar':
         await _eliminarToro();
@@ -124,6 +128,7 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
       appBar: AppBar(
         title: Text('Toro #${_toro!.numero}'),
         actions: [
+          if (_toro!.estado == 'activo') BotonVender(onPressed: () => _accion('vendido')),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () =>
@@ -133,8 +138,6 @@ class _ToroDetalleScreenState extends State<ToroDetalleScreen> {
             onSelected: _accion,
             itemBuilder: (_) => [
               if (_toro!.estado == 'activo') ...[
-                const PopupMenuItem(
-                    value: 'vendido', child: Text('Marcar como vendido')),
                 const PopupMenuItem(
                     value: 'fallecido', child: Text('Marcar como fallecido')),
               ] else

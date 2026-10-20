@@ -48,6 +48,10 @@ class AnimalTile extends StatelessWidget {
   final String? detalle;
   final Widget? trailing;
   final VoidCallback onTap;
+  /// Mantener presionado (p. ej. para seleccionar varios y venderlos).
+  final VoidCallback? onLongPress;
+  /// null = sin selección; true/false = modo selección (muestra la casilla).
+  final bool? seleccionado;
 
   const AnimalTile({
     super.key,
@@ -58,15 +62,20 @@ class AnimalTile extends StatelessWidget {
     this.detalle,
     this.trailing,
     required this.onTap,
+    this.onLongPress,
+    this.seleccionado,
   });
 
   @override
   Widget build(BuildContext context) {
+    final sel = seleccionado;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      color: sel == true ? AppColors.primaryContainer : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
+        onLongPress: onLongPress,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
           child: Row(children: [
@@ -107,11 +116,20 @@ class AnimalTile extends StatelessWidget {
                 ],
               ),
             ),
-            trailing ??
-                const Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: Icon(Icons.chevron_right, color: AppColors.textoSuave),
-                ),
+            if (sel != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Icon(
+                    sel ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: sel ? AppColors.primary : AppColors.textoSuave),
+              )
+            else
+              trailing ??
+                  const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child:
+                        Icon(Icons.chevron_right, color: AppColors.textoSuave),
+                  ),
           ]),
         ),
       ),

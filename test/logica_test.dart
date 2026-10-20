@@ -185,6 +185,26 @@ void main() {
     expect(await conceptos.movimientosQueLoUsan(usado.id), 1);
   });
 
+  test('parto por la cría: quita la preñez solo si es después de la monta',
+      () async {
+    final repro = ReproduccionRepository();
+    final prenada = await VacaRepository().create(
+        numero: '300',
+        estadoReproductivo: 'prenada',
+        fechaMonta: d(2026, 6, 1),
+        fechaEstimadaParto: d(2027, 3, 11));
+    // Cría de hace un año: la preñez de hoy se respeta.
+    expect(await repro.partoSiFalta(prenada.id, d(2025, 10, 1)), isTrue);
+    expect((await VacaRepository().getById(prenada.id))!.prenada, isTrue);
+    // Cría nacida después de la monta: ya parió, queda vacía.
+    expect(await repro.partoSiFalta(prenada.id, d(2027, 3, 5)), isTrue);
+    expect((await VacaRepository().getById(prenada.id))!.prenada, isFalse);
+
+    expect(esTipoParto('Parto'), isTrue);
+    expect(esTipoParto(' parto normal'), isTrue);
+    expect(esTipoParto('Palpación'), isFalse);
+  });
+
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {
     final vacas = VacaRepository();
     final repro = ReproduccionRepository();
@@ -204,11 +224,19 @@ void main() {
     expect(ternero!.madreId, v.id);
     expect(ternero.fechaNacimiento, d(2024, 1, 10));
 
+    // Ese parto (2024) es anterior a la monta actual (2025): no borra la preñez.
     final tras = await vacas.getById(v.id);
-    expect(tras!.estadoReproductivo, 'vacia');
-    expect(tras.fechaEstimadaParto, isNull);
+    expect(tras!.estadoReproductivo, 'prenada');
+    expect(tras.fechaEstimadaParto, d(2025, 10, 11));
 
+    // Parto después de la monta: queda vacía.
     await repro.registrarParto(vaca: tras, fecha: d(2025, 1, 4));
+    final vacia = await vacas.getById(v.id);
+    expect(vacia!.estadoReproductivo, 'vacia');
+    expect(vacia.fechaEstimadaParto, isNull);
+
+    // Otro parto a pocos días (gemelo): no se repite.
+    await repro.registrarParto(vaca: vacia, fecha: d(2025, 1, 6));
     final r = await repro.resumen(v.id);
     expect(r.partos.length, 2);
     expect(r.intervalos, [360]);

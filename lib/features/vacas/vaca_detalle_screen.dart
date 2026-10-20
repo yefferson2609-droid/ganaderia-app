@@ -58,7 +58,10 @@ class _VacaDetalleScreenState extends State<VacaDetalleScreen> {
           : null;
       _resumen = await ReproduccionRepository().resumen(widget.id);
     }
-    _tipos = await _tipoRepo.getAll(soloActivos: true);
+    // Los partos se registran con "Registrar parto" o "Agregar cría".
+    _tipos = (await _tipoRepo.getAll(soloActivos: true))
+        .where((t) => !esTipoParto(t.nombre))
+        .toList();
     setState(() => _loading = false);
   }
 

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/models/tipo_evento.dart';
 import '../../core/models/vaca.dart';
+import '../../core/repositories/reproduccion_repository.dart';
 import '../../core/repositories/evento_masivo_repository.dart';
 import '../../core/repositories/tipo_evento_repository.dart';
 import '../../core/repositories/vaca_repository.dart';
@@ -43,7 +44,10 @@ class _EventoMasivoScreenState extends State<EventoMasivoScreen> {
   }
 
   Future<void> _loadData() async {
-    _tipos = await _tipoRepo.getAll(soloActivos: true);
+    // Los partos se registran en la ficha de cada vaca (Registrar parto).
+    _tipos = (await _tipoRepo.getAll(soloActivos: true))
+        .where((t) => !esTipoParto(t.nombre))
+        .toList();
     _vacas = await _vacaRepo.getAll();
     if (_tipos.isNotEmpty) _tipoSeleccionado = _tipos.first.id;
     setState(() => _loadingData = false);

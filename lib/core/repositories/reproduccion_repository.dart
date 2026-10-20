@@ -21,6 +21,10 @@ const _esVitamina = "lower(t.nombre) LIKE '%vitamin%'";
 
 const _toroDeLaMonta = Object();
 
+/// Tipo de evento "Parto" (o "Parto normal", etc.).
+bool esTipoParto(String nombre) =>
+    nombre.toLowerCase().trim().startsWith('parto');
+
 enum EstadoProduccion { enOrdeno, seca, sinPartos }
 
 const kEstadoProduccionLabels = {
@@ -295,8 +299,35 @@ class ReproduccionRepository {
     return conteo;
   }
 
+  /// ¿Ya hay un parto de esa vaca a menos de 30 días de [fecha]?
+  Future<bool> _hayPartoCerca(String vacaId, DateTime fecha) async =>
+      (await resumen(vacaId))
+          .partos
+          .any((p) => p.difference(fecha).inDays.abs() <= 30);
+
+  /// Tras un parto en [fecha], la vaca queda vacía, salvo que el parto sea
+  /// anterior a su monta actual (un parto viejo no borra la preñez de hoy).
+  /// Si no se sabe la monta, solo se quita cuando el parto se registra a
+  /// mano ([aMano]).
+  Future<void> _quitarPrenez(String vacaId, DateTime fecha,
+      {required bool aMano}) async {
+    final v = await VacaRepository().getById(vacaId);
+    if (v == null || !v.prenada) return;
+    final monta = v.fechaMonta ??
+        v.fechaEstimadaParto
+            ?.subtract(const Duration(days: kDiasGestacion));
+    if (monta == null ? !aMano : !fecha.isAfter(monta)) return;
+    await VacaRepository().update(v.copyWith(
+      estadoReproductivo: 'vacia',
+      clearFechaMonta: true,
+      clearToroId: true,
+      clearFechaParto: true,
+    ));
+  }
+
   /// Registra el parto, deja la vaca vacía y opcionalmente crea el ternero.
-  /// Devuelve el id del ternero creado (o null).
+  /// Si ya hay un parto a menos de 30 días (p. ej. un gemelo), no repite el
+  /// parto: solo agrega la cría. Devuelve el id del ternero creado (o null).
   Future<String?> registrarParto({
     required Vaca vaca,
     required DateTime fecha,
@@ -306,12 +337,14 @@ class ReproduccionRepository {
     /// Padre del ternero; si no se indica, el toro de la monta.
     Object? padreId = _toroDeLaMonta,
   }) async {
-    await EventoVacaRepository().create(
-      vacaId: vaca.id,
-      tipoEventoId: await _tipoId(kTipoParto),
-      fecha: fecha,
-      notas: notas,
-    );
+    if (!await _hayPartoCerca(vaca.id, fecha)) {
+      await EventoVacaRepository().create(
+        vacaId: vaca.id,
+        tipoEventoId: await _tipoId(kTipoParto),
+        fecha: fecha,
+        notas: notas,
+      );
+    }
 
     String? terneroId;
     if (numeroTernero != null && sexoTernero != null) {
@@ -329,12 +362,7 @@ class ReproduccionRepository {
       terneroId = t.id;
     }
 
-    await VacaRepository().update(vaca.copyWith(
-      estadoReproductivo: 'vacia',
-      clearFechaMonta: true,
-      clearToroId: true,
-      clearFechaParto: true,
-    ));
+    await _quitarPrenez(vaca.id, fecha, aMano: true);
     return terneroId;
   }
 
@@ -385,16 +413,14 @@ class ReproduccionRepository {
     final vaca = await _db.query('vacas',
         where: 'id = ? AND deleted = 0', whereArgs: [vacaId]);
     if (vaca.isEmpty) return false; // la madre no es una vaca registrada
-    final partos = (await resumen(vacaId)).partos;
-    if (partos.any((p) => p.difference(nacimiento).inDays.abs() <= 30)) {
-      return false;
-    }
+    if (await _hayPartoCerca(vacaId, nacimiento)) return false;
     await EventoVacaRepository().create(
       vacaId: vacaId,
       tipoEventoId: await _tipoId(kTipoParto),
       fecha: nacimiento,
       notas: notas,
     );
+    await _quitarPrenez(vacaId, nacimiento, aMano: false);
     return true;
   }
 

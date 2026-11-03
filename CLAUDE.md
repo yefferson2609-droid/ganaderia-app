@@ -107,11 +107,10 @@ flutter build apk --release
   finanzas, usuarios/permisos, reportes PDF, inventario por ubicación,
   producción de leche (mañana/tarde y por vaca), ordeño/secas, sugerencia de
   secado por raza, alertas del hato, palpación, raza/foto/peso por animal.
-- El usuario tiene instaladas la app vieja (v1.0.7, firma de otra PC) y
-  "Ganadería (nueva)" de prueba (última entregada: 1.0.13).
-- Pendiente de que el usuario pruebe la 1.0.13 en el teléfono.
-- Hecho en código y sin compilar aún (será la 1.0.14): Levante y ceba por
-  categorías + sincronización automática.
+- Última entregada: **1.0.25** ("Ganadería (nueva)"). Un solo camino para
+  partos, palpación, secado, venta y vitamina; conceptos archivables.
+- **Traspaso**: `docs/TRASPASO.md` resume todo (reglas acordadas, estado de
+  los datos y pendientes) para continuar con otra IA o programador.
 
 ## Próximo trabajo: versión comercial multi-finca
 Ver `docs/PLAN_MULTIFINCA.md`.

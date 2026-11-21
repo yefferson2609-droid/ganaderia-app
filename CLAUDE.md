@@ -55,10 +55,10 @@ flutter build apk --release
   mostrar (los acentos "se ven mal" pero están bien).
 
 ## Arquitectura
-- `lib/core/database/local_db.dart`: SQLite local, versión **12**. Migraciones en
+- `lib/core/database/local_db.dart`: SQLite local, versión **13**. Migraciones en
   `_onUpgrade`; `_createV8` agrega raza/foto, produccion_leche, pesajes_animal;
   `_createV9` agrega `categoria` y `fecha_destete` a terneros; `_createV10`
-  agrega `eliminado` a perfiles_usuario; `_createV11` las tablas de nómina; `_createV12` la procedencia (origen, registro, padre/madre de fuera; `models/procedencia.dart`).
+  agrega `eliminado` a perfiles_usuario; `_createV11` las tablas de nómina; `_createV12` la procedencia (origen, registro, padre/madre de fuera; `models/procedencia.dart`); `_createV13` la tabla `eventos_animal` (historial de eventos de toros, levante y caballos; el evento masivo sirve para todos).
 - **"Levante y ceba"** (tabla/ruta `terneros`): categorías en
   `lib/core/models/ternero.dart` (ternera, novilla_levante, novilla_vientre,
   ternero, torete, torete_venta, novillo_ceba). `categoria` null = sin
@@ -93,7 +93,7 @@ flutter build apk --release
 
 ## Supabase (proyecto actual, una sola finca)
 - URL `https://punqawvuwxlrdipapnja.supabase.co` (clave anon en lib/main.dart).
-- Migraciones en `supabase_migrations/`; **todas ejecutadas hasta la 011** (011 = procedencia, ejecutada el 2026-10-18 con permiso del usuario)
+- Migraciones en `supabase_migrations/`; **ejecutadas hasta la 011** (011 = procedencia, 2026-10-18); **la 012 (eventos_animal) pendiente de permiso del usuario**
   (la 007 reúne 005 y 006). Ejecutadas por Claude desde el navegador integrado
   con la sesión del usuario (editor SQL vía `monaco.editor.getEditors()[0]`).
 - Usuarios: "Eliminar" llama a la función `eliminar_usuario` (solo admin, no a sí mismo): bloquea la cuenta (banned_until), cierra sesiones, borra permisos y marca `eliminado` (no se borra la cuenta porque hay FK created_by → auth.users). Usuario inactivo/eliminado no puede entrar y se le cierra la sesión al sincronizar. La sync, si un upsert es rechazado por RLS (42501), intenta update.

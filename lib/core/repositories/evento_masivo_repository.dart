@@ -1,16 +1,30 @@
 import 'package:uuid/uuid.dart';
 import '../database/local_db.dart';
+import 'evento_animal_repository.dart';
 
 class EventoMasivoRepository {
   final _db = LocalDb.instance.db;
   final _uuid = const Uuid();
 
+  /// Registra un evento para varias vacas ([vacaIds]) y para otros animales
+  /// ([otros]: toros, levante y ceba, caballos, como (tipo, id)). Cada uno
+  /// queda en el historial de su ficha.
   Future<void> registrar({
     required String tipoEventoId,
     required List<String> vacaIds,
+    List<(String, String)> otros = const [],
     required DateTime fecha,
     String? notas,
   }) async {
+    for (final (tipo, id) in otros) {
+      await EventoAnimalRepository().create(
+          animalTipo: tipo,
+          animalId: id,
+          tipoEventoId: tipoEventoId,
+          fecha: fecha,
+          notas: notas);
+    }
+    if (vacaIds.isEmpty) return;
     final now = DateTime.now();
     final eventoId = _uuid.v4();
 

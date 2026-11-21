@@ -15,6 +15,8 @@ import 'package:ganaderia/core/repositories/reproduccion_repository.dart';
 import 'package:ganaderia/core/repositories/ternero_repository.dart';
 import 'package:ganaderia/core/repositories/tipo_evento_repository.dart';
 import 'package:ganaderia/core/repositories/evento_vaca_repository.dart';
+import 'package:ganaderia/core/repositories/evento_animal_repository.dart';
+import 'package:ganaderia/core/repositories/evento_masivo_repository.dart';
 import 'package:ganaderia/core/repositories/vaca_repository.dart';
 import 'package:ganaderia/core/repositories/toro_repository.dart';
 import 'package:ganaderia/core/widgets/descendencia_section.dart';
@@ -32,7 +34,7 @@ Future<void> borrarTodo() async {
   final db = LocalDb.instance.db;
   for (final t in [
     'vacas', 'eventos_vaca', 'tipos_evento', 'terneros', 'produccion_leche',
-    'pesajes_animal', 'ubicaciones', 'toros'
+    'pesajes_animal', 'ubicaciones', 'toros', 'eventos_animal'
   ]) {
     await db.delete(t);
   }
@@ -249,6 +251,34 @@ void main() {
     await marcarVendido(AnimalEnVenta('ternero', t.id, 'Ternero #santo'));
     expect((await VacaRepository().getById(v.id))!.estado, 'vendida');
     expect((await TerneroRepository().getById(t.id))!.estado, 'vendido');
+  });
+
+  test('evento masivo: vacas, levante y toros quedan en su historial', () async {
+    final tipo = await TipoEventoRepository().create(nombre: 'Vacuna aftosa');
+    final v = await VacaRepository().create(numero: '1');
+    final t = await TerneroRepository().create(numero: '2', sexo: 'macho');
+    final toro = await ToroRepository().create(numero: '3', nombre: 'Rey');
+
+    await EventoMasivoRepository().registrar(
+      tipoEventoId: tipo.id,
+      vacaIds: [v.id],
+      otros: [('ternero', t.id), ('toro', toro.id)],
+      fecha: d(2026, 11, 21),
+      notas: 'Lote 45',
+    );
+
+    expect((await EventoVacaRepository().getByVaca(v.id)).single.tipoEventoNombre,
+        'Vacuna aftosa');
+    final et = await EventoAnimalRepository().getByAnimal('ternero', t.id);
+    expect(et.single.tipoEventoNombre, 'Vacuna aftosa');
+    expect(et.single.notas, 'Lote 45');
+    expect((await EventoAnimalRepository().getByAnimal('toro', toro.id)).length, 1);
+
+    // Solo otros animales (sin vacas) también funciona.
+    await EventoMasivoRepository().registrar(
+        tipoEventoId: tipo.id, vacaIds: [], otros: [('toro', toro.id)],
+        fecha: d(2026, 11, 22));
+    expect((await EventoAnimalRepository().getByAnimal('toro', toro.id)).length, 2);
   });
 
   test('parto: pasa a ordeño, crea ternero y calcula intervalos', () async {
@@ -582,9 +612,11 @@ void main() {
     });
     await v6.close();
 
-    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 12
+    await LocalDb.instance.init(path: path); // corre _onUpgrade 6 → 13
     final db = LocalDb.instance.db;
-    expect(await db.getVersion(), 12);
+    expect(await db.getVersion(), 13);
+    expect(await LocalDb.instance.columnas('eventos_animal'),
+        containsAll(['animal_tipo', 'animal_id', 'tipo_evento_id']));
     for (final t in ['vacas', 'toros', 'terneros']) {
       expect(await LocalDb.instance.columnas(t),
           containsAll(['origen', 'registro', 'padre_ext_nombre', 'madre_ext_raza']));

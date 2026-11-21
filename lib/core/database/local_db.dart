@@ -19,7 +19,7 @@ class LocalDb {
 
     _db = await openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -208,6 +208,7 @@ class LocalDb {
     await _createV10(db);
     await _createV11(db);
     await _createV12(db);
+    await _createV13(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -264,6 +265,29 @@ class LocalDb {
     if (oldVersion < 12) {
       await _createV12(db);
     }
+    if (oldVersion < 13) {
+      await _createV13(db);
+    }
+  }
+
+  /// Historial de eventos de toros, levante y ceba y caballos (las vacas
+  /// usan eventos_vaca).
+  Future<void> _createV13(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS eventos_animal (
+        id TEXT PRIMARY KEY,
+        animal_tipo TEXT NOT NULL,
+        animal_id TEXT NOT NULL,
+        tipo_evento_id TEXT NOT NULL,
+        fecha TEXT NOT NULL,
+        notas TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        synced INTEGER NOT NULL DEFAULT 1,
+        deleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
   }
 
   /// Procedencia: origen, registro y padres de fuera de la finca

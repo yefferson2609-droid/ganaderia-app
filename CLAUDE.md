@@ -35,7 +35,7 @@ flutter build apk --release
 - Ejecutar con `dangerouslyDisableSandbox` (Gradle necesita red/loopback).
 - Con `GANADERIA_PRUEBA=1` el paquete es `com.agroyeff.ganaderia.prueba` y el
   nombre "Ganadería (nueva)". Sin la variable: `com.agroyeff.ganaderia`, "ganaderia".
-- Subir `version:` en pubspec.yaml en cada entrega (va en 1.0.27+27).
+- Subir `version:` en pubspec.yaml en cada entrega (va en 1.0.28+28).
 - Copiar el APK a `%USERPROFILE%\Desktop\APK Ganaderia\ganaderia-NUEVA-prueba-vX.Y.Z.apk`.
 - Firma fija: `android/key.properties` + `android/app/ganaderia-release.jks`
   (fuera de git; si se pierden no se puede actualizar encima). NDK 28.2.13676358
@@ -107,7 +107,7 @@ flutter build apk --release
   finanzas, usuarios/permisos, reportes PDF, inventario por ubicación,
   producción de leche (mañana/tarde y por vaca), ordeño/secas, sugerencia de
   secado por raza, alertas del hato, palpación, raza/foto/peso por animal.
-- Última entregada: **1.0.27** ("Ganadería (nueva)"): evento masivo para todos los animales; colores Verde brillante; punto rojo en Solicitudes. Un solo camino para
+- Última entregada: **1.0.28** ("Ganadería (nueva)"): sincronización rápida (sube primero, en grupo, con límite de espera); evento masivo para todos los animales; colores Verde brillante; punto rojo en Solicitudes. Un solo camino para
   partos, palpación, secado, venta y vitamina; conceptos archivables.
 - **Traspaso**: `docs/TRASPASO.md` resume todo (reglas acordadas, estado de
   los datos y pendientes) para continuar con otra IA o programador.

@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 
-/// Paleta "Campo moderno" (multi-finca): verde pasto como color de marca,
-/// tierra como acento, fondo crema claro con tarjetas blancas, y colores de
-/// estado que se leen bien al sol y en tema oscuro.
-///
-/// Colores oscurecidos para leer al sol (2026-10-18): contraste medido sobre
-/// el fondo crema de 7:1 o más en letra y verde; etiquetas teñidas, 5:1 o más.
-/// Comparación en Design: https://claude.ai/artifact/NbKufCVfM9gZCzLFRn7hTv
+/// Paleta "Verde brillante" (elegida por el dueño el 2026-11-21, opción E de
+/// https://claude.ai/artifact/RBbdcKjhyznw5XNughdVZ8): verde vivo de marca,
+/// amarillo de acento, fondo blanco con tarjetas verde muy claro.
+/// Reforzada para el sol: las letras de etiquetas y estados (success,
+/// warning) usan verde y amarillo más oscuros, con contraste de 7:1 o más;
+/// botones y barra mantienen el verde brillante.
 class AppColors {
   AppColors._();
 
   // Marca
-  static const primary = Color(0xFF1F5A30);
-  static const primaryLight = Color(0xFF3F7A4B);
-  static const primaryDark = Color(0xFF163F22);
-  static const primaryContainer = Color(0xFFDCEBDD);
+  static const primary = Color(0xFF2E7D32);
+  static const primaryLight = Color(0xFF4CAF50);
+  static const primaryDark = Color(0xFF256B29);
+  static const primaryContainer = Color(0xFFE3F0E1);
 
-  // Tierra
-  static const secondary = Color(0xFF7A4D22);
-  static const secondaryContainer = Color(0xFFF3E6D3);
+  // Acento amarillo (texto e íconos)
+  static const secondary = Color(0xFF8A5F00);
+  static const secondaryContainer = Color(0xFFFFF3D1);
 
-  // Estado / semántica
-  static const success = Color(0xFF1F5A30);
-  static const warning = Color(0xFF8A5200);
+  // Estado / semántica (letras de etiquetas: oscuras para leer al sol)
+  static const success = Color(0xFF18561C);
+  static const warning = Color(0xFF6E4600);
   static const danger = Color(0xFF9E1B14);
   static const dangerContainer = Color(0xFFFBE9E7);
   static const info = Color(0xFF1A4E8A);
@@ -32,12 +31,12 @@ class AppColors {
   static const neutralGrey = Color(0xFF4A524D);
 
   // Superficies (tema claro)
-  static const fondo = Color(0xFFF6F3EC); // crema
-  static const tarjeta = Colors.white;
-  static const borde = Color(0xFFB8B09E);
-  static const bordeCampo = Color(0xFF8A8272); // campos para escribir
-  static const texto = Color(0xFF111A14);
-  static const textoSuave = Color(0xFF3E4741);
+  static const fondo = Colors.white;
+  static const tarjeta = Color(0xFFF6F8F4); // verde muy claro
+  static const borde = Color(0xFFCAD7C6);
+  static const bordeCampo = Color(0xFF8A9A88); // campos para escribir
+  static const texto = Color(0xFF162016);
+  static const textoSuave = Color(0xFF4A564A);
 
   // Superficies (tema oscuro)
   static const fondoOscuro = Color(0xFF121813);

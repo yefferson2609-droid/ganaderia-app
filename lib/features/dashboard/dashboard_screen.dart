@@ -52,6 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, int> _sinUbicacion = {};
   Map<EstadoProduccion, int> _produccion = {};
   double _lecheHoy = 0;
+  int _solicitudesNuevas = 0; // punto rojo del botón Solicitudes
   int _prenadas = 0;
 
   DateTime now0() {
@@ -131,8 +132,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final solicitudRepo = SolicitudRepository();
+    var porRevisar = 0;
     if (permisos.puedeEditar('solicitudes')) {
-      final porRevisar = await solicitudRepo.contarPendientes();
+      porRevisar = await solicitudRepo.contarPendientes();
       if (porRevisar > 0) {
         avisos.add(_Aviso(
             Icons.inventory_2,
@@ -150,6 +152,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (guardado != null) vistas = DateTime.tryParse(guardado) ?? vistas;
     } catch (_) {}
     final resueltas = await solicitudRepo.contarResueltasDe(uid, vistas);
+    // Punto rojo del botón Solicitudes: pendientes de revisar para quien
+    // revisa; para los demás, sus solicitudes ya respondidas sin ver.
+    _solicitudesNuevas = porRevisar + resueltas;
     if (resueltas > 0) {
       avisos.add(_Aviso(
           Icons.mark_email_read,
@@ -247,7 +252,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) context.push(a.ruta).then((_) => _loadConteos());
   }
 
-  void _abrir(String ruta) => context.push(ruta).then((_) => _loadConteos());
+  Future<void> _abrir(String ruta) async {
+    // Al entrar a Solicitudes, las respuestas recibidas cuentan como vistas.
+    if (ruta == '/solicitudes') {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('$_kAvisoSolicitudesVistas:${usuarioActualId()}',
+            DateTime.now().toIso8601String());
+      } catch (_) {}
+    }
+    if (mounted) context.push(ruta).then((_) => _loadConteos());
+  }
 
   Widget _seccion(String titulo) => Padding(
         padding: const EdgeInsets.only(top: 24, bottom: 12),
@@ -390,7 +405,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         for (final o in accesos)
                           Expanded(
                             child: _AccesoRapido(
-                                opcion: o, onTap: () => _abrir(o.ruta)),
+                                opcion: o,
+                                aviso: o.ruta == '/solicitudes'
+                                    ? _solicitudesNuevas
+                                    : 0,
+                                onTap: () => _abrir(o.ruta)),
                           ),
                       ]),
                     ],
@@ -1086,7 +1105,10 @@ class _MenuLateral extends StatelessWidget {
 class _AccesoRapido extends StatelessWidget {
   final _Opcion opcion;
   final VoidCallback onTap;
-  const _AccesoRapido({required this.opcion, required this.onTap});
+  /// Número del punto rojo (0 = sin punto).
+  final int aviso;
+  const _AccesoRapido(
+      {required this.opcion, required this.onTap, this.aviso = 0});
 
   // Color de cada acceso, para reconocerlos de un vistazo.
   static const _colores = {
@@ -1107,11 +1129,34 @@ class _AccesoRapido extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
           child: Column(children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: color.withValues(alpha: 0.13),
-              child: Icon(opcion.icono, color: color, size: 24),
-            ),
+            Stack(clipBehavior: Clip.none, children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: color.withValues(alpha: 0.13),
+                child: Icon(opcion.icono, color: color, size: 24),
+              ),
+              if (aviso > 0)
+                Positioned(
+                  right: -8,
+                  top: -6,
+                  child: Container(
+                    constraints:
+                        const BoxConstraints(minWidth: 22, minHeight: 22),
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD32F2F),
+                      borderRadius: BorderRadius.circular(11),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(aviso > 99 ? '99+' : '$aviso',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ),
+            ]),
             const SizedBox(height: 8),
             Text(opcion.corto ?? opcion.texto,
                 textAlign: TextAlign.center,

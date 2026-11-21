@@ -61,11 +61,27 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   int _pendientesTrasSync = 0;
   Timer? _timer;
 
-  /// Cada cuánto se revisa si hay que sincronizar sola.
-  static const _revision = Duration(minutes: 1);
+  /// Cada cuánto se revisa si hay cambios nuevos para subir (casi al
+  /// instante después de guardar algo).
+  static const _revision = Duration(seconds: 15);
 
   /// Cada cuánto se traen los cambios de los demás aunque no haya nada local.
   static const _refresco = Duration(minutes: 5);
+
+  /// Si un intento tuvo errores, cuánto esperar antes de reintentar.
+  static const _esperaTrasError = Duration(minutes: 1);
+
+  /// Máximo que se espera una respuesta del servidor; con mala señal, en
+  /// vez de quedarse "sincronizando" sin fin, se corta y se reintenta luego.
+  static const _espera = Duration(seconds: 20);
+  static const _esperaFoto = Duration(seconds: 60);
+
+  /// Tablas que se bajan al mismo tiempo.
+  static const _bajadasALaVez = 5;
+
+  DateTime? _ultimaBajada;
+
+  Future<T> _conEspera<T>(Future<T> f, [Duration d = _espera]) => f.timeout(d);
 
   int _pendientes = 0;
 
@@ -105,26 +121,29 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  /// Sincronización automática: envía los cambios pendientes en cuanto
-  /// puede y trae los de los demás cada [_refresco]. Si el último intento
-  /// tuvo errores, espera más para no insistir cada minuto.
+  /// Sincronización automática: lo nuevo se SUBE enseguida (cada 15 s se
+  /// revisa), y lo de los demás se BAJA cada [_refresco] o al volver a la
+  /// app. Si el último intento tuvo errores, espera un poco antes de
+  /// reintentar.
   Future<void> _sincronizarSiHaceFalta({bool alVolver = false}) async {
     if (_isSyncing || !_isOnline) return;
     if (_supabase.auth.currentUser == null) return;
     final ahora = DateTime.now();
-    final desdeIntento = _ultimoIntento == null
-        ? const Duration(days: 1)
-        : ahora.difference(_ultimoIntento!);
+    Duration desde(DateTime? t) =>
+        t == null ? const Duration(days: 1) : ahora.difference(t);
     final pendientes = await contarPendientes();
-    final esperaErrores = _lastError != null ? _refresco : Duration.zero;
+    final esperaErrores = _lastError != null ? _esperaTrasError : Duration.zero;
 
     // Solo cuenta lo nuevo: lo que quedó pendiente tras el último intento
     // (p. ej. una foto que no subió) se reintenta en el refresco normal.
     final hayNuevos = pendientes > _pendientesTrasSync;
-    final toca = (alVolver && desdeIntento >= const Duration(seconds: 30)) ||
-        (hayNuevos && desdeIntento >= esperaErrores) ||
-        desdeIntento >= _refresco;
-    if (toca) await syncAll();
+    final tocaBajar = (alVolver && desde(_ultimaBajada) >= const Duration(seconds: 30)) ||
+        desde(_ultimaBajada) >= _refresco;
+    if (tocaBajar) {
+      await syncAll();
+    } else if (hayNuevos && desde(_ultimoIntento) >= esperaErrores) {
+      await _sincronizar(bajar: false); // solo subir: rápido
+    }
   }
 
   Future<void> _cargarUltimaSync() async {
@@ -171,7 +190,11 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  Future<void> syncAll() async {
+  /// Sincronización completa: primero SUBE lo nuevo de este teléfono y
+  /// después BAJA lo de los demás.
+  Future<void> syncAll() => _sincronizar(bajar: true);
+
+  Future<void> _sincronizar({required bool bajar}) async {
     if (_isSyncing) return;
     if (_supabase.auth.currentUser == null) return;
     _isSyncing = true;
@@ -180,56 +203,81 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     final errores = <String>[];
-    // La bajada no pisa filas con cambios locales pendientes (synced = 0),
-    // así que se puede bajar primero y luego subir.
-    for (final tabla in kTablasSync) {
-      try {
-        await _pull(tabla, errores);
-      } catch (e) {
-        errores.add('No se recibió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
-      }
-    }
-    for (final tabla in kTablasSync) {
-      try {
-        await _push(tabla, errores);
-      } catch (e) {
-        errores.add('No se envió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
-      }
-    }
-
-    // Si un administrador desactivó o eliminó a este usuario, se cierra
-    // su sesión (el router lo lleva a la pantalla de inicio).
-    final uid = _supabase.auth.currentUser?.id;
-    if (uid != null) {
-      final yo = await LocalDb.instance.db.query('perfiles_usuario',
-          columns: ['activo', 'eliminado'], where: 'id = ?', whereArgs: [uid]);
-      if (yo.isNotEmpty &&
-          (yo.first['activo'] == 0 || yo.first['eliminado'] == 1)) {
-        _isSyncing = false;
-        notifyListeners();
-        await _supabase.auth.signOut();
-        return;
-      }
-    }
-
-    // Se registra la hora aunque haya errores: lo que no falló sí quedó
-    // sincronizado, y los errores se muestran aparte.
-    _lastSync = DateTime.now();
+    var sinSenal = false;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kUltimaSync, _lastSync!.toIso8601String());
-    } catch (_) {}
-    if (errores.isNotEmpty) {
-      const max = 25;
-      _lastError = [
-        ...errores.take(max),
-        if (errores.length > max) '… y ${errores.length - max} errores más',
-      ].join('\n');
-      debugPrint('Errores de sincronización:\n${errores.join('\n')}');
+      // 1) Subir primero: lo que se anotó aquí llega enseguida. Va tabla por
+      //    tabla en orden (p. ej. una vaca nueva antes que su leche).
+      for (final tabla in kTablasSync) {
+        try {
+          await _push(tabla, errores);
+        } catch (e) {
+          errores.add('No se envió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
+          if (_esFallaDeRed(e)) {
+            sinSenal = true; // lo demás se reintenta en un rato
+            break;
+          }
+        }
+      }
+
+      // 2) Bajar lo de los demás, varias tablas a la vez. La bajada no pisa
+      //    filas con cambios locales pendientes (synced = 0).
+      if (bajar && !sinSenal) {
+        for (var i = 0;
+            i < kTablasSync.length && !sinSenal;
+            i += _bajadasALaVez) {
+          final grupo = kTablasSync.skip(i).take(_bajadasALaVez);
+          await Future.wait(grupo.map((tabla) async {
+            try {
+              await _pull(tabla, errores);
+            } catch (e) {
+              errores.add('No se recibió ${_nombreTabla(tabla)}: ${_mensaje(e)}');
+              if (_esFallaDeRed(e)) sinSenal = true;
+            }
+          }));
+        }
+        if (!sinSenal) _ultimaBajada = DateTime.now();
+
+        // Si un administrador desactivó o eliminó a este usuario, se cierra
+        // su sesión (el router lo lleva a la pantalla de inicio).
+        final uid = _supabase.auth.currentUser?.id;
+        if (uid != null) {
+          final yo = await LocalDb.instance.db.query('perfiles_usuario',
+              columns: ['activo', 'eliminado'],
+              where: 'id = ?',
+              whereArgs: [uid]);
+          if (yo.isNotEmpty &&
+              (yo.first['activo'] == 0 || yo.first['eliminado'] == 1)) {
+            _isSyncing = false;
+            notifyListeners();
+            await _supabase.auth.signOut();
+            return;
+          }
+        }
+      }
+
+      // Se registra la hora aunque haya errores: lo que no falló sí quedó
+      // sincronizado, y los errores se muestran aparte.
+      _lastSync = DateTime.now();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kUltimaSync, _lastSync!.toIso8601String());
+      } catch (_) {}
+    } catch (e) {
+      errores.add('La sincronización se cortó: ${_mensaje(e)}');
+    } finally {
+      // Pase lo que pase, la app deja de mostrar "sincronizando".
+      if (errores.isNotEmpty) {
+        const max = 25;
+        _lastError = [
+          ...errores.take(max),
+          if (errores.length > max) '… y ${errores.length - max} errores más',
+        ].join('\n');
+        debugPrint('Errores de sincronización:\n${errores.join('\n')}');
+      }
+      _pendientesTrasSync = await contarPendientes();
+      _isSyncing = false;
+      notifyListeners();
     }
-    _pendientesTrasSync = await contarPendientes();
-    _isSyncing = false;
-    notifyListeners();
   }
 
   Future<List<Map<String, dynamic>>> _fetchAll(String tabla) async {
@@ -237,11 +285,11 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     final todos = <Map<String, dynamic>>[];
     var desde = 0;
     while (true) {
-      final rows = await _supabase
+      final rows = await _conEspera(_supabase
           .from(tabla)
           .select()
           .order('id')
-          .range(desde, desde + pagina - 1);
+          .range(desde, desde + pagina - 1));
       todos.addAll(rows);
       if (rows.length < pagina) break;
       desde += pagina;
@@ -314,6 +362,10 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     final db = LocalDb.instance.db;
 
     final unsynced = await db.query(tabla, where: 'synced = 0 AND deleted = 0');
+
+    // Primero se preparan todas las filas (fotos y columnas que el servidor
+    // aún no tiene) y se intenta mandarlas JUNTAS en un solo envío.
+    final preparadas = <(Map<String, dynamic>, Map<String, dynamic>, bool)>[];
     for (final row in unsynced) {
       final remoto = _toRemoteRow(tabla, row);
       var fotoPendiente = false;
@@ -340,11 +392,39 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       // de supabase_migrations): se envía sin ellas. Si traían un dato, la
       // fila queda pendiente para reenviarla completa cuando existan.
       var datoPendiente = fotoPendiente;
-      final faltantes = _columnasFaltantes.putIfAbsent(tabla, () => {});
-      for (final c in faltantes) {
+      for (final c in _columnasFaltantes[tabla] ?? const <String>{}) {
         if (remoto.remove(c) != null) datoPendiente = true;
       }
-      var enviado = false;
+      preparadas.add((row, remoto, datoPendiente));
+    }
+
+    // Envío en grupo (un viaje por cada tanda de filas con los mismos
+    // campos). Si falla, esas filas se reenvían de a una más abajo, para que
+    // una fila con problema no frene a las demás.
+    final enviadasEnGrupo = <String>{};
+    if (preparadas.length > 1) {
+      final porCampos = <String, List<Map<String, dynamic>>>{};
+      for (final (_, remoto, _) in preparadas) {
+        final campos = (remoto.keys.toList()..sort()).join(',');
+        porCampos.putIfAbsent(campos, () => []).add(remoto);
+      }
+      for (final filas in porCampos.values) {
+        for (var i = 0; i < filas.length; i += 200) {
+          final tanda = filas.skip(i).take(200).toList();
+          try {
+            await _conEspera(_supabase.from(tabla).upsert(tanda));
+            enviadasEnGrupo.addAll(tanda.map((f) => f['id'] as String));
+          } catch (_) {
+            // Se reintentan de a una (con el detalle de cada error).
+          }
+        }
+      }
+    }
+
+    for (final (row, remoto, pendiente) in preparadas) {
+      var datoPendiente = pendiente;
+      final faltantes = _columnasFaltantes.putIfAbsent(tabla, () => {});
+      var enviado = enviadasEnGrupo.contains(row['id']);
       for (var intento = 0; intento < 6 && !enviado; intento++) {
         try {
           await _upsertOActualizar(tabla, remoto);
@@ -361,6 +441,9 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
           faltantes.add(col);
           if (remoto.remove(col) != null) datoPendiente = true;
         } catch (e) {
+          // Sin señal: no tiene sentido seguir fila por fila (cada una
+          // esperaría el límite); se corta y se reintenta en un rato.
+          if (_esFallaDeRed(e)) rethrow;
           errores.add(
               'No se envió ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
           break;
@@ -386,7 +469,8 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
     final deleted = await db.query(tabla, where: 'deleted = 1 AND synced = 0');
     for (final row in deleted) {
       try {
-        await _supabase.from(tabla).delete().eq('id', row['id'] as String);
+        await _conEspera(
+            _supabase.from(tabla).delete().eq('id', row['id'] as String));
         await db.delete(tabla, where: 'id = ?', whereArgs: [row['id']]);
       } on PostgrestException catch (e) {
         // 23503 = otros datos lo usan (p. ej. un concepto con movimientos).
@@ -400,9 +484,21 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
               'No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
         }
       } catch (e) {
+        if (_esFallaDeRed(e)) rethrow;
         errores.add('No se borró ${_nombreTabla(tabla)} (${row['id']}): ${_mensaje(e)}');
       }
     }
+  }
+
+  /// Error por falta de señal o servidor que no responde a tiempo.
+  bool _esFallaDeRed(Object e) {
+    if (e is TimeoutException || e is SocketException) return true;
+    final s = e.toString();
+    return s.contains('SocketException') ||
+        s.contains('ClientException') ||
+        s.contains('Failed host lookup') ||
+        s.contains('Connection closed') ||
+        s.contains('Connection reset');
   }
 
   /// Envía una fila con "insertar o actualizar". Si la seguridad del servidor
@@ -410,14 +506,14 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// fila ya existe, la actualiza directamente.
   Future<void> _upsertOActualizar(String tabla, Map<String, dynamic> fila) async {
     try {
-      await _supabase.from(tabla).upsert(fila);
+      await _conEspera(_supabase.from(tabla).upsert(fila));
     } on PostgrestException catch (e) {
       if (e.code != '42501') rethrow; // 42501 = no permitido por seguridad
-      final actualizadas = await _supabase
+      final actualizadas = await _conEspera(_supabase
           .from(tabla)
           .update(Map.of(fila)..remove('id'))
           .eq('id', fila['id'] as String)
-          .select('id');
+          .select('id'));
       if (actualizadas.isEmpty) rethrow;
     }
   }
@@ -468,7 +564,12 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       ];
       return partes.join(' · ');
     }
-    if (e is SocketException) return 'Sin internet';
+    if (e is TimeoutException) {
+      return 'La señal está muy lenta (no respondió a tiempo); se reintenta solo';
+    }
+    if (e is SocketException || _esFallaDeRed(e)) {
+      return 'Sin señal; se reintenta solo';
+    }
     final s = e.toString();
     return s.length > 300 ? '${s.substring(0, 300)}…' : s;
   }
@@ -496,8 +597,11 @@ class SyncProvider extends ChangeNotifier with WidgetsBindingObserver {
       // Nombre único: si se cambia la foto, la URL cambia y no se ve la vieja.
       final nombre = '$id-${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ruta = bucket == tabla ? nombre : '$tabla/$nombre';
-      await _supabase.storage.from(bucket).upload(ruta, archivo,
-          fileOptions: const FileOptions(upsert: true, contentType: 'image/jpeg'));
+      await _conEspera(
+          _supabase.storage.from(bucket).upload(ruta, archivo,
+              fileOptions:
+                  const FileOptions(upsert: true, contentType: 'image/jpeg')),
+          _esperaFoto);
       return _supabase.storage.from(bucket).getPublicUrl(ruta);
     } catch (e) {
       debugPrint('No se pudo subir la foto ($tabla $id): $e');

@@ -65,8 +65,8 @@ flutter build apk --release
   clasificar (se usa la sugerida). La columna antigua `etapa` se deriva de la
   categoría. Destete a los 9 meses, novilla de vientre a los 24 (ajustes.dart).
   Novilla preñada (ficha o Palpación) pasa a Vacas con fecha de parto.
-- Sincronización automática: revisa cada minuto (envía cambios nuevos), trae
-  datos cada 5 min y al volver a la app.
+- Sincronización automática: cada 15 s revisa y SUBE lo nuevo (solo subida); BAJA
+  todo cada 5 min y al volver a la app. Siempre sube primero y baja después; sube en grupo (un upsert por tanda, si falla va de a uno); baja 5 tablas a la vez; cada llamada tiene límite de 20 s (fotos 60 s) y al primer corte de red se detiene y reintenta al minuto.
 - **Nómina** (`lib/features/nomina`, `nomina_repository.dart`): trabajadores
   con sueldo semanal fijo, bonos (se suman), anticipos y préstamos (gasto al
   entregarlos, se descuentan el domingo). El pago lo hace **el servidor**:
